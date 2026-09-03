@@ -1618,6 +1618,12 @@ function startGame(index) {
         electorFavor: 0,
         granadaProgress: 0,
 
+        // Estates: the condition of your roads, walls and ports, and how your tenants
+        // actually feel about you — both drive your real income, not just raw land count.
+        estateHealth: 55,
+        popularLoyalty: 55,
+        taxRate: "balanced",
+
         relationships: {
 
             Edward: 30,
@@ -1914,6 +1920,62 @@ function renderCharacter(content) {
    FAMILY
 ========================================================= */
 
+// Concrete ways to actually help a relative — not one generic "invest" button. Each
+// costs something real and names exactly what you did for them.
+const FAMILY_HELP_OPTIONS = [
+    { id: "position", label: "🤝 Arrange a Position at Court", cost: { influence: 10 }, loyaltyGain: 15, desc: "Use your own standing to get them noticed by people who matter." },
+    { id: "debts", label: "💰 Settle Their Debts", cost: { gold: 20 }, loyaltyGain: 15, desc: "Quietly pay off what they owe before it becomes anyone else's business." },
+    { id: "dispute", label: "⚖️ Intervene in a Dispute", cost: { influence: 15 }, loyaltyGain: 20, risky: true, desc: "Put your own name behind their side of a quarrel that isn't really yours." },
+    { id: "gift", label: "🎁 Send a Generous Gift", cost: { gold: 10 }, loyaltyGain: 8, desc: "Nothing that costs much standing, but it's noticed and appreciated." },
+];
+
+function helpFamilyMember(index, optionId) {
+
+    const opt = FAMILY_HELP_OPTIONS.find(o => o.id === optionId);
+    const member = game.family[index];
+    if (!opt || !member) return;
+
+    if (opt.cost.gold && game.wealth < opt.cost.gold) {
+        showEvent("Not Enough Wealth", `You cannot afford to help ${member.name} this way right now.`);
+        return;
+    }
+
+    if (opt.cost.influence && game.influence < opt.cost.influence) {
+        showEvent("Not Enough Standing", `You don't have the influence to help ${member.name} this way right now.`);
+        return;
+    }
+
+    if (opt.cost.gold) game.wealth -= opt.cost.gold;
+    if (opt.cost.influence) game.influence -= opt.cost.influence;
+
+    if (opt.risky && Math.random() < 0.3) {
+
+        member.loyalty = Math.min(100, member.loyalty + Math.round(opt.loyaltyGain / 2));
+        game.prestige = Math.max(0, game.prestige - 8);
+
+        game.chronicle.unshift(`${game.year}: You intervene in ${member.name}'s dispute, but it goes worse than hoped — the matter becomes public, and it costs you standing.`);
+        showEvent("It Doesn't Go Cleanly", `Your intervention on ${member.name}'s behalf becomes common knowledge, and not everyone approves of how you handled it.`);
+
+    } else {
+
+        member.loyalty = Math.min(100, member.loyalty + opt.loyaltyGain);
+
+        const actionText = {
+            position: `You use your own standing to arrange a position at court for ${member.name}.`,
+            debts: `You quietly settle ${member.name}'s debts before they become anyone else's business.`,
+            dispute: `You put your name behind ${member.name} in a dispute, and it goes cleanly.`,
+            gift: `You send ${member.name} a generous gift.`,
+        }[opt.id];
+
+        game.chronicle.unshift(`${game.year}: ${actionText}`);
+        showEvent("Help Given", actionText);
+
+    }
+
+    render();
+
+}
+
 function renderFamily(content) {
 
     content.innerHTML = `
@@ -1925,7 +1987,8 @@ function renderFamily(content) {
             <p>
             Your family is a political institution.
             Marriage, inheritance, loyalty and rivalry
-            can reshape your entire position.
+            can reshape your entire position — and helping them
+            costs something real every time, not just a gesture.
             </p>
 
         </div>
@@ -1954,41 +2017,27 @@ function renderFamily(content) {
 
             <div class="meter"><span style="width:${member.loyalty}%"></span></div>
 
-            <button data-family="${index}">
-                Invest in relationship
-            </button>
+            <div class="grid" id="familyHelp${index}"></div>
 
         `;
 
         content.appendChild(card);
 
-    });
+        const grid = card.querySelector(`#familyHelp${index}`);
 
-    content.querySelectorAll("[data-family]")
-        .forEach(button => {
+        FAMILY_HELP_OPTIONS.forEach(opt => {
 
-            button.addEventListener("click", () => {
+            const costLabel = opt.cost.gold ? `−${opt.cost.gold} gold` : `−${opt.cost.influence} influence`;
+            const btn = document.createElement("button");
 
-                const i =
-                    Number(button.dataset.family);
+            btn.innerHTML = `<strong>${opt.label} (${costLabel})</strong><br><span class="muted">${opt.desc}</span>`;
+            btn.addEventListener("click", () => helpFamilyMember(index, opt.id));
 
-                game.family[i].loyalty =
-                    Math.min(
-                        100,
-                        game.family[i].loyalty + 8
-                    );
-
-                game.influence++;
-
-                game.chronicle.unshift(
-                    `${game.year}: You invested in your family relationship.`
-                );
-
-                render();
-
-            });
+            grid.appendChild(btn);
 
         });
+
+    });
 
 }
 
@@ -2966,6 +3015,22 @@ function showBirthEvent() {
 }
 
 
+// A wide enough pool, filtered against names already in the family, that siblings don't
+// keep coming out with the same name — a real risk when only 5 names existed per gender.
+const CHILD_NAME_POOLS = {
+    M: ["Edward", "Richard", "Charles", "Thomas", "Henry", "John", "Edmund", "George", "William", "Robert", "Philip", "Anthony", "Francis", "Arthur", "Hugh"],
+    F: ["Margaret", "Elizabeth", "Anne", "Cecily", "Isabel", "Eleanor", "Joan", "Catherine", "Mary", "Agnes", "Beatrice", "Jane", "Alice", "Joanna", "Philippa"]
+};
+
+function pickChildName(gender) {
+    const pool = CHILD_NAME_POOLS[gender];
+    const taken = new Set(game.children.map(c => c.name));
+    taken.add(game.person);
+    const available = pool.filter(n => !taken.has(n));
+    const finalPool = available.length ? available : pool;
+    return finalPool[Math.floor(Math.random() * finalPool.length)];
+}
+
 function resolveBirth(withPhysician) {
 
     if (withPhysician) game.wealth = Math.max(0, game.wealth - 20);
@@ -2976,9 +3041,7 @@ function resolveBirth(withPhysician) {
     const roll = Math.random();
 
     const childGender = Math.random() < 0.5 ? "M" : "F";
-    const namesM = ["Edward", "Richard", "Charles", "Thomas", "Henry"];
-    const namesF = ["Margaret", "Elizabeth", "Anne", "Cecily", "Isabel"];
-    const childName = (childGender === "M" ? namesM : namesF)[Math.floor(Math.random() * 5)];
+    const childName = pickChildName(childGender);
 
     function addChild() {
         const child = {
@@ -3444,59 +3507,168 @@ function performDiplomacyAction(country, action) {
 
 
 /* =========================================================
-   ESTATES
+   ESTATES — Extraction vs. Investment. Wise spending (roads,
+   walls, health, education) compounds into real prosperity;
+   decadence buys a moment of spectacle at real long-term cost;
+   taxation trades income against how your own people feel
+   about you.
 ========================================================= */
 
+const ESTATE_INVESTMENTS = [
+    { id: "roads", label: "🛣️ Build Roads & Bridges", cost: 15, desc: "Trade moves faster and safer across your lands.", effect: () => { game.estateHealth = Math.min(100, game.estateHealth + 10); game.prestige += 2; } },
+    { id: "farmland", label: "🌾 Clear Forest for Farmland", cost: 15, desc: "More land under the plow means more grain, and fewer hungry tenants.", effect: () => { game.estateHealth = Math.min(100, game.estateHealth + 6); game.popularLoyalty = Math.min(100, game.popularLoyalty + 6); } },
+    { id: "walls", label: "🏰 Upgrade Fortress Walls", cost: 20, desc: "A stronger seat is a safer one, and a more respected one.", effect: () => { game.estateHealth = Math.min(100, game.estateHealth + 12); game.prestige += 4; } },
+    { id: "ports", label: "⚓ Subsidize Ports & Trade", cost: 20, desc: "Merchants remember whose harbors are worth using.", effect: () => { game.estateHealth = Math.min(100, game.estateHealth + 8); game.influence += 4; } },
+    { id: "health", label: "🏥 Fund Almshouses & Physicians (Health)", cost: 15, desc: "Fewer of your people die of things that don't have to kill them.", effect: () => { game.popularLoyalty = Math.min(100, game.popularLoyalty + 10); game.health = Math.min(100, game.health + 3); } },
+    { id: "education", label: "📚 Endow a Local School (Education)", cost: 15, desc: "Literate stewards and clerks pay for themselves many times over.", effect: () => { game.prestige += 5; game.popularLoyalty = Math.min(100, game.popularLoyalty + 4); } },
+];
+
+function investInEstate(id) {
+
+    const opt = ESTATE_INVESTMENTS.find(o => o.id === id);
+    if (!opt) return;
+
+    if (game.wealth < opt.cost) {
+        showEvent("Not Enough Wealth", "Your treasury cannot support this investment right now.");
+        return;
+    }
+
+    game.wealth -= opt.cost;
+    opt.effect();
+
+    game.chronicle.unshift(`${game.year}: You invest in your estates — ${opt.label.replace(/^[^\w]+/, "").trim()}.`);
+    showEvent("Investment Made", opt.desc);
+
+    render();
+
+}
+
+function hostTournament() {
+
+    if (game.wealth < 40) {
+        showEvent("Not Enough Wealth", "A tournament worth remembering costs more than you currently have.");
+        return;
+    }
+
+    game.wealth -= 40;
+    game.prestige += 15;
+    game.estateHealth = Math.max(0, game.estateHealth - 12);
+
+    game.chronicle.unshift(`${game.year}: You host a lavish tournament that everyone at court will talk about for a season — and that your fortress walls will feel for years.`);
+    showEvent("A Spectacle to Remember", "The tournament is a triumph of spectacle. Your fortress and roads, neglected in the rush to pay for it, are visibly worse for it.");
+
+    render();
+
+}
+
+function indulgeVices() {
+
+    if (game.wealth < 15) {
+        showEvent("Nothing Left to Spend", "Your treasury has nothing left worth throwing away right now.");
+        return;
+    }
+
+    const spent = game.wealth;
+    game.wealth = 0;
+
+    const prestigeGain = Math.min(25, Math.round(spent / 4));
+    game.prestige += prestigeGain;
+    game.popularLoyalty = Math.max(0, game.popularLoyalty - Math.round(spent / 5));
+    game.estateHealth = Math.max(0, game.estateHealth - Math.round(spent / 8));
+    game.worldFlags.knownForVice = true;
+
+    game.chronicle.unshift(`${game.year}: You empty the treasury entirely on clothes, favorites, wine, and company that never asks questions — a season no steward will forgive.`);
+    showEvent("Every Last Coin Spent", `You spend the whole treasury — ${spent} gold — on pure indulgence. It buys ${prestigeGain} points of dazzling spectacle and nothing that lasts. Your tenants and your estate's condition both feel exactly how little of it reached them.`);
+
+    render();
+
+}
+
+function setTaxRate(rate) {
+
+    if (game.taxRate === rate) return;
+
+    game.taxRate = rate;
+
+    const label = rate === "high" ? "high taxation" : rate === "low" ? "light taxation" : "balanced taxation";
+    const flavor = rate === "high"
+        ? "Your treasury will grow faster from here — and your tenants will notice, and resent it."
+        : rate === "low"
+            ? "Your tenants breathe easier, at the cost of a thinner treasury from here on."
+            : "A middling course: it pleases no one greatly, but angers no one either.";
+
+    game.chronicle.unshift(`${game.year}: You set your estates to ${label}.`);
+    showEvent("Taxation Set", flavor);
+
+    render();
+
+}
+
 function renderEstates(content) {
+
+    const taxMultiplier = game.taxRate === "high" ? 1.5 : game.taxRate === "low" ? 0.65 : 1;
+    const healthMultiplier = 0.5 + (game.estateHealth / 100);
+    const approxIncome = Math.round(game.land * 4 * taxMultiplier * healthMultiplier);
 
     content.innerHTML = `
 
         <div class="card">
-
             <h2>🌾 Estates</h2>
-
-            <div class="stat">
-                Holdings
-                <strong>${game.land}</strong>
-            </div>
-
-            <div class="stat">
-                Approximate income
-                <strong>${game.land * 7}</strong>
-            </div>
-
+            <div class="stat">Holdings <strong>${game.land}</strong></div>
+            <div class="stat">Approximate yearly income <strong>${approxIncome}</strong></div>
+            <div class="stat">Estate condition <strong>${game.estateHealth}/100</strong></div>
+            <div class="meter"><span style="width:${game.estateHealth}%"></span></div>
+            <div class="stat" style="margin-top:8px;">Popular loyalty <strong>${game.popularLoyalty}/100</strong></div>
+            <div class="meter"><span style="width:${game.popularLoyalty}%"></span></div>
+            <p class="muted" style="margin-top:8px;">
+                ${game.estateHealth < 30 ? "Your fortresses and roads are visibly neglected — it shows in the income, and in the banditry." : ""}
+                ${game.popularLoyalty < 30 ? " Your own tenants are running thin on patience with you." : ""}
+                ${game.estateHealth >= 30 && game.popularLoyalty >= 30 ? "Your lands are held together well enough for now." : ""}
+            </p>
         </div>
 
-        <div class="grid">
+        <div class="card">
+            <h3>Taxation</h3>
+            <p class="muted">Current policy: <strong>${game.taxRate === "high" ? "High" : game.taxRate === "low" ? "Low" : "Balanced"}</strong></p>
+            <div class="grid">
+                <button data-tax="low" class="${game.taxRate === "low" ? "secondary" : ""}">Low Taxation</button>
+                <button data-tax="balanced" class="${game.taxRate === "balanced" ? "secondary" : ""}">Balanced</button>
+                <button data-tax="high" class="${game.taxRate === "high" ? "secondary" : ""}">High Taxation</button>
+            </div>
+        </div>
 
-            <button data-estate="invest">
-                🏗️ Invest in Land
-            </button>
+        <div class="card">
+            <h3>Wise Spending — Infrastructure & Welfare</h3>
+            <p class="muted">Invested gold compounds over time into a healthier, more prosperous, more loyal estate.</p>
+            <div class="grid" id="investGrid"></div>
+        </div>
 
-            <button data-estate="grant">
-                🎁 Grant Land to Kin
-            </button>
-
-            <button data-estate="extract">
-                💰 Increase Extraction
-            </button>
-
+        <div class="card danger">
+            <h3>Sovereign Decay — Extraction & Excess</h3>
+            <p class="muted">A tournament buys a season of glory. Spending everything on nothing buys a memory and a resentful countryside.</p>
+            <div class="grid">
+                <button id="hostTournament">🏆 Host a Lavish Tournament (−40 gold)</button>
+                <button id="indulgeVices">🍷 Take It All and Spend It All (−${game.wealth} gold)</button>
+            </div>
         </div>
 
     `;
 
-    content.querySelectorAll("[data-estate]")
-        .forEach(button => {
+    const investGrid = content.querySelector("#investGrid");
 
-            button.addEventListener("click", () => {
+    ESTATE_INVESTMENTS.forEach(opt => {
+        const btn = document.createElement("button");
+        btn.innerHTML = `<strong>${opt.label} (−${opt.cost} gold)</strong><br><span class="muted">${opt.desc}</span>`;
+        btn.addEventListener("click", () => investInEstate(opt.id));
+        investGrid.appendChild(btn);
+    });
 
-                estateAction(
-                    button.dataset.estate
-                );
+    content.querySelectorAll("[data-tax]").forEach(btn => {
+        btn.addEventListener("click", () => setTaxRate(btn.dataset.tax));
+    });
 
-            });
-
-        });
+    document.getElementById("hostTournament").addEventListener("click", hostTournament);
+    document.getElementById("indulgeVices").addEventListener("click", indulgeVices);
 
 }
 
@@ -4221,77 +4393,6 @@ function giveGift(person) {
 }
 
 
-/* =========================================================
-   ESTATE ACTIONS
-========================================================= */
-
-function estateAction(type) {
-
-    if (type === "invest") {
-
-        if (game.wealth < 10) {
-
-            showEvent(
-                "Not Enough Wealth",
-                "Your treasury cannot support the investment."
-            );
-
-            return;
-        }
-
-        game.wealth -= 10;
-
-        game.land++;
-
-        game.chronicle.unshift(
-            `${game.year}: You invested in improving or acquiring land.`
-        );
-
-    }
-
-
-    if (type === "grant") {
-
-        if (game.land < 2) {
-
-            showEvent(
-                "Not Enough Land",
-                "You cannot make a meaningful land grant with your current holdings."
-            );
-
-            return;
-        }
-
-        game.land--;
-
-        game.influence += 5;
-
-        game.chronicle.unshift(
-            `${game.year}: You granted land to a relative, strengthening their loyalty.`
-        );
-
-    }
-
-
-    if (type === "extract") {
-
-        game.wealth += 12;
-
-        game.prestige =
-            Math.max(
-                0,
-                game.prestige - 3
-            );
-
-        game.chronicle.unshift(
-            `${game.year}: You increased extraction from your estates. Wealth increased, but your reputation suffered.`
-        );
-
-    }
-
-    render();
-
-}
 
 
 /* =========================================================
@@ -4327,26 +4428,18 @@ function performAction(type) {
 
     if (type === "letters") {
 
-        showEvent(
-            "Letters From Home",
-            "Your relatives may ask for money, political support, marriage arrangements or diplomatic intervention. Their lives continue while you are elsewhere."
-        );
+        currentTab = "family";
+        render();
+        return;
 
     }
 
 
     if (type === "estate") {
 
-        game.wealth += game.land * 2;
-
-        game.chronicle.unshift(
-            `${game.year}: Your stewards reported income from your estates.`
-        );
-
-        showEvent(
-            "Estate Accounts",
-            "Your lands have produced income, giving your household more freedom to act."
-        );
+        currentTab = "estates";
+        render();
+        return;
 
     }
 
@@ -4372,6 +4465,27 @@ function mortalityChance(age, health) {
     return c;
 }
 
+// Favor ebbs and flows — nothing you earn just sits at its peak forever. Every value
+// drifts a little each year back toward a resting baseline unless something actively
+// maintains it, the same way real court favor fades once you stop showing up.
+function driftToward(value, baseline, rate) {
+    if (value > baseline) return Math.max(baseline, value - rate);
+    if (value < baseline) return Math.min(baseline, value + rate);
+    return value;
+}
+
+function applyAnnualDrift() {
+    Object.keys(game.relationships).forEach(k => {
+        game.relationships[k] = driftToward(game.relationships[k], 30, 2 + Math.random() * 2);
+    });
+    game.family.forEach(f => {
+        f.loyalty = driftToward(f.loyalty, 45, 1 + Math.random() * 2);
+    });
+    game.bankFavor = driftToward(game.bankFavor, 40, 2);
+    game.electorFavor = driftToward(game.electorFavor, 10, 3);
+    game.piety = driftToward(game.piety, game.house === "curia" ? 55 : 35, 1);
+}
+
 function advanceTime(months) {
 
     const recapLines = [];
@@ -4391,18 +4505,44 @@ function advanceTime(months) {
 
             if (game.married && game.spouseAge != null) game.spouseAge++;
 
+            applyAnnualDrift();
+
             yearsPassed++;
+
+            // Tax rate trades income against how your tenants feel about you; the
+            // estate's own condition compounds on top of that — a decayed holding
+            // yields less no matter the tax rate, and a well-kept one yields more.
+            const taxMultiplier = game.taxRate === "high" ? 1.5 : game.taxRate === "low" ? 0.65 : 1;
+            const healthMultiplier = 0.5 + (game.estateHealth / 100);
 
             const incomeGain = Math.max(
                 0,
-                Math.floor(Math.random() * (game.land + 1))
+                Math.round((game.land * 4 + Math.random() * 5) * taxMultiplier * healthMultiplier)
             );
 
             game.wealth += incomeGain;
 
+            // Estates need upkeep or they slowly decay; popular loyalty drifts with
+            // whatever tax policy you're actually running, for better or worse.
+            game.estateHealth = Math.max(0, game.estateHealth - 2);
+            if (game.taxRate === "high") game.popularLoyalty = Math.max(0, game.popularLoyalty - 4);
+            else if (game.taxRate === "low") game.popularLoyalty = Math.min(100, game.popularLoyalty + 3);
+
             recapLines.push(
                 `You turn ${game.age}. Your estates yield ${incomeGain} gold in income, and the world moves on with births, deaths, marriages, and political shifts you had no hand in.`
             );
+
+            if (game.popularLoyalty < 25 && Math.random() < 0.5) {
+                const lost = Math.min(game.wealth, 5 + Math.floor(Math.random() * 10));
+                game.wealth -= lost;
+                recapLines.push(`Fields go unplowed and tenants slip away to neighboring domains rather than pay what you're asking — your stewards report ${lost} gold less than expected this year.`);
+            }
+
+            if (game.estateHealth < 25 && Math.random() < 0.5) {
+                const lost = Math.min(game.wealth, 5 + Math.floor(Math.random() * 10));
+                game.wealth -= lost;
+                recapLines.push(`Crumbling walls and neglected roads invite exactly the kind of trouble you'd expect — highway banditry costs your household ${lost} gold this year.`);
+            }
 
         }
 
