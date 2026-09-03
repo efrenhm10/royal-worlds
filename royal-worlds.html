@@ -235,11 +235,43 @@ ENTER WORLD →
 </section>
 
 
+<!-- ================= REALM SELECTION ================= -->
+
+<section id="realms" class="screen">
+
+<h1>🗺️ Choose Your Realm</h1>
+
+<p class="muted">
+Europe is not just England. Kingdoms, duchies, electorates, the Church
+and the great banking houses each have their own court, their own
+politics, and their own way of playing the game.
+</p>
+
+<div id="realmList" class="grid"></div>
+
+</section>
+
+
 <!-- ================= HOUSE SELECTION ================= -->
 
 <section id="houses" class="screen">
 
-<h1>🏰 Choose Your House</h1>
+<div class="top">
+
+<div>
+<h1 id="realmName"></h1>
+<p id="realmDescription" class="muted"></p>
+</div>
+
+<button id="backToRealms" style="max-width:180px;">
+← Realms
+</button>
+
+</div>
+
+<div class="card">
+
+<h2>Choose Your House</h2>
 
 <p class="muted">
 Your house determines your dynasty, relatives, political network,
@@ -247,6 +279,8 @@ resources and enemies.
 </p>
 
 <div id="houseList" class="grid"></div>
+
+</div>
 
 </section>
 
@@ -332,6 +366,7 @@ queen — a niece, a cousin, or a minor lord shapes this world too.
 <button data-tab="heir">👶 Children</button>
 <button data-tab="diplomacy">🤝 Diplomacy</button>
 <button data-tab="estates">🌾 Estates</button>
+<button data-tab="powers">⚡ Powers</button>
 <button data-tab="chronicle">📜 Chronicle</button>
 
 <button id="newGame" class="secondary">
@@ -370,6 +405,10 @@ york: {
 
 name: "House of York",
 
+realm: "Kingdom of England",
+homeCountry: "England",
+startStats: { wealth: 80, prestige: 90, influence: 35, land: 6 },
+
 description:
 "The ruling royal dynasty after Edward IV's victory.",
 
@@ -392,6 +431,10 @@ people: [
 neville: {
 
 name: "House Neville",
+
+realm: "Kingdom of England",
+homeCountry: "England",
+startStats: { wealth: 95, prestige: 55, influence: 85, land: 8 },
 
 description:
 "One of England's most powerful magnate families, with enormous land, wealth and political influence.",
@@ -416,6 +459,10 @@ woodville: {
 
 name: "House Woodville / Rivers",
 
+realm: "Kingdom of England",
+homeCountry: "England",
+startStats: { wealth: 55, prestige: 55, influence: 35, land: 2 },
+
 description:
 "A rising family whose fortunes are about to be transformed by royal marriage.",
 
@@ -439,6 +486,10 @@ lancaster: {
 
 name: "House Lancaster",
 
+realm: "Kingdom of England",
+homeCountry: "England",
+startStats: { wealth: 55, prestige: 55, influence: 35, land: 2 },
+
 description:
 "The defeated royal dynasty. Its claims and surviving supporters remain dangerous.",
 
@@ -460,6 +511,10 @@ beaufort: {
 
 name: "House Beaufort",
 
+realm: "Kingdom of England",
+homeCountry: "England",
+startStats: { wealth: 55, prestige: 55, influence: 35, land: 2 },
+
 description:
 "A powerful royal-blooded noble family connected to the Lancastrian world.",
 
@@ -477,8 +532,12 @@ burgundy: {
 
 name: "House Valois-Burgundy",
 
+realm: "Duchy of Burgundy",
+homeCountry: "Burgundy",
+startStats: { wealth: 100, prestige: 65, influence: 45, land: 5 },
+
 description:
-"A wealthy continental dynasty balancing England, France, trade and territorial ambition.",
+"A wealthy continental dynasty balancing England, France, trade and territorial ambition. The Golden Merchant of Christendom — richer than most kingdoms it deals with.",
 
 people: [
 
@@ -489,6 +548,253 @@ people: [
 ["Anne of Burgundy", 20, "Lady", "F"],
 
 ["A Burgundian noble", 25, "Plausible", "F"]
+
+]
+
+},
+
+valois: {
+
+name: "The Valois Court",
+
+realm: "Kingdom of France",
+homeCountry: "France",
+startStats: { wealth: 70, prestige: 60, influence: 40, land: 3 },
+
+description:
+"The French royal court under Louis XI — watchful, centralizing, and determined to see every great duchy answer to Paris in the end.",
+
+people: [
+
+["Anne of France", 20, "King's Daughter", "F"],
+
+["Pierre de Beaujeu", 24, "Courtier", "M"],
+
+["Louis, Duke of Orléans", 21, "Prince of the Blood", "M"],
+
+["A Valois courtier", 25, "Plausible", "F"]
+
+]
+
+},
+
+montfort: {
+
+name: "House of Montfort",
+
+realm: "Duchy of Brittany",
+homeCountry: "Brittany",
+startStats: { wealth: 50, prestige: 45, influence: 30, land: 3 },
+
+description:
+"The ducal house of an independent Brittany, wary of both France and England alike, and known already for sheltering exiles who may one day prove useful bargaining chips.",
+
+people: [
+
+["A Breton noble", 26, "Plausible", "M"],
+
+["A Breton noblewoman", 23, "Plausible", "F"],
+
+["A steward of the ducal court", 40, "Steward", "M"]
+
+]
+
+},
+
+trastamara: {
+
+name: "The Castilian Court",
+
+realm: "Crown of Castile",
+homeCountry: "Castile",
+startStats: { wealth: 60, prestige: 50, influence: 35, land: 2 },
+
+description:
+"Courtiers and kin surrounding the fractured Trastámara succession — a court shadowed by the long war against Granada and an unresolved question of who will one day wear the crown.",
+
+people: [
+
+["Beatriz de Bobadilla", 18, "Lady-in-waiting", "F"],
+
+["Andrés de Cabrera", 28, "Royal Official", "M"],
+
+["A Castilian noble", 26, "Plausible", "M"]
+
+]
+
+},
+
+aragon: {
+
+name: "The Aragonese Court",
+
+realm: "Crown of Aragon",
+homeCountry: "Aragon",
+startStats: { wealth: 55, prestige: 50, influence: 30, land: 2 },
+
+description:
+"The court of the Crown of Aragon — Mediterranean, mercantile, and watching Castile as closely as it watches France.",
+
+people: [
+
+["A nobleman of Aragon", 25, "Plausible", "M"],
+
+["A noblewoman of Aragon", 22, "Plausible", "F"],
+
+["A Catalan merchant-noble", 35, "Plausible", "M"]
+
+]
+
+},
+
+aviz: {
+
+name: "The House of Aviz",
+
+realm: "Kingdom of Portugal",
+homeCountry: "Portugal",
+startStats: { wealth: 65, prestige: 45, influence: 30, land: 2 },
+
+description:
+"Portugal's royal house, restless and outward-looking, with talk at court turning as often to voyages down the African coast as to any war closer to home.",
+
+people: [
+
+["A Portuguese nobleman", 24, "Plausible", "M"],
+
+["A Portuguese noblewoman", 21, "Plausible", "F"],
+
+["A captain of the exploration fleets", 30, "Captain", "M"]
+
+]
+
+},
+
+habsburg: {
+
+name: "The House of Habsburg",
+
+realm: "Archduchy of Austria",
+homeCountry: "Austria",
+startStats: { wealth: 60, prestige: 65, influence: 40, land: 4 },
+
+description:
+"The Austrian archducal court — custodian, for now, of the Imperial crown, and famous across Christendom for winning by marriage what others win by war.",
+
+people: [
+
+["A Habsburg archduke", 22, "Plausible", "M"],
+
+["A Habsburg archduchess", 19, "Plausible", "F"],
+
+["An Imperial courtier", 35, "Plausible", "M"]
+
+]
+
+},
+
+saxony: {
+
+name: "The Electorate of Saxony",
+
+realm: "The Holy Roman Empire",
+homeCountry: "Saxony",
+startStats: { wealth: 50, prestige: 40, influence: 45, land: 4 },
+
+description:
+"One of the seven Prince-Electorates whose vote decides who wears the Imperial crown — worth more to outsiders, most days, than its own army.",
+
+people: [
+
+["A Saxon nobleman", 26, "Plausible", "M"],
+
+["A Saxon noblewoman", 23, "Plausible", "F"]
+
+]
+
+},
+
+brandenburg: {
+
+name: "The Electorate of Brandenburg",
+
+realm: "The Holy Roman Empire",
+homeCountry: "Brandenburg",
+startStats: { wealth: 48, prestige: 40, influence: 45, land: 4 },
+
+description:
+"A Prince-Electorate on the Empire's eastern edge, its electoral vote bought and courted by rulers who will never set foot in its own lands.",
+
+people: [
+
+["A Brandenburg nobleman", 27, "Plausible", "M"],
+
+["A Brandenburg noblewoman", 24, "Plausible", "F"]
+
+]
+
+},
+
+palatinate: {
+
+name: "The Electorate of the Palatinate",
+
+realm: "The Holy Roman Empire",
+homeCountry: "Palatinate",
+startStats: { wealth: 52, prestige: 40, influence: 45, land: 4 },
+
+description:
+"A Rhineland Prince-Electorate, guardian of one of the seven votes for Emperor, and never shy about the price of its loyalty.",
+
+people: [
+
+["A Palatine nobleman", 25, "Plausible", "M"],
+
+["A Palatine noblewoman", 22, "Plausible", "F"]
+
+]
+
+},
+
+curia: {
+
+name: "The Roman Curia",
+
+realm: "The Roman Church",
+homeCountry: "Rome",
+startStats: { wealth: 45, prestige: 70, influence: 60, land: 1 },
+
+description:
+"The Church's central government in Rome — piety, politics, and the machinery of Christendom's spiritual authority, all bound tightly together, and answerable, in the end, to gold as much as to God.",
+
+people: [
+
+["A cardinal of the Curia", 48, "Cardinal", "M"],
+
+["A Roman noblewoman of curial influence", 30, "Plausible", "F"],
+
+["A papal secretary", 33, "Plausible", "M"]
+
+]
+
+},
+
+medici: {
+
+name: "The Medici Bank",
+
+realm: "The Medici Bank",
+homeCountry: "Florence",
+startStats: { wealth: 130, prestige: 35, influence: 50, land: 0 },
+
+description:
+"Florence's great banking dynasty, whose loans and favor shape the fortunes of kings who will never quite admit how much they owe.",
+
+people: [
+
+["A Medici kinsman", 27, "Banker", "M"],
+
+["A Medici kinswoman", 24, "Plausible", "F"]
 
 ]
 
@@ -507,65 +813,154 @@ const MARRIAGE_MARKET = {
 
   england: {
     country: "England",
-    tier: "domestic",
-    tierLabel: "Domestic match",
-    prospects: {
-      M: [{ id: "neville_cousin", name: "A Neville cousin", relKey: "NevilleCousin", demandGold: 15, demandLand: 0, consortTitle: null }],
-      F: [{ id: "percy_heir", name: "A Percy heir", relKey: "PercyHeir", demandGold: 15, demandLand: 0, consortTitle: null }]
-    }
+    countryKey: "england",
+    royal: null,
+    noble: {
+      tierLabel: "Noble match",
+      houses: {
+        yorkist: { label: "A Yorkist noble house", relKey: "YorkNobles", demandGold: 30, demandLand: 1 },
+        lancastrian: { label: "A Lancastrian noble house", relKey: "LancastrianNobles", demandGold: 30, demandLand: 1 }
+      }
+    },
+    merchant: { tierLabel: "Merchant match", relKey: "EnglishMerchants", demandGold: 10, demandLand: 0 }
   },
 
   burgundy: {
     country: "Burgundy",
-    tier: "royal",
-    tierLabel: "Royal match",
-    prospects: {
-      F: [{ id: "charles_bold", name: "Charles the Bold, heir to Burgundy", relKey: "Charles", demandGold: 55, demandLand: 2, consortTitle: "Duchess of Burgundy" }],
-      M: [{ id: "anne_burgundy", name: "Anne of Burgundy", relKey: "AnneBurgundy", demandGold: 50, demandLand: 2, consortTitle: null }]
-    }
+    countryKey: "burgundy",
+    royal: {
+      tierLabel: "Royal match",
+      prospects: {
+        F: [{ id: "charles_bold", name: "Charles the Bold, heir to Burgundy", relKey: "Charles", demandGold: 55, demandLand: 2, consortTitle: "Duchess of Burgundy" }],
+        M: [{ id: "anne_burgundy", name: "Anne of Burgundy", relKey: "AnneBurgundy", demandGold: 50, demandLand: 2, consortTitle: null }]
+      }
+    },
+    noble: { tierLabel: "Noble match", relKey: "BurgundianNobles", demandGold: 35, demandLand: 1 },
+    merchant: { tierLabel: "Merchant match", relKey: "BurgundianMerchants", demandGold: 12, demandLand: 0 }
   },
 
   france: {
     country: "France",
-    tier: "royal",
-    tierLabel: "Royal match",
-    prospects: {
-      F: [{ id: "valois_prince", name: "A prince of the House of Valois", relKey: "France", demandGold: 65, demandLand: 2, consortTitle: null }],
-      M: [{ id: "bona_savoy", name: "Bona of Savoy, kin to the French crown", relKey: "France", demandGold: 60, demandLand: 2, consortTitle: null }]
-    }
+    countryKey: "france",
+    royal: {
+      tierLabel: "Royal match",
+      prospects: {
+        F: [{ id: "valois_prince", name: "A prince of the House of Valois", relKey: "France", demandGold: 65, demandLand: 2, consortTitle: null }],
+        M: [{ id: "bona_savoy", name: "Bona of Savoy, kin to the French crown", relKey: "France", demandGold: 60, demandLand: 2, consortTitle: null }]
+      }
+    },
+    noble: { tierLabel: "Noble match", relKey: "FrenchNobles", demandGold: 35, demandLand: 1 },
+    merchant: { tierLabel: "Merchant match", relKey: "FrenchMerchants", demandGold: 12, demandLand: 0 }
   },
 
   scotland: {
     country: "Scotland",
-    tier: "noble",
-    tierLabel: "Noble match",
-    prospects: {
-      F: [{ id: "stewart_lord", name: "A lord of the House of Stewart", relKey: "Scotland", demandGold: 30, demandLand: 1, consortTitle: null }],
-      M: [{ id: "stewart_lady", name: "A lady of the House of Stewart", relKey: "Scotland", demandGold: 30, demandLand: 1, consortTitle: null }]
-    }
+    countryKey: "scotland",
+    royal: null,
+    noble: { tierLabel: "Noble match", relKey: "Scotland", demandGold: 30, demandLand: 1 },
+    merchant: { tierLabel: "Merchant match", relKey: "ScottishMerchants", demandGold: 10, demandLand: 0 }
   },
 
   castile: {
     country: "Castile",
-    tier: "royal",
-    tierLabel: "Royal match",
-    prospects: {
-      F: [{ id: "infante", name: "An Infante of Castile", relKey: "Castile", demandGold: 70, demandLand: 2, consortTitle: null }],
-      M: [{ id: "infanta", name: "An Infanta of Castile", relKey: "Castile", demandGold: 70, demandLand: 2, consortTitle: null }]
-    }
+    countryKey: "castile",
+    royal: {
+      tierLabel: "Royal match",
+      prospects: {
+        F: [{ id: "infante", name: "An Infante of Castile", relKey: "Castile", demandGold: 70, demandLand: 2, consortTitle: null }],
+        M: [{ id: "infanta", name: "An Infanta of Castile", relKey: "Castile", demandGold: 70, demandLand: 2, consortTitle: null }]
+      }
+    },
+    noble: { tierLabel: "Noble match", relKey: "CastilianNobles", demandGold: 40, demandLand: 1 },
+    merchant: { tierLabel: "Merchant match", relKey: "CastilianMerchants", demandGold: 15, demandLand: 0 }
   },
 
   portugal: {
     country: "Portugal",
-    tier: "noble",
-    tierLabel: "Noble match",
-    prospects: {
-      F: [{ id: "aviz_lord", name: "A nobleman of the House of Aviz", relKey: "Portugal", demandGold: 35, demandLand: 1, consortTitle: null }],
-      M: [{ id: "aviz_lady", name: "A noblewoman of the House of Aviz", relKey: "Portugal", demandGold: 35, demandLand: 1, consortTitle: null }]
-    }
+    countryKey: "portugal",
+    royal: null,
+    noble: { tierLabel: "Noble match", relKey: "Portugal", demandGold: 35, demandLand: 1 },
+    merchant: { tierLabel: "Merchant match", relKey: "PortugueseMerchants", demandGold: 12, demandLand: 0 }
+  },
+
+  brittany: {
+    country: "Brittany",
+    countryKey: "brittany",
+    royal: null,
+    noble: { tierLabel: "Noble match", relKey: "Brittany", demandGold: 30, demandLand: 1 },
+    merchant: { tierLabel: "Merchant match", relKey: "BretonMerchants", demandGold: 10, demandLand: 0 }
+  },
+
+  aragon: {
+    country: "Aragon",
+    countryKey: "aragon",
+    royal: {
+      tierLabel: "Royal match",
+      prospects: {
+        F: [{ id: "ferdinand_aragon", name: "Ferdinand, heir to Aragon", relKey: "Aragon", demandGold: 60, demandLand: 2, consortTitle: null }],
+        M: [{ id: "aragon_infanta", name: "An Infanta of Aragon", relKey: "Aragon", demandGold: 60, demandLand: 2, consortTitle: null }]
+      }
+    },
+    noble: { tierLabel: "Noble match", relKey: "AragoneseNobles", demandGold: 35, demandLand: 1 },
+    merchant: { tierLabel: "Merchant match", relKey: "AragoneseMerchants", demandGold: 12, demandLand: 0 }
+  },
+
+  austria: {
+    country: "Austria",
+    countryKey: "austria",
+    royal: {
+      tierLabel: "Royal match",
+      // "Bella gerant alii, tu felix Austria nube" — the Habsburgs are famous for making
+      // marriage easy: their asking price is deliberately lower than a crown this size
+      // would normally command, because the match itself is the whole strategy.
+      prospects: {
+        F: [{ id: "habsburg_archduke", name: "A Habsburg Archduke", relKey: "Austria", demandGold: 40, demandLand: 1, consortTitle: null }],
+        M: [{ id: "habsburg_archduchess", name: "A Habsburg Archduchess", relKey: "Austria", demandGold: 40, demandLand: 1, consortTitle: null }]
+      }
+    },
+    noble: { tierLabel: "Noble match", relKey: "AustrianNobles", demandGold: 35, demandLand: 1 },
+    merchant: { tierLabel: "Merchant match", relKey: "AustrianMerchants", demandGold: 12, demandLand: 0 }
   }
 
 };
+
+// Name pools for noble/merchant matches nobody bothered to record in the chronicles —
+// the player can override the suggestion, but there's always a plausible one ready.
+const NOBLE_NAME_POOLS = {
+  england: { M: ["Thomas","John","Robert","Richard","Edmund","Walter","Humphrey"], F: ["Margaret","Alice","Joan","Eleanor","Agnes","Isabel","Cecily"], yorkistSurnames: ["Stafford","Herbert","Hastings","Howard","Devereux"], lancastrianSurnames: ["Beaumont","Courtenay","Percy","Clifford","Roos"] },
+  burgundy: { M: ["Jean","Philippe","Guy","Adolf","Louis"], F: ["Marguerite","Jeanne","Isabelle","Catherine","Yolande"], surnames: ["de Croÿ","de Lannoy","van Borselen","de Ligne","de Lalaing"] },
+  france: { M: ["Jean","Louis","Charles","Guy","Robert"], F: ["Jeanne","Marguerite","Isabelle","Yolande","Anne"], surnames: ["de Montmorency","d'Albret","de Brézé","de Coucy","de Chabannes"] },
+  scotland: { M: ["James","Robert","Archibald","David","Alexander"], F: ["Margaret","Euphemia","Janet","Mary","Elizabeth"], surnames: ["Douglas","Hamilton","Lindsay","Kennedy","Erskine"] },
+  castile: { M: ["Diego","Alonso","Pedro","Íñigo","Rodrigo"], F: ["Beatriz","Leonor","Mencía","Teresa","Catalina"], surnames: ["de Mendoza","de Guzmán","Manrique","de Velasco","de Ayala"] },
+  portugal: { M: ["João","Diogo","Afonso","Fernando","Vasco"], F: ["Beatriz","Filipa","Isabel","Leonor","Joana"], surnames: ["de Meneses","de Sousa","Pereira","de Castro","de Almeida"] },
+  brittany: { M: ["Jean","Pierre","Guy","François","Olivier"], F: ["Anne","Marguerite","Françoise","Jeanne","Isabeau"], surnames: ["de Rohan","de Rieux","de Laval","du Guesclin","de Malestroit"] },
+  aragon: { M: ["Ferran","Joan","Alfons","Pere","Martí"], F: ["Elionor","Joana","Beatriu","Isabel","Violant"], surnames: ["de Cardona","de Urrea","de Luna","de Moncada","de Centelles"] },
+  austria: { M: ["Maximilian","Sigismund","Albrecht","Leopold","Ernst"], F: ["Kunigunde","Margarete","Elisabeth","Katharina","Eleonore"], surnames: ["von Liechtenstein","von Starhemberg","von Kuenring","von Auersperg","von Rosenberg"] },
+  saxony: { M: ["Ernst","Albrecht","Friedrich","Wilhelm","Georg"], F: ["Sophie","Katharina","Margarete","Barbara","Anna"], surnames: ["von Miltitz","von Schönberg","von Einsiedel","von Bünau"] },
+  brandenburg: { M: ["Albrecht","Johann","Friedrich","Sigismund","Otto"], F: ["Barbara","Anna","Dorothea","Ursula","Margarete"], surnames: ["von Bredow","von Quitzow","von der Schulenburg","von Rochow"] },
+  palatinate: { M: ["Friedrich","Philipp","Ludwig","Ruprecht","Otto"], F: ["Margarete","Katharina","Elisabeth","Mechthild","Klara"], surnames: ["von Sickingen","von Hirschhorn","von Erbach","von Sponheim"] }
+};
+
+const MERCHANT_SURNAMES = {
+  england: ["Canynges","Chalton","Philpot","Shaa","Tate"],
+  burgundy: ["van der Beurse","de Baenst","Metteneye","Adornes"],
+  france: ["Le Picart","Berthelot","Briçonnet","Ruzé"],
+  scotland: ["Napier","Cochrane","Halyburton","Guthrie"],
+  castile: ["de Burgos","Ruiz","de Medina","del Puerto"],
+  portugal: ["Fernandes","Lopes","Gonçalves","Eanes"],
+  brittany: ["Le Barbu","Le Bihan","Coatanlem","Le Roux"],
+  aragon: ["Santángel","de Paternoy","Sánchez","Gralla"],
+  austria: ["Fugger","Baumgartner","Höchstetter","Welser"]
+};
+
+function randomFrom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+function generatePeriodName(countryKey, gender, surnamePool) {
+    const pool = NOBLE_NAME_POOLS[countryKey] || NOBLE_NAME_POOLS.england;
+    const first = randomFrom(pool[gender] || pool.M);
+    const surname = randomFrom(surnamePool && surnamePool.length ? surnamePool : MERCHANT_SURNAMES.england);
+    return `${first} ${surname}`;
+}
 
 // Swap a title's gendered word so an heir who inherits it reads correctly regardless of
 // their own gender — "Duchess of Burgundy" becomes "Duke of Burgundy" for a son, etc.
@@ -577,6 +972,16 @@ function adaptTitleGender(title, gender) {
         if (gender === "M" && title.indexOf(f) === 0) return m + title.slice(f.length);
     }
     return title;
+}
+
+// What an heir's title becomes on inheriting — strips a "Dowager " prefix first, since
+// dowager status belongs to the widow who held it, not the new heir taking the position
+// itself (an heir of a "Dowager Duchess" becomes "Duke"/"Duchess", never "Dowager Duke").
+function resolveHeirTitle(oldRole, heirGender) {
+    const stripped = (oldRole || "").replace(/^Dowager\s+/, "");
+    const isInheritable = /Duke|Duchess|King|Queen|Earl|Countess/.test(stripped);
+    if (!isInheritable) return heirGender === "F" ? "Lady" : "Lord";
+    return adaptTitleGender(stripped, heirGender);
 }
 
 // A courtesy title for a child, reflecting the parent's actual current standing —
@@ -646,6 +1051,75 @@ const COUNTRY_PROFILES = {
     people: [
       ["Portugal", "King Afonso V"],
       ["Edward", "Edward IV of England"],
+    ]
+  },
+
+  Brittany: {
+    desc: "You are at the Breton ducal court under Duke Francis II — smaller and quieter than the great crowns around it, and acutely aware that its independence survives only by playing France and England off each other. An exiled Lancastrian claimant, Henry Tudor, is currently a guest here — or a prisoner, depending on who you ask.",
+    people: [
+      ["Brittany", "Duke Francis II"],
+      ["France", "King Louis XI"],
+      ["Edward", "Edward IV of England"],
+    ]
+  },
+
+  Aragon: {
+    desc: "You are at the Aragonese court — Mediterranean, mercantile, and never quite as interested in the Wars of the Roses as it is in Castile, France, and its own trading interests in Naples and Sicily.",
+    people: [
+      ["Aragon", "King John II of Aragon"],
+      ["Castile", "The Castilian Crown"],
+      ["France", "King Louis XI"],
+    ]
+  },
+
+  Austria: {
+    desc: "You are at the Habsburg archducal court under Emperor Frederick III — patient, unglamorous, and playing a longer game than anyone around it: winning by marriage what others spend armies trying to win by war.",
+    people: [
+      ["Austria", "Emperor Frederick III"],
+      ["Burgundy", "The Burgundian Crown"],
+      ["France", "King Louis XI"],
+    ]
+  },
+
+  Saxony: {
+    desc: "You are at the Saxon electoral court — smaller than a kingdom, but its vote for the Imperial crown makes it courted by rulers far larger than itself.",
+    people: [
+      ["Austria", "The Habsburg Emperor"],
+      ["France", "King Louis XI"],
+    ]
+  },
+
+  Brandenburg: {
+    desc: "You are at the Brandenburg electoral court on the Empire's eastern edge — modest in wealth, considerable in leverage, thanks to the electoral vote it alone controls.",
+    people: [
+      ["Austria", "The Habsburg Emperor"],
+      ["France", "King Louis XI"],
+    ]
+  },
+
+  Palatinate: {
+    desc: "You are at the Palatine electoral court on the Rhine — a small state that punches well above its weight whenever an Imperial election draws near.",
+    people: [
+      ["Austria", "The Habsburg Emperor"],
+      ["France", "King Louis XI"],
+    ]
+  },
+
+  Rome: {
+    desc: "You are within the Roman Curia — the Church's own government, where piety, politics, and the machinery of Christendom's spiritual authority are impossible to fully separate from one another.",
+    people: [
+      ["Rome", "The Holy Father"],
+      ["France", "King Louis XI"],
+      ["Austria", "The Habsburg Emperor"],
+    ]
+  },
+
+  Florence: {
+    desc: "You are within the counting-houses of the Medici Bank in Florence — no crown, no army, and yet half of Christendom's rulers owe you something.",
+    people: [
+      ["Rome", "The Holy Father"],
+      ["Edward", "Edward IV of England"],
+      ["France", "King Louis XI"],
     ]
   },
 
@@ -745,6 +1219,8 @@ const WORLD_TIMELINE = [
               g.married = false;
               g.spouseName = null;
               g.spouseCountry = null;
+              g.spouseAge = null;
+              g.spouseRelKey = null;
               g.prestige = Math.max(0, g.prestige - 10);
               g.pendingWidowhood = oldSpouse;
               if (recapLines) recapLines.push(`You are widowed — ${oldSpouse} has died in battle at Nancy.`);
@@ -762,6 +1238,7 @@ const WORLD_TIMELINE = [
       apply: (g) => { g.worldFlags.burgundyAnnexed = true; } },
 
     { id: "henry_iv_castile_dies", year: 1474, month: 12,
+      eligible: (g) => g.location !== "Castile",
       text: `News from Castile: King Henry IV has died. His half-sister Isabella proclaims herself Queen at Segovia — though many contest it in favor of his daughter Joanna.`,
       apply: (g) => { g.worldFlags.isabellaIsQueen = true; } },
 
@@ -778,10 +1255,12 @@ const WORLD_TIMELINE = [
       apply: (g) => { g.worldFlags.castilianSuccessionWar = false; g.worldFlags.isabellaConfirmed = true; } },
 
     { id: "afonso_dies", year: 1481, month: 8,
+      loyaltyIfPresent: { country: "Portugal", relKey: "Portugal", newRulerLabel: "King John II" },
       text: `News from Portugal: King Afonso V has died. His son succeeds as King John II.`,
       apply: (g) => { g.worldFlags.afonsoDead = true; } },
 
     { id: "edward_dies", year: 1483, month: 4,
+      eligible: (g) => g.location !== "England",
       text: `News from England: King Edward IV has died. His young son is briefly proclaimed Edward V before the Duke of Gloucester seizes the throne as Richard III.`,
       apply: (g) => { g.worldFlags.edwardDead = true; } },
 
@@ -790,10 +1269,12 @@ const WORLD_TIMELINE = [
       apply: () => {} },
 
     { id: "richard_crowned", year: 1483, month: 7,
+      eligible: (g) => g.location !== "England",
       text: `News from England: Richard, Duke of Gloucester, has been crowned King Richard III at Westminster Abbey, his nephews' claim set aside on grounds of their late father's marriage being declared invalid.`,
       apply: (g) => { g.worldFlags.richardIsKing = true; } },
 
     { id: "princes_vanish", year: 1483, month: 9,
+      eligible: (g) => g.location !== "England",
       text: `Unsettling news from England: the young Edward V and his brother Richard, lodged in the Tower of London, have not been seen for weeks. No one at court will say aloud what everyone privately fears.`,
       apply: () => {} },
 
@@ -820,12 +1301,39 @@ const WORLD_TIMELINE = [
       apply: (g) => { g.worldFlags.tudorRoseUnited = true; } },
 
     { id: "louis_dies", year: 1483, month: 8,
+      loyaltyIfPresent: { country: "France", relKey: "France", newRulerLabel: "King Charles VIII" },
       text: `News from France: King Louis XI has died. His young son succeeds as Charles VIII.`,
       apply: (g) => { g.worldFlags.louisDead = true; } },
 
     { id: "james_iii_dies", year: 1488, month: 6,
+      loyaltyIfPresent: { country: "Scotland", relKey: "Scotland", newRulerLabel: "King James IV" },
       text: `News from Scotland: King James III has been killed after a rebellion led by disaffected nobles — and, uncomfortably, his own son. James IV succeeds him.`,
       apply: (g) => { g.worldFlags.jamesIIIDead = true; } },
+
+    { id: "imperial_election_maximilian", year: 1486, month: 2,
+      text: `News from the Holy Roman Empire: the Prince-Electors have chosen Maximilian of Habsburg as King of the Romans, securing the Imperial succession for his father Frederick III's house for another generation.`,
+      apply: (g, recapLines) => {
+          g.worldFlags.maximilianElected = true;
+          if (g.homeCountry === "Austria" && g.electorFavor >= 40) {
+              g.prestige += 15;
+              if (recapLines) recapLines.push(`Your own years of courting the Electors are quietly credited — Vienna knows exactly whose gold and patience helped secure this.`);
+          }
+          if (["Saxony", "Brandenburg", "Palatinate"].includes(g.homeCountry) && !g.worldFlags.electorSoldVote) {
+              g.relationships.Austria = Math.min(100, (g.relationships.Austria || 20) + 10);
+              if (recapLines) recapLines.push(`Your vote is remembered as one of the ones that came without a fight.`);
+          }
+      } },
+
+    { id: "granada_falls", year: 1492, month: 1,
+      text: `News from the south: after a decade of grinding war, the Emirate of Granada has fallen to the combined armies of Castile and Aragon — the Reconquista, seven centuries in the making, is complete.`,
+      apply: (g, recapLines) => {
+          g.worldFlags.granadaFallen = true;
+          if ((g.homeCountry === "Castile" || g.homeCountry === "Aragon") && g.granadaProgress >= 45) {
+              g.prestige += 20;
+              g.piety += 15;
+              if (recapLines) recapLines.push(`Your own contributions to the long campaign are remembered — the Pope's favor toward your house grows markedly.`);
+          }
+      } },
 ];
 
 function checkWorldTimeline(recapLines) {
@@ -839,6 +1347,9 @@ function checkWorldTimeline(recapLines) {
             game.firedWorldEvents.push(ev.id);
             ev.apply(game, recapLines);
             recapLines.push(ev.text);
+            if (ev.loyaltyIfPresent && game.location === ev.loyaltyIfPresent.country) {
+                game.pendingLoyaltyEvents.push(ev.loyaltyIfPresent);
+            }
         }
 
     });
@@ -893,6 +1404,8 @@ function livingLabel(key, defaultLabel) {
 
 let game = null;
 
+let selectedRealm = null;
+
 let selectedHouse = null;
 
 let currentTab = "overview";
@@ -915,42 +1428,98 @@ function showScreen(id) {
 
 
 /* =========================================================
-   HOUSE SELECTION
+   REALM SELECTION — the top-level choice of which political
+   entity you're entering the world as. Grouped from HOUSES so
+   adding a new realm is just a matter of adding houses to it.
 ========================================================= */
 
-function showHouses() {
+const REALM_DESCRIPTIONS = {
+    "Kingdom of England": "A fractured royal house, a civil war only recently decided, and a crown that has already changed hands once in living memory.",
+    "Kingdom of France": "The Valois crown, centralizing at the expense of every great duchy it can reach.",
+    "Duchy of Burgundy": "The wealthiest, most ceremonious court in Christendom — and one openly hoping to become a kingdom in its own right.",
+    "Duchy of Brittany": "An independent duchy walking a narrow line between France and England, and already sheltering exiles who may prove valuable one day.",
+    "Crown of Castile": "A kingdom shadowed by the long war against Granada and an unresolved question of succession.",
+    "Crown of Aragon": "A Mediterranean crown, mercantile and watchful, with one eye always on Castile.",
+    "Kingdom of Portugal": "A restless, seafaring kingdom more interested in the African coast than in continental wars.",
+    "Archduchy of Austria": "The Habsburg seat of the Imperial crown — a house that wins more by marriage than by war.",
+    "The Holy Roman Empire": "A fragmented patchwork of princely states held together by an elected Emperor and the electors who make him.",
+    "The Roman Church": "Rome's central government — piety, politics, and the machinery of Christendom's spiritual authority.",
+    "The Medici Bank": "Florence's great banking dynasty, whose gold quietly shapes the fortunes of kings.",
+};
+
+function showRealms() {
+
+    const realmOrder = [];
+    Object.values(HOUSES).forEach(h => { if (!realmOrder.includes(h.realm)) realmOrder.push(h.realm); });
+
+    const list = document.getElementById("realmList");
+
+    list.innerHTML = "";
+
+    realmOrder.forEach(realm => {
+
+        const button = document.createElement("button");
+
+        button.innerHTML = `
+            <strong>${realm}</strong>
+            <br>
+            <span class="muted">${REALM_DESCRIPTIONS[realm] || ""}</span>
+        `;
+
+        button.addEventListener("click", () => chooseRealm(realm));
+
+        list.appendChild(button);
+
+    });
+
+    showScreen("realms");
+
+}
+
+
+function chooseRealm(realm) {
+
+    selectedRealm = realm;
+
+    document.getElementById("realmName").textContent = realm;
+    document.getElementById("realmDescription").textContent = REALM_DESCRIPTIONS[realm] || "";
 
     const list = document.getElementById("houseList");
 
     list.innerHTML = "";
 
-    for (const key in HOUSES) {
+    Object.entries(HOUSES)
+        .filter(([, h]) => h.realm === realm)
+        .forEach(([key, house]) => {
 
-        const house = HOUSES[key];
+            const button = document.createElement("button");
 
-        const button = document.createElement("button");
+            button.innerHTML = `
+                <strong>${house.name}</strong>
+                <br>
+                <span class="muted">
+                    ${house.description}
+                </span>
+            `;
 
-        button.innerHTML = `
-            <strong>${house.name}</strong>
-            <br>
-            <span class="muted">
-                ${house.description}
-            </span>
-        `;
+            button.addEventListener("click", () => {
 
-        button.addEventListener("click", () => {
+                chooseHouse(key);
 
-            chooseHouse(key);
+            });
+
+            list.appendChild(button);
 
         });
 
-        list.appendChild(button);
-
-    }
-
     showScreen("houses");
+
 }
 
+
+/* =========================================================
+   HOUSE SELECTION
+========================================================= */
 
 function chooseHouse(key) {
 
@@ -1000,8 +1569,8 @@ function chooseHouse(key) {
 
 function startGame(index) {
 
-    const person =
-        HOUSES[selectedHouse].people[index];
+    const house = HOUSES[selectedHouse];
+    const person = house.people[index];
 
     game = {
 
@@ -1019,46 +1588,35 @@ function startGame(index) {
 
         month: 1,
 
-        location:
-            selectedHouse === "burgundy"
-                ? "Burgundy"
-                : "England",
+        location: house.homeCountry,
 
-        homeCountry:
-            selectedHouse === "burgundy"
-                ? "Burgundy"
-                : "England",
+        homeCountry: house.homeCountry,
 
         arrivedYear: 1461,
         arrivedMonth: 1,
 
         worldFlags: {},
         pendingWidowhood: null,
+        pendingLoyaltyEvents: [],
         firedWorldEvents: [],
+        diplomacyCountry: null,
 
-        wealth:
-            selectedHouse === "neville"
-                ? 95
-                : selectedHouse === "york"
-                    ? 80
-                    : 55,
+        wealth: house.startStats.wealth,
 
-        prestige:
-            selectedHouse === "york"
-                ? 90
-                : 55,
+        prestige: house.startStats.prestige,
 
-        influence:
-            selectedHouse === "neville"
-                ? 85
-                : 35,
+        influence: house.startStats.influence,
 
-        land:
-            selectedHouse === "neville"
-                ? 8
-                : selectedHouse === "york"
-                    ? 6
-                    : 2,
+        land: house.startStats.land,
+
+        // The Church lends and lobbies rather than levying troops; the Medici Bank has
+        // no army or land at all, but starts with piety/ledger tracking of its own.
+        piety: selectedHouse === "curia" ? 70 : 40,
+        loansOutstanding: [],
+        pendingBankDefaults: [],
+        bankFavor: 40,
+        electorFavor: 0,
+        granadaProgress: 0,
 
         relationships: {
 
@@ -1105,9 +1663,13 @@ function startGame(index) {
         married: false,
         spouseName: null,
         spouseCountry: null,
+        spouseAge: null,
+        spouseRelKey: null,
 
         negotiation: null,
         pendingCountry: null,
+        pendingTier: null,
+        pendingHouse: null,
         pendingSubject: null,
         pendingChildIndex: null,
         manageChildIndex: null,
@@ -1118,7 +1680,7 @@ function startGame(index) {
 
         chronicle: [
 
-            `1461: ${person[0]} enters the political world as a member of ${HOUSES[selectedHouse].name}.`
+            `1461: ${person[0]} enters the political world as a member of ${house.name}.`
 
         ]
 
@@ -1195,6 +1757,9 @@ function render() {
 
     if (currentTab === "estates")
         renderEstates(content);
+
+    if (currentTab === "powers")
+        renderPowers(content);
 
     if (currentTab === "chronicle")
         renderChronicle(content);
@@ -1822,6 +2387,9 @@ function renderChildren(content) {
 }
 
 
+// Marriage now runs country → tier (royal / noble / merchant) → for England's noble
+// tier, a Yorkist-or-Lancastrian house choice with a real loyalty test → a fixed named
+// prospect (royal) or a custom-named one you can name yourself (noble/merchant).
 function renderProspectChoice(content) {
 
     const market = MARRIAGE_MARKET[game.pendingCountry];
@@ -1831,7 +2399,147 @@ function renderProspectChoice(content) {
     const subjectGender = isChild ? childRef.gender : game.gender;
     const subjectName = isChild ? childRef.name : game.person;
 
-    const prospects = (market.prospects[subjectGender] || market.prospects.F)
+    if (!game.pendingTier) {
+        renderTierChoice(content, market, subjectName);
+        return;
+    }
+
+    if (game.pendingTier === "noble" && market.noble.houses && !game.pendingHouse) {
+        renderHouseChoice(content, market, subjectName);
+        return;
+    }
+
+    if (game.pendingTier === "royal") {
+        renderRoyalProspects(content, market, subjectGender, subjectName);
+        return;
+    }
+
+    renderCustomMatchEntry(content, market, subjectGender, subjectName);
+
+}
+
+
+function renderTierChoice(content, market, subjectName) {
+
+    content.innerHTML = `
+        <div class="card">
+            <h2>💍 ${market.country}</h2>
+            <p class="muted">On behalf of <strong>${subjectName}</strong>. What kind of match are you seeking here?</p>
+        </div>
+        <div class="grid" id="tierGrid"></div>
+        <button class="secondary" id="backToCountries">← Choose a different country</button>
+    `;
+
+    const grid = content.querySelector("#tierGrid");
+
+    if (market.royal) {
+        const btn = document.createElement("button");
+        btn.innerHTML = `<strong>👑 Royal Match</strong><br><span class="muted">A real, named figure close to the throne. Highest prestige, highest price.</span>`;
+        btn.addEventListener("click", () => { game.pendingTier = "royal"; render(); });
+        grid.appendChild(btn);
+    }
+
+    const nobleBtn = document.createElement("button");
+    nobleBtn.innerHTML = `<strong>🛡️ Noble Match</strong><br><span class="muted">${market.noble.houses ? "A great house, aligned with a faction of its own." : "A landed family of real local standing."}</span>`;
+    nobleBtn.addEventListener("click", () => { game.pendingTier = "noble"; render(); });
+    grid.appendChild(nobleBtn);
+
+    const merchBtn = document.createElement("button");
+    merchBtn.innerHTML = `<strong>🪙 Merchant Match</strong><br><span class="muted">Modest standing, modest cost — wealth without a title behind it.</span>`;
+    merchBtn.addEventListener("click", () => { game.pendingTier = "merchant"; render(); });
+    grid.appendChild(merchBtn);
+
+    content.querySelector("#backToCountries").addEventListener("click", () => {
+        game.pendingCountry = null;
+        game.pendingTier = null;
+        game.pendingHouse = null;
+        game.pendingSubject = null;
+        game.pendingChildIndex = null;
+        game.manageChildIndex = null;
+        render();
+    });
+
+}
+
+
+function renderHouseChoice(content, market, subjectName) {
+
+    content.innerHTML = `
+        <div class="card">
+            <h2>🛡️ A Noble House</h2>
+            <p class="muted">On behalf of <strong>${subjectName}</strong>. England's noble families are not neutral ground — whichever you choose says something about where your own house stands.</p>
+        </div>
+        <div class="grid" id="houseGrid"></div>
+        <button class="secondary" id="backToTiers">← Back</button>
+    `;
+
+    const grid = content.querySelector("#houseGrid");
+
+    Object.entries(market.noble.houses).forEach(([key, house]) => {
+        const btn = document.createElement("button");
+        btn.innerHTML = `<strong>${house.label}</strong>`;
+        btn.addEventListener("click", () => selectNobleHouse(key));
+        grid.appendChild(btn);
+    });
+
+    content.querySelector("#backToTiers").addEventListener("click", () => { game.pendingTier = null; render(); });
+
+}
+
+
+function selectNobleHouse(key) {
+
+    if (key === "lancastrian" && !["lancaster", "beaufort"].includes(game.house)) {
+        attemptLancastrianLoyaltyProof(() => { game.pendingHouse = "lancastrian"; render(); });
+        return;
+    }
+
+    if (key === "lancastrian") {
+        showEvent("A Kinsman's Welcome", "Your own Lancastrian blood needs no proving here — they receive you as one of their own from the first conversation.");
+    }
+
+    game.pendingHouse = key;
+    render();
+
+}
+
+
+// A Lancastrian noble house doesn't marry a Yorkist-aligned house lightly — they want to
+// know where you actually stand before any contract is even discussed.
+function attemptLancastrianLoyaltyProof(onSuccess) {
+
+    showChoiceEvent({
+        title: "🕯️ Proving Your Loyalty",
+        text: `A Lancastrian household does not marry lightly into a family it has no reason to trust — not after everything the wars have cost them. Before any contract is even discussed, they want to know where you truly stand.`,
+        choices: [
+            { label: "Denounce the House of York outright", effect: () => {
+                game.relationships.LancastrianNobles = Math.min(100, (game.relationships.LancastrianNobles || 20) + 20);
+                game.relationships.Edward = Math.max(0, (game.relationships.Edward || 30) - 15);
+                game.worldFlags.provenLancastrianLoyalty = true;
+                onSuccess();
+                return { msg: "You say what needs saying, plainly, whatever it costs you elsewhere. They believe you." };
+            }},
+            { label: "Offer a substantial gift of good faith (−25 gold)", effect: () => {
+                if (game.wealth < 25) return { fail: true, msg: "You cannot afford a gift that would actually convince them." };
+                game.wealth -= 25;
+                game.relationships.LancastrianNobles = Math.min(100, (game.relationships.LancastrianNobles || 20) + 12);
+                game.worldFlags.provenLancastrianLoyalty = true;
+                onSuccess();
+                return { msg: "Gold speaks where words alone might not have. It is enough, for now." };
+            }},
+            { label: "Walk away from this match", effect: () => {
+                game.pendingHouse = null;
+                return { msg: "You decide the price of their trust is more than you're willing to pay." };
+            }},
+        ]
+    });
+
+}
+
+
+function renderRoyalProspects(content, market, subjectGender, subjectName) {
+
+    const prospects = (market.royal.prospects[subjectGender] || market.royal.prospects.F)
         .filter(p => !(p.id === "charles_bold" && game.worldFlags.charlesDead))
         .map(p => {
             if (p.id === "charles_bold" && game.worldFlags.charlesIsDuke) {
@@ -1842,11 +2550,11 @@ function renderProspectChoice(content) {
 
     content.innerHTML = `
         <div class="card">
-            <h2>💍 ${market.country} — ${market.tierLabel}</h2>
+            <h2>👑 ${market.country} — Royal Match</h2>
             <p class="muted">On behalf of <strong>${subjectName}</strong>. Here is who your family can realistically open negotiations with.</p>
         </div>
         <div class="grid" id="prospectGrid"></div>
-        <button class="secondary" id="backToCountries">← Choose a different country</button>
+        <button class="secondary" id="backToTiers">← Back</button>
     `;
 
     if (!prospects.length) {
@@ -1865,16 +2573,64 @@ function renderProspectChoice(content) {
             <span class="muted">Expected to seek roughly ${p.demandGold} gold and ${p.demandLand} land in terms</span>
         `;
 
-        btn.addEventListener("click", () => startNegotiation(market, p));
+        btn.addEventListener("click", () => startNegotiation({ country: market.country, tier: "royal" }, p));
 
         grid.appendChild(btn);
 
     });
 
-    content.querySelector("#backToCountries").addEventListener("click", () => {
-        game.pendingCountry = null;
-        game.pendingSubject = null;
-        game.pendingChildIndex = null;
+    content.querySelector("#backToTiers").addEventListener("click", () => { game.pendingTier = null; render(); });
+
+}
+
+
+function renderCustomMatchEntry(content, market, subjectGender, subjectName) {
+
+    const tierData = game.pendingTier === "noble"
+        ? (game.pendingHouse ? market.noble.houses[game.pendingHouse] : market.noble)
+        : market.merchant;
+
+    let surnamePool;
+    if (market.countryKey === "england" && game.pendingTier === "noble") {
+        surnamePool = game.pendingHouse === "lancastrian" ? NOBLE_NAME_POOLS.england.lancastrianSurnames : NOBLE_NAME_POOLS.england.yorkistSurnames;
+    } else if (game.pendingTier === "merchant") {
+        surnamePool = MERCHANT_SURNAMES[market.countryKey] || MERCHANT_SURNAMES.england;
+    } else {
+        surnamePool = (NOBLE_NAME_POOLS[market.countryKey] || {}).surnames || MERCHANT_SURNAMES.england;
+    }
+
+    const suggested = generatePeriodName(market.countryKey, subjectGender, surnamePool);
+
+    content.innerHTML = `
+        <div class="card">
+            <h2>${game.pendingTier === "merchant" ? "🪙 A Merchant Match" : "🛡️ " + (tierData.label || "A Noble Match")}</h2>
+            <p class="muted">On behalf of <strong>${subjectName}</strong>. No chronicler recorded this person's name — name them yourself, or let one be suggested.</p>
+            <label class="muted" style="display:block;margin-top:8px;">Name this match:</label>
+            <input id="customMatchName" type="text" placeholder="${suggested}" style="width:100%;padding:9px;margin:6px 0;border-radius:8px;border:1px solid #c9b98a;font-family:Georgia,serif;">
+        </div>
+        <div class="grid">
+            <button id="confirmCustomMatch">📨 Confirm &amp; Begin Negotiation</button>
+            <button class="secondary" id="backFromCustom">← Back</button>
+        </div>
+    `;
+
+    document.getElementById("confirmCustomMatch").addEventListener("click", () => {
+        const typed = document.getElementById("customMatchName").value.trim();
+        const finalName = typed || suggested;
+        const prospect = {
+            id: "custom_" + Date.now(),
+            name: finalName,
+            relKey: tierData.relKey,
+            demandGold: tierData.demandGold,
+            demandLand: tierData.demandLand,
+            consortTitle: null
+        };
+        startNegotiation({ country: market.country, tier: game.pendingTier }, prospect);
+    });
+
+    document.getElementById("backFromCustom").addEventListener("click", () => {
+        if (game.pendingTier === "noble" && market.noble.houses) game.pendingHouse = null;
+        else game.pendingTier = null;
         render();
     });
 
@@ -1902,6 +2658,8 @@ function startNegotiation(market, prospect) {
     };
 
     game.pendingCountry = null;
+    game.pendingTier = null;
+    game.pendingHouse = null;
 
     game.chronicle.unshift(
         `${game.year}: You open marriage negotiations on behalf of ${subjectName} with ${prospect.name}'s family, in ${market.country}.`
@@ -2005,6 +2763,8 @@ function negotiationAction(action) {
         game.pendingSubject = null;
         game.pendingChildIndex = null;
         game.manageChildIndex = null;
+        game.pendingTier = null;
+        game.pendingHouse = null;
 
         render();
 
@@ -2063,6 +2823,8 @@ function resolveNegotiationRound() {
             game.pendingSubject = null;
             game.pendingChildIndex = null;
             game.manageChildIndex = null;
+            game.pendingTier = null;
+            game.pendingHouse = null;
 
             showEvent(
                 "A Marriage Is Sealed",
@@ -2074,6 +2836,8 @@ function resolveNegotiationRound() {
             game.married = true;
             game.spouseName = neg.name;
             game.spouseCountry = neg.countryId;
+            game.spouseAge = Math.max(14, game.age + Math.round((Math.random() * 16) - 8));
+            game.spouseRelKey = neg.relKey;
 
             const relocated = neg.countryId !== game.location;
 
@@ -2092,6 +2856,8 @@ function resolveNegotiationRound() {
 
             game.negotiation = null;
             game.pendingSubject = null;
+            game.pendingTier = null;
+            game.pendingHouse = null;
 
             showEvent(
                 "A Marriage Is Sealed",
@@ -2121,6 +2887,8 @@ function resolveNegotiationRound() {
         game.pendingSubject = null;
         game.pendingChildIndex = null;
         game.manageChildIndex = null;
+        game.pendingTier = null;
+        game.pendingHouse = null;
 
         showEvent(
             "Negotiations Collapse",
@@ -2257,6 +3025,8 @@ function resolveBirth(withPhysician) {
             game.married = false;
             game.spouseName = null;
             game.spouseCountry = null;
+            game.spouseAge = null;
+            game.spouseRelKey = null;
 
         }
 
@@ -2337,6 +3107,39 @@ function widowedDecision(deceasedName, contextLine) {
 }
 
 
+// Generalizes "a monarch just died in the country you live in" into a real choice,
+// wherever it happens — not just England. Bespoke crisis chains (England, Castile) use
+// their own richer events instead; this covers everywhere else.
+function showLoyaltyPledgeEvent(info) {
+
+    document.getElementById("event").innerHTML = `
+        <div class="card event">
+            <h2>⚖️ A New Ruler, A Choice</h2>
+            <p>With the throne passing to ${info.newRulerLabel}, every household at this court is expected to make its loyalty known — sooner rather than later.</p>
+            <div class="grid">
+                <button id="loyaltyPledge">Pledge your open support</button>
+                <button id="loyaltyWatch">Hold back and watch how things settle</button>
+            </div>
+        </div>
+    `;
+
+    document.getElementById("loyaltyPledge").addEventListener("click", () => {
+        game.relationships[info.relKey] = Math.min(100, (game.relationships[info.relKey] || 20) + 15);
+        game.chronicle.unshift(`${game.year}: You pledge open loyalty to ${info.newRulerLabel}.`);
+        document.getElementById("event").innerHTML = "";
+        render();
+    });
+
+    document.getElementById("loyaltyWatch").addEventListener("click", () => {
+        game.influence += 3;
+        game.chronicle.unshift(`${game.year}: You hold back from declaring loyalty to ${info.newRulerLabel} just yet, watching how the new reign settles.`);
+        document.getElementById("event").innerHTML = "";
+        render();
+    });
+
+}
+
+
 function handleDeath(reason) {
 
     game.chronicle.unshift(`${game.year}: ${reason}`);
@@ -2364,8 +3167,8 @@ function succeedToHeir(reason) {
 
     // a real title (Duke, Duchess, King, Queen, Earl, Countess) carries forward, adapted
     // to the heir's own gender — it does not just reset to a bare "Lady"/"Lord"
-    const inheritable = /Duke|Duchess|King|Queen|Earl|Countess/.test(oldRole || "");
-    game.role = inheritable ? adaptTitleGender(oldRole, heir.gender) : (heir.gender === "F" ? "Lady" : "Lord");
+    const inheritable = /Duke|Duchess|King|Queen|Earl|Countess/.test((oldRole || "").replace(/^Dowager\s+/, ""));
+    game.role = resolveHeirTitle(oldRole, heir.gender);
 
     game.wealth = Math.max(10, Math.round(game.wealth * 0.6));
     game.influence = Math.max(5, Math.round(game.influence * 0.5));
@@ -2383,9 +3186,14 @@ function succeedToHeir(reason) {
     game.married = !!heir.married;
     game.spouseName = heir.spouseName || null;
     game.spouseCountry = heir.spouseCountry || null;
+    game.spouseAge = game.married ? Math.max(14, heirAge + Math.round((Math.random() * 16) - 8)) : null;
+    game.spouseRelKey = null;
     game.negotiation = null;
     game.pendingCountry = null;
     game.pendingSubject = null;
+    game.pendingChildIndex = null;
+    game.pendingTier = null;
+    game.pendingHouse = null;
     game.manageChildIndex = null;
 
     game.pregnancy = null;
@@ -2402,36 +3210,46 @@ function succeedToHeir(reason) {
 
     render();
 
-    // A minor who inherits a position abroad faces a real question: stay and hold it,
-    // or go home where family and safety are more certain.
-    if (heirAge < 16 && oldLocation !== game.homeCountry) {
+    // A minor heir always faces a real guardianship question — abroad, it's stay-and-hold
+    // versus go home; at home, it's a regency versus being fostered with a guardian.
+    if (heirAge < 16) {
+
+        const domestic = oldLocation === game.homeCountry;
 
         document.getElementById("event").innerHTML = `
             <div class="card event">
                 <h2>👑 A New Generation — And a Question</h2>
-                <p>${heir.name}, only ${heirAge} years old, inherits what remains of ${oldName}'s fortune and standing at the ${oldLocation} court.${schoolingNote}</p>
-                <p>Too young to rule alone, ${heir.name}'s guardians face a real choice: remain here and hold what was built, or take the child home to ${game.homeCountry}, where family and safety are more certain but the position here will very likely be lost.</p>
+                <p>${heir.name}, only ${heirAge} years old, inherits what remains of ${oldName}'s fortune and standing${domestic ? "" : ` at the ${oldLocation} court`}.${schoolingNote}</p>
+                <p>Too young to rule alone, ${heir.name}'s guardians face a real choice: ${domestic
+                    ? `govern in ${heir.name}'s name here at home under a regency, or send the child to be fostered in a trusted relative's household until of age.`
+                    : `remain here and hold what was built, or take the child home to ${game.homeCountry}, where family and safety are more certain but the position here will very likely be lost.`}</p>
                 <div class="grid">
-                    <button id="minorStay">Remain at the ${oldLocation} court</button>
-                    <button id="minorHome">Return home to ${game.homeCountry}</button>
+                    <button id="minorStay">${domestic ? "Govern under a regency, here at home" : `Remain at the ${oldLocation} court`}</button>
+                    <button id="minorHome">${domestic ? "Send the child to a guardian's household" : `Return home to ${game.homeCountry}`}</button>
                 </div>
             </div>
         `;
 
         document.getElementById("minorStay").addEventListener("click", () => {
-            game.prestige = Math.max(0, game.prestige - 5);
-            game.chronicle.unshift(`${game.year}: ${heir.name}'s guardians choose to remain at the ${oldLocation} court, whatever the risk of a child's uncertain claim.`);
+            if (!domestic) game.prestige = Math.max(0, game.prestige - 5);
+            game.chronicle.unshift(domestic
+                ? `${game.year}: A regency is arranged to govern in ${heir.name}'s name until they come of age.`
+                : `${game.year}: ${heir.name}'s guardians choose to remain at the ${oldLocation} court, whatever the risk of a child's uncertain claim.`);
             document.getElementById("event").innerHTML = "";
             render();
         });
 
         document.getElementById("minorHome").addEventListener("click", () => {
-            game.location = game.homeCountry;
-            game.arrivedYear = game.year;
-            game.arrivedMonth = game.month;
-            const wasInheritable = inheritable;
-            if (wasInheritable) game.role = heir.gender === "F" ? "Lady" : "Lord";
-            game.chronicle.unshift(`${game.year}: ${heir.name} is taken home to ${game.homeCountry}. Whatever was held at ${oldLocation} passes out of the family's hands.`);
+            if (domestic) {
+                game.prestige = Math.max(0, game.prestige - 2);
+                game.chronicle.unshift(`${game.year}: ${heir.name} is sent to be fostered in a trusted relative's household until old enough to govern directly.`);
+            } else {
+                game.location = game.homeCountry;
+                game.arrivedYear = game.year;
+                game.arrivedMonth = game.month;
+                if (inheritable) game.role = heir.gender === "F" ? "Lady" : "Lord";
+                game.chronicle.unshift(`${game.year}: ${heir.name} is taken home to ${game.homeCountry}. Whatever was held at ${oldLocation} passes out of the family's hands.`);
+            }
             document.getElementById("event").innerHTML = "";
             render();
         });
@@ -2478,51 +3296,149 @@ function showGameOverPopup(reason) {
    MARRIAGE / DIPLOMACY TAB RENDER
 ========================================================= */
 
+// Real levers, not a single flat "approach" button: sending real men has real risk
+// (and real reward), separate from just paying gold or opening a low-stakes channel.
+const DIPLOMACY_ACTIONS = {
+
+    England: [
+        { label: "⚔️ Send Men to the Crown's Cause", cost: { land: 1 }, relKey: "Edward", desc: "Commit levies from your own land to whichever cause the English crown currently needs them for.", militaryGate: true },
+        { label: "🛡️ Raise Men From Your Own Estates", cost: { gold: 20 }, relKey: "Edward", desc: "Muster a company at your own expense, without touching your land grants, and place it at the Crown's disposal.", militaryGate: true },
+        { label: "💰 Send Financial Aid", cost: { gold: 20 }, relKey: "Edward", desc: "Fund the Crown's war chest directly." },
+        { label: "✉️ Open a Diplomatic Channel", cost: {}, relKey: "Edward", desc: "A lower-stakes overture — information and goodwill, nothing pledged." },
+    ],
+
+    France: [
+        { label: "⚔️ Send Men to a French Cause", cost: { land: 1 }, relKey: "France", desc: "Lend your own levies to whichever French faction you're courting.", militaryGate: true },
+        { label: "🛡️ Raise Mercenaries for France", cost: { gold: 25 }, relKey: "France", desc: "Hire and dispatch a company at your own cost — safer for your own lands than sending your levies.", militaryGate: true },
+        { label: "💰 Send Financial Aid", cost: { gold: 25 }, relKey: "France", desc: "Louis XI's court notices gold as much as anything else." },
+        { label: "✉️ Open a Diplomatic Channel", cost: {}, relKey: "France", desc: "Careful, low-stakes contact — everyone at this court is watching everyone else." },
+    ],
+
+    Burgundy: [
+        { label: "⚔️ Send Men to Burgundy's Defense", cost: { land: 1 }, relKey: "Charles", desc: "Commit levies to help hold the Burgundian border against French pressure.", militaryGate: true },
+        { label: "🛡️ Raise Men at Your Own Expense", cost: { gold: 20 }, relKey: "Charles", desc: "Muster and fund a company for the ducal court's use.", militaryGate: true },
+        { label: "💰 Send Financial Aid", cost: { gold: 20 }, relKey: "Charles", desc: "Gold speaks loudly at the wealthiest court in Christendom." },
+        { label: "✉️ Open a Diplomatic Channel", cost: {}, relKey: "Charles", desc: "A modest overture, nothing pledged." },
+    ],
+
+    Scotland: [
+        { label: "⚔️ Send Men Across the Border", cost: { land: 1 }, relKey: "Scotland", desc: "Commit levies to whichever side of the border trouble you're backing.", militaryGate: true },
+        { label: "🛡️ Raise Men at Your Own Expense", cost: { gold: 18 }, relKey: "Scotland", desc: "Muster a company at your own cost rather than risk your own tenants.", militaryGate: true },
+        { label: "💰 Send Financial Aid", cost: { gold: 18 }, relKey: "Scotland", desc: "A harder-edged court, but coin still buys goodwill here as anywhere." },
+        { label: "✉️ Open a Diplomatic Channel", cost: {}, relKey: "Scotland", desc: "A cautious overture — this court trusts southerners slowly, if at all." },
+    ],
+
+};
+
 function renderDiplomacy(content) {
 
+    if (game.diplomacyCountry) {
+        renderDiplomacyActions(content, game.diplomacyCountry);
+        return;
+    }
+
     content.innerHTML = `
-
         <div class="card">
-
             <h2>🤝 Diplomacy</h2>
-
-            <p>
-            Foreign powers have their own interests.
-            You are negotiating with people and governments
-            that do not necessarily want what you want.
-            </p>
-
+            <p>Foreign powers have their own interests. You are negotiating with people and governments that do not necessarily want what you want.</p>
         </div>
-
-        <div class="grid">
-
-            <button data-diplomacy="England">
-                🏴 Approach England
-            </button>
-
-            <button data-diplomacy="Burgundy">
-                🇧🇪 Approach Burgundy
-            </button>
-
-            <button data-diplomacy="France">
-                🇫🇷 Approach France
-            </button>
-
-        </div>
+        <div class="grid" id="diploGrid"></div>
     `;
 
-    content.querySelectorAll("[data-diplomacy]")
-        .forEach(button => {
+    const grid = content.querySelector("#diploGrid");
 
-            button.addEventListener("click", () => {
+    Object.keys(DIPLOMACY_ACTIONS).forEach(country => {
+        const btn = document.createElement("button");
+        btn.innerHTML = `<strong>${country}</strong>`;
+        btn.addEventListener("click", () => { game.diplomacyCountry = country; render(); });
+        grid.appendChild(btn);
+    });
 
-                diplomacy(
-                    button.dataset.diplomacy
-                );
+}
 
-            });
 
-        });
+function renderDiplomacyActions(content, country) {
+
+    const actions = DIPLOMACY_ACTIONS[country].filter(a => !a.militaryGate || isIndependentNoble(game));
+
+    content.innerHTML = `
+        <div class="card">
+            <h2>🤝 ${country}</h2>
+            <p class="muted">${game.location === country ? countryProfile().desc : `${country} has its own court, its own factions, and its own reasons for whatever it decides to do with what you offer.`}</p>
+        </div>
+        <div class="grid" id="diploActionGrid"></div>
+        <button class="secondary" id="backFromDiplo">← Back to Diplomacy</button>
+    `;
+
+    const grid = content.querySelector("#diploActionGrid");
+
+    actions.forEach(a => {
+        const btn = document.createElement("button");
+        const discounted = a.militaryGate && a.cost.gold && country === "Burgundy" && game.homeCountry === "Burgundy" && game.worldFlags.burgundianMercenaries;
+        const effectiveGold = discounted ? Math.round(a.cost.gold / 2) : a.cost.gold;
+        const costText = a.cost.gold ? `−${effectiveGold} gold${discounted ? " (mercenary discount)" : ""}` : a.cost.land ? `−${a.cost.land} land` : "no cost";
+        btn.innerHTML = `<strong>${a.label}</strong><br><span class="muted">${a.desc} (${costText})</span>`;
+        btn.addEventListener("click", () => performDiplomacyAction(country, a));
+        grid.appendChild(btn);
+    });
+
+    content.querySelector("#backFromDiplo").addEventListener("click", () => { game.diplomacyCountry = null; render(); });
+
+}
+
+
+function performDiplomacyAction(country, action) {
+
+    // Burgundy's retained mercenary company halves the gold cost of raising men —
+    // its whole "Wealth-Diplomacy Conduit" identity in miniature.
+    const discounted = action.militaryGate && action.cost.gold && game.homeCountry === "Burgundy" && game.worldFlags.burgundianMercenaries;
+    const goldCost = discounted ? Math.round(action.cost.gold / 2) : action.cost.gold;
+
+    if (goldCost && game.wealth < goldCost) {
+        showEvent("Treasury Too Weak", "You cannot afford this commitment right now.");
+        return;
+    }
+
+    if (action.cost.land && game.land < action.cost.land) {
+        showEvent("No Free Levies", "You have no free landed levies left to commit.");
+        return;
+    }
+
+    if (goldCost) game.wealth -= goldCost;
+    if (action.cost.land) game.land -= action.cost.land;
+
+    const relKey = action.relKey;
+    let msg;
+
+    if (action.cost.land) {
+
+        const success = Math.random() < 0.65;
+
+        if (success) {
+            game.relationships[relKey] = Math.min(100, (game.relationships[relKey] || 20) + 18);
+            game.prestige += 8;
+            msg = `Your men serve ${country}'s cause well. Word of it travels back to you with real gratitude attached.`;
+        } else {
+            game.relationships[relKey] = Math.min(100, (game.relationships[relKey] || 20) + 6);
+            game.prestige = Math.max(0, game.prestige - 3);
+            msg = `Your men are committed, but the campaign goes poorly. The gesture is noted, if not the outcome.`;
+        }
+
+    } else if (action.cost.gold) {
+
+        game.relationships[relKey] = Math.min(100, (game.relationships[relKey] || 20) + 12);
+        msg = `Your gold is received gratefully, and ${country} takes note of who paid and who didn't.`;
+
+    } else {
+
+        game.influence += 3;
+        msg = `${country} has interests of its own — you make what headway you can without committing anything binding.`;
+
+    }
+
+    game.chronicle.unshift(`${game.year}: ${msg}`);
+    showEvent(action.label.replace(/^[^\w]+/, "").trim(), msg);
+    render();
 
 }
 
@@ -2581,6 +3497,619 @@ function renderEstates(content) {
             });
 
         });
+
+}
+
+
+/* =========================================================
+   POWERS — the Medici Bank's backroom loan system (open to
+   everyone) plus each realm's own unique mechanic, per the
+   world's design: England's legitimacy crisis, France's covert
+   funding, Burgundy's wealth-as-diplomacy, Brittany's asylum
+   leverage, Castile/Aragon's Reconquista, Austria's electors,
+   the Electorates' vote, and the Church's piety and conclave.
+========================================================= */
+
+const LOAN_OPTIONS = [
+    { id: "customs", label: "Pledge Customs Revenue", amount: 40, months: 24, desc: "A modest loan against your household's trade income." },
+    { id: "fortress", label: "Pledge a Border Fortress", amount: 70, months: 24, desc: "A larger loan — the Bank takes a real interest in whether you keep the peace." },
+    { id: "title", label: "Pledge a Court Title or Office", amount: 55, months: 24, desc: "The Bank accepts a claim on your own standing as collateral." },
+];
+
+function requestLoan(optionId) {
+
+    const opt = LOAN_OPTIONS.find(o => o.id === optionId);
+    if (!opt) return;
+
+    if (game.loansOutstanding.length >= 2) {
+        showEvent("The Bank Declines", "The Medici Bank will not extend further credit while two loans already stand unpaid.");
+        return;
+    }
+
+    const owed = Math.round(opt.amount * 1.4);
+    const collateral = opt.label.replace("Pledge ", "");
+
+    game.wealth += opt.amount;
+    game.loansOutstanding.push({ id: opt.id + "_" + Date.now(), amountOwed: owed, collateral, monthsLeft: opt.months });
+
+    game.chronicle.unshift(`${game.year}: The Medici Bank advances you ${opt.amount} gold against ${collateral.toLowerCase()}.`);
+
+    showEvent("A Loan Is Advanced", `${opt.amount} gold arrives from the Medici Bank's agents, against ${collateral.toLowerCase()} as collateral. You will owe ${owed} gold within ${opt.months} months.`);
+
+    render();
+
+}
+
+
+function repayLoan(loanId) {
+
+    const loan = game.loansOutstanding.find(l => l.id === loanId);
+    if (!loan) return;
+
+    if (game.wealth < loan.amountOwed) {
+        showEvent("Insufficient Funds", "You cannot yet repay this loan in full.");
+        return;
+    }
+
+    game.wealth -= loan.amountOwed;
+    game.loansOutstanding = game.loansOutstanding.filter(l => l.id !== loanId);
+    game.bankFavor = Math.min(100, game.bankFavor + 15);
+
+    game.chronicle.unshift(`${game.year}: You repay the Medici Bank in full, against ${loan.collateral.toLowerCase()}. Your credit with them is better for it.`);
+
+    showEvent("Debt Repaid", "The Bank's agents confirm the debt settled. Your standing with them improves, and future loans will come easier and cheaper.");
+
+    render();
+
+}
+
+
+// Defaulting triggers a real "Credit Liquidation" consequence — the debt is sold to a
+// rival, used to fund unrest against you, or laid before the Pope as grounds to excommunicate.
+function showLoanDefaultEvent(loan) {
+
+    const outcome = Math.random();
+
+    game.bankFavor = Math.max(0, game.bankFavor - 25);
+
+    if (outcome < 0.34) {
+
+        game.worldFlags.debtSoldToRival = true;
+        game.prestige = Math.max(0, game.prestige - 12);
+
+        const text = `Word reaches you that the Medici Bank, tired of waiting on ${loan.collateral.toLowerCase()}, has sold your unpaid debt outright to a rival power. Whatever claim that debt represented is no longer the Bank's to forgive.`;
+        game.chronicle.unshift(`${game.year}: ${text}`);
+        showEvent("Credit Liquidation — Debt Sold", text);
+        render();
+
+    } else if (outcome < 0.67) {
+
+        game.worldFlags.bankFundedRebels = true;
+        game.influence = Math.max(0, game.influence - 15);
+        Object.keys(game.relationships).forEach(k => { game.relationships[k] = Math.max(0, game.relationships[k] - 5); });
+
+        const text = `The Medici Bank's agents, unwilling to simply write off ${loan.collateral.toLowerCase()}, have quietly begun funding malcontents within your own household's reach. Loyalty everywhere feels thinner than it did a season ago.`;
+        game.chronicle.unshift(`${game.year}: ${text}`);
+        showEvent("Credit Liquidation — Unrest Funded", text);
+        render();
+
+    } else {
+
+        applyExcommunication(`The Medici Bank, with its own long reach into Rome, has laid your unpaid debt before the Curia — and Rome has acted on it.`);
+
+    }
+
+}
+
+
+// Excommunication is the Church's real weapon: it doesn't just cost you standing, it
+// hands every neighbor a free, standing justification to move against you.
+function applyExcommunication(context) {
+
+    game.worldFlags.excommunicated = true;
+    game.piety = Math.max(0, game.piety - 30);
+    game.prestige = Math.max(0, game.prestige - 20);
+
+    Object.keys(game.relationships).forEach(k => {
+        game.relationships[k] = Math.round(game.relationships[k] * 0.5);
+    });
+
+    game.chronicle.unshift(`${game.year}: ${context} Every neighboring court now has standing grounds, should it wish to use them, to move against you.`);
+
+    document.getElementById("event").innerHTML = `
+        <div class="card event danger">
+            <h2>⛪ Excommunicated</h2>
+            <p>${context} Every neighboring court now has grounds, should it wish to use them, to move against you. Your own household grows visibly colder toward you overnight.</p>
+            <button id="continueEvent">Continue</button>
+        </div>
+    `;
+
+    document.getElementById("continueEvent").addEventListener("click", () => {
+        document.getElementById("event").innerHTML = "";
+        render();
+    });
+
+    render();
+
+}
+
+
+// ===== ENGLAND — the Crown Claim System =====
+
+function crownLegitimacy() {
+    const base = { york: 70, neville: 55, woodville: 40, lancaster: 60, beaufort: 65 }[game.house] || 40;
+    const relBonus = Math.round(((game.relationships.Edward || 30) - 30) * 0.5);
+    return Math.max(0, Math.min(100, base + relBonus));
+}
+
+function formRebellionCoalition() {
+
+    const legitimacy = crownLegitimacy();
+
+    if (legitimacy >= 40 || game.influence < 40) {
+        showEvent("No Coalition to Be Had", "Either the Crown's grip is too secure right now, or you lack the standing to gather anyone serious behind you.");
+        return;
+    }
+
+    game.influence -= 20;
+    const success = Math.random() < 0.5;
+
+    if (success) {
+        game.prestige += 20;
+        game.worldFlags.rebellionCoalitionFormed = true;
+        game.chronicle.unshift(`${game.year}: With the Crown's authority visibly weak, you quietly gather a coalition of the discontented behind your own claim.`);
+        showEvent("A Coalition Forms", "Enough of the discontented rally to you that this is no longer just talk in a private room.");
+    } else {
+        game.prestige = Math.max(0, game.prestige - 15);
+        game.relationships.Edward = Math.max(0, (game.relationships.Edward || 30) - 20);
+        game.chronicle.unshift(`${game.year}: Word of your gathering reaches the Crown before it amounts to anything.`);
+        showEvent("Discovered Too Soon", "Someone talks. The Crown hears of your gathering before it becomes anything real, and you're left exposed for the attempt.");
+    }
+
+    render();
+
+}
+
+
+// ===== FRANCE — Fund Claimant =====
+
+function fundClaimant(target) {
+
+    const cost = 35;
+    const relKey = target === "England" ? "Edward" : "Charles";
+
+    if (game.wealth < cost) {
+        showEvent("Treasury Too Weak", "This kind of quiet work is not cheap.");
+        return;
+    }
+
+    game.wealth -= cost;
+    const discovered = Math.random() < 0.3;
+
+    if (discovered) {
+        game.prestige = Math.max(0, game.prestige - 15);
+        game.relationships[relKey] = Math.max(0, (game.relationships[relKey] || 30) - 20);
+        game.chronicle.unshift(`${game.year}: Word leaks that French gold has been funding malcontents in ${target}. It costs you dearly there.`);
+        showEvent("Exposed", `The channel is traced back to you. Whatever goodwill you had in ${target} is badly damaged.`);
+    } else {
+        game.worldFlags[target === "England" ? "fundedEnglishRebels" : "fundedBurgundianRebels"] = true;
+        game.influence += 10;
+        game.chronicle.unshift(`${game.year}: Gold moves quietly out of the treasury toward malcontents in ${target}, with nothing on paper to trace it back to you.`);
+        showEvent("Money Well Hidden", `The gold reaches its intended hands in ${target}, unremarked.`);
+    }
+
+    render();
+
+}
+
+
+// ===== BURGUNDY — Mercenary Retention & Wealth-Diplomacy Conduit =====
+
+function retainMercenaries() {
+
+    if (game.wealth < 40) {
+        showEvent("Treasury Too Weak", "Retaining a standing mercenary company outright takes real capital.");
+        return;
+    }
+
+    game.wealth -= 40;
+    game.worldFlags.burgundianMercenaries = true;
+
+    game.chronicle.unshift(`${game.year}: You put Burgundy's wealth to its best use — retaining a standing mercenary company at a fraction of what feudal levies would cost.`);
+    showEvent("Mercenaries Retained", "A standing company is now yours to call on. Future military commitments through diplomacy will cost you less.");
+
+    render();
+
+}
+
+function wealthDiplomacyConduit(relKey, label) {
+
+    if (game.wealth < 30) {
+        showEvent("Treasury Too Weak", "This kind of leverage requires real gold, not gestures.");
+        return;
+    }
+
+    game.wealth -= 30;
+    game.relationships[relKey] = Math.min(100, (game.relationships[relKey] || 20) + 20);
+
+    game.chronicle.unshift(`${game.year}: Burgundian gold converts directly into goodwill with ${label} — a trick fewer courts can afford to try.`);
+    showEvent("Wealth Becomes Favor", `${label} receives your gold-backed overture with real warmth. Few can turn coin into standing as efficiently as Burgundy.`);
+
+    render();
+
+}
+
+
+// ===== BRITTANY — Asylum Leverage Protocol =====
+
+function leverageAsylum(choice) {
+
+    if (game.worldFlags.richardDead || game.worldFlags.henryVIITudor) {
+        showEvent("The Moment Has Passed", "Henry Tudor is no longer anyone's hostage to bargain with — he sits on England's throne now.");
+        return;
+    }
+
+    if (choice === "tribute") {
+        game.wealth += 25;
+        game.relationships.Edward = Math.max(0, (game.relationships.Edward || 30) - 10);
+        game.chronicle.unshift(`${game.year}: You quietly press England for tribute in exchange for continuing to keep Henry Tudor safely out of the way.`);
+        showEvent("Tribute Extracted", "Gold arrives from England, uneasy about what continuing to shelter Henry Tudor might otherwise cost them.");
+    } else {
+        game.worldFlags.brittanySupportedTudor = true;
+        game.influence += 10;
+        game.chronicle.unshift(`${game.year}: You quietly commit Breton support to Henry Tudor's cause, betting on the exile rather than on England's goodwill.`);
+        showEvent("A Different Wager", "You place your quiet support behind the exile rather than his enemies. Time will tell if it was the right bet.");
+    }
+
+    render();
+
+}
+
+
+// ===== CASTILE / ARAGON — The Reconquista Buffer =====
+
+function fundReconquista() {
+
+    if (game.wealth < 25) {
+        showEvent("Treasury Too Weak", "The war against Granada consumes gold faster than most treasuries can supply.");
+        return;
+    }
+
+    if (game.worldFlags.granadaFallen) {
+        showEvent("The War Is Over", "Granada has already fallen. There is nothing left to fund.");
+        return;
+    }
+
+    game.wealth -= 25;
+    game.granadaProgress = Math.min(100, game.granadaProgress + 15);
+
+    game.chronicle.unshift(`${game.year}: You send gold and men south to the long war against Granada.`);
+    showEvent("Sent South", "Your contribution joins the long, grinding campaign against the Emirate of Granada.");
+
+    render();
+
+}
+
+
+// ===== AUSTRIA — Bella Gerant Alii, Tu Felix Austria Nube =====
+
+function courtElectors() {
+
+    if (game.wealth < 30) {
+        showEvent("Treasury Too Weak", "Courting the Electors properly takes real gold, not just charm.");
+        return;
+    }
+
+    game.wealth -= 30;
+    game.electorFavor = Math.min(100, game.electorFavor + 15);
+
+    game.chronicle.unshift(`${game.year}: Habsburg gold and marriage-promises move quietly toward the Prince-Electors.`);
+    showEvent("Favor Bought", "The Electors receive your overtures warmly enough. The Imperial crown's grip on your house grows a little more secure.");
+
+    render();
+
+}
+
+
+// ===== THE ELECTORATES — Electoral Veto & Golden Bull Protocol =====
+
+function auctionElectoralVote(target) {
+
+    if (target === "austria") {
+        game.relationships.Austria = Math.min(100, (game.relationships.Austria || 20) + 20);
+        game.prestige += 8;
+        game.chronicle.unshift(`${game.year}: You pledge your electoral vote to the Habsburgs, in exchange for their lasting gratitude.`);
+        showEvent("Vote Pledged to Austria", "The Habsburg court will remember exactly whose vote came without a fight.");
+    } else {
+        game.wealth += 45;
+        game.relationships.Austria = Math.max(0, (game.relationships.Austria || 20) - 15);
+        game.worldFlags.electorSoldVote = true;
+        game.chronicle.unshift(`${game.year}: Your electoral vote goes to the highest foreign bidder instead — Vienna will not be pleased when it learns of it.`);
+        showEvent("Vote Sold Abroad", "Gold arrives from outside the Empire. Vienna's goodwill, however, does not.");
+    }
+
+    render();
+
+}
+
+
+// ===== PORTUGAL — The Exploration Venture =====
+
+function charterExplorationVoyage() {
+
+    if (game.wealth < 30) {
+        showEvent("Treasury Too Weak", "Chartering a real expedition down the African coast takes real capital.");
+        return;
+    }
+
+    game.wealth -= 30;
+
+    if (Math.random() < 0.55) {
+        const gain = 55 + Math.round(Math.random() * 30);
+        game.wealth += gain;
+        game.piety += 5;
+        game.chronicle.unshift(`${game.year}: A chartered voyage returns from down the African coast with real profit — and word of it reaches Rome as evidence of the faith spreading with it.`);
+        showEvent("The Fleet Returns", `The voyage returns successful, yielding ${gain} gold — and a little more Papal favor besides.`);
+    } else {
+        game.chronicle.unshift(`${game.year}: A chartered voyage down the African coast does not return. The sea keeps what it takes.`);
+        showEvent("Lost at Sea", "The voyage does not return. It is a hazard of the trade, however often it stings.");
+    }
+
+    render();
+
+}
+
+
+// ===== THE ROMAN CHURCH — Papal Favor & Excommunication Currency =====
+
+function excommunicateRival() {
+
+    if (game.piety < 30) {
+        showEvent("Insufficient Standing", "Your own piety and standing in the Curia are too thin to make such a sentence stick.");
+        return;
+    }
+
+    game.piety -= 20;
+    game.prestige += 10;
+
+    game.chronicle.unshift(`${game.year}: You move the Curia to excommunicate a defiant secular ruler who has ignored the Church's authority once too often.`);
+    showEvent("Sentence Pronounced", "The bull is sealed and dispatched. Every neighbor of the excommunicated ruler now has standing grounds to act against them.");
+
+    render();
+
+}
+
+function papalConclave() {
+
+    if (game.wealth < 40) {
+        showEvent("Treasury Too Weak", "Buying cardinals' votes at scale requires more gold than you currently hold.");
+        return;
+    }
+
+    game.wealth -= 40;
+
+    if (Math.random() < 0.3) {
+        game.worldFlags.dynastyPope = true;
+        game.prestige += 25;
+        game.piety += 20;
+        game.chronicle.unshift(`${game.year}: Against real odds, a member of your own circle within the Curia is elected Pope.`);
+        showEvent("Habemus Papam", "Against real odds, your own faction's candidate emerges from the Conclave as the new Pope. Divorces, foreign claims, and frozen wars are, for now, a little more within your reach.");
+    } else {
+        game.piety = Math.max(0, game.piety - 10);
+        game.chronicle.unshift(`${game.year}: Your gold buys votes enough to matter, but not enough to elect one of your own as Pope.`);
+        showEvent("The Conclave Decides Otherwise", "Your faction's candidate falls short. The gold spent buys goodwill for next time, but the tiara goes elsewhere.");
+    }
+
+    render();
+
+}
+
+
+// ===== THE MEDICI BANK — playing the lender, not the borrower =====
+
+function medicLendAbroad() {
+
+    game.influence += 8;
+    game.bankFavor = Math.min(100, game.bankFavor + 10);
+    game.wealth += 10;
+
+    game.chronicle.unshift(`${game.year}: Your house extends fresh credit to a foreign crown desperate enough to accept your terms.`);
+    showEvent("Credit Extended", "Another crown now owes you more than it would like to admit. Influence, in the end, is just patience with paperwork.");
+
+    render();
+
+}
+
+
+function renderPowers(content) {
+
+    content.innerHTML = `
+        <div class="card">
+            <h2>🏦 The Medici Bank</h2>
+            <p class="muted">The Bank does not hand out free gold — every loan is pledged against something real, and every default has real consequences.</p>
+            <div class="stat">Standing with the Bank <strong>${game.bankFavor}/100</strong></div>
+            <div class="meter"><span style="width:${game.bankFavor}%"></span></div>
+        </div>
+    `;
+
+    if (game.loansOutstanding.length) {
+
+        const loansCard = document.createElement("div");
+        loansCard.className = "card";
+        loansCard.innerHTML = `<h3>Outstanding Loans</h3>`;
+
+        game.loansOutstanding.forEach(loan => {
+            loansCard.innerHTML += `
+                <div class="stat">${loan.collateral} — owe ${loan.amountOwed} gold, due in ${loan.monthsLeft} mo. <button data-repay="${loan.id}" style="width:auto;padding:6px 10px;margin-left:8px;">Repay</button></div>
+            `;
+        });
+
+        content.appendChild(loansCard);
+
+    }
+
+    if (game.loansOutstanding.length < 2) {
+
+        const requestCard = document.createElement("div");
+        requestCard.className = "card";
+        requestCard.innerHTML = `<h3>Request a Loan</h3>`;
+        const grid = document.createElement("div");
+        grid.className = "grid";
+
+        LOAN_OPTIONS.forEach(opt => {
+            const btn = document.createElement("button");
+            btn.innerHTML = `<strong>${opt.label} (+${opt.amount} gold)</strong><br><span class="muted">${opt.desc}</span>`;
+            btn.addEventListener("click", () => requestLoan(opt.id));
+            grid.appendChild(btn);
+        });
+
+        requestCard.appendChild(grid);
+        content.appendChild(requestCard);
+
+    }
+
+    content.querySelectorAll("[data-repay]").forEach(btn => {
+        btn.addEventListener("click", () => repayLoan(btn.dataset.repay));
+    });
+
+    // ---- realm-specific unique mechanic ----
+
+    const mechanicCard = document.createElement("div");
+    mechanicCard.className = "card";
+
+    if (game.homeCountry === "England") {
+
+        const legitimacy = crownLegitimacy();
+        mechanicCard.innerHTML = `
+            <h2>👑 The Crown Claim System</h2>
+            <p class="muted">Every great house in England has a bloodline legitimacy score, measured against the Crown's own hold on power. When that hold looks weak enough, a coalition becomes possible.</p>
+            <div class="stat">The Crown's apparent legitimacy <strong>${legitimacy}/100</strong></div>
+            <div class="meter"><span style="width:${legitimacy}%"></span></div>
+            <p class="muted" style="margin-top:8px;">${legitimacy < 40 ? "The Crown's grip looks genuinely shaky right now." : "The Crown's position looks too secure to challenge yet."}</p>
+            <button id="rebellionCoalition">⚔️ Form a Rebellion Coalition</button>
+        `;
+
+    } else if (game.homeCountry === "France") {
+
+        mechanicCard.innerHTML = `
+            <h2>🕸️ Fund a Claimant</h2>
+            <p class="muted">Rather than invade outright, France can channel gold quietly into rebel factions abroad — intrigue laundered through distance and deniability.</p>
+            <div class="grid">
+                <button data-fund="England">Fund Malcontents in England (−35 gold)</button>
+                <button data-fund="Burgundy">Fund Malcontents in Burgundy (−35 gold)</button>
+            </div>
+        `;
+
+    } else if (game.homeCountry === "Burgundy") {
+
+        mechanicCard.innerHTML = `
+            <h2>💰 The Wealth-Diplomacy Conduit</h2>
+            <p class="muted">Burgundy's gold buys what other courts must fight for. ${game.worldFlags.burgundianMercenaries ? "A standing mercenary company already stands ready at reduced cost." : "A standing mercenary company can be retained at a fraction of feudal levy costs."}</p>
+            <div class="grid">
+                ${game.worldFlags.burgundianMercenaries ? "" : `<button id="retainMercs">🛡️ Retain a Mercenary Company (−40 gold)</button>`}
+                <button data-conduit="Edward" data-label="the English Crown">🤝 Buy Favor with England (−30 gold)</button>
+                <button data-conduit="France" data-label="the French Crown">🤝 Buy Favor with France (−30 gold)</button>
+            </div>
+        `;
+
+    } else if (game.homeCountry === "Brittany") {
+
+        mechanicCard.innerHTML = `
+            <h2>🏰 The Asylum Leverage Protocol</h2>
+            <p class="muted">${game.worldFlags.richardDead || game.worldFlags.henryVIITudor ? "Henry Tudor has already had his day — there is no more leverage to be had here." : "Henry Tudor, exiled claimant to the Lancastrian cause, remains under your protection — a diplomatic hostage, or a wager on the future, depending how you use him."}</p>
+            <div class="grid">
+                <button data-asylum="tribute">💰 Demand Tribute From England (+25 gold)</button>
+                <button data-asylum="support">🤝 Commit Quiet Support to His Cause</button>
+            </div>
+        `;
+
+    } else if (game.homeCountry === "Castile" || game.homeCountry === "Aragon") {
+
+        mechanicCard.innerHTML = `
+            <h2>⚔️ The Reconquista Buffer</h2>
+            <p class="muted">${game.worldFlags.granadaFallen ? "Granada has fallen — the long war is over." : "Spain cannot fully turn its attention elsewhere until the long war against Granada is won."}</p>
+            <div class="stat">Campaign progress <strong>${game.granadaProgress}/100</strong></div>
+            <div class="meter"><span style="width:${game.granadaProgress}%"></span></div>
+            ${game.worldFlags.granadaFallen ? "" : `<button id="fundReconquista">⚔️ Fund the Campaign (−25 gold)</button>`}
+        `;
+
+    } else if (game.homeCountry === "Austria") {
+
+        mechanicCard.innerHTML = `
+            <h2>💍 Bella Gerant Alii, Tu Felix Austria Nube</h2>
+            <p class="muted">"Let others wage war — you, happy Austria, marry." Austria wins more by courting the Empire's electors and marrying well than by fighting.</p>
+            <div class="stat">Favor among the Prince-Electors <strong>${game.electorFavor}/100</strong></div>
+            <div class="meter"><span style="width:${game.electorFavor}%"></span></div>
+            <button id="courtElectors">👑 Court the Prince-Electors (−30 gold)</button>
+        `;
+
+    } else if (["Saxony", "Brandenburg", "Palatinate"].includes(game.homeCountry)) {
+
+        mechanicCard.innerHTML = `
+            <h2>🗳️ The Electoral Veto</h2>
+            <p class="muted">Your vote for Emperor is worth more than your army — Vienna courts it, and so does anyone hoping to check Vienna.</p>
+            <div class="grid">
+                <button data-vote="austria">Pledge Your Vote to Austria</button>
+                <button data-vote="foreign">Sell Your Vote Abroad (+45 gold)</button>
+            </div>
+        `;
+
+    } else if (game.homeCountry === "Portugal") {
+
+        mechanicCard.innerHTML = `
+            <h2>🌊 The Exploration Venture</h2>
+            <p class="muted">Portugal's fortune is built on the sea, not on continental levies — every voyage chartered is a gamble against real profit.</p>
+            <button id="charterVoyage">⛵ Charter an Exploration Voyage (−30 gold)</button>
+        `;
+
+    } else if (game.house === "curia") {
+
+        mechanicCard.innerHTML = `
+            <h2>⛪ Papal Favor & Excommunication</h2>
+            <p class="muted">The Church's currency is Piety, and its ultimate weapon is Excommunication — a sentence that hands every neighbor of the condemned a free justification to move against them.</p>
+            <div class="stat">Piety <strong>${game.piety}/100</strong></div>
+            <div class="meter"><span style="width:${game.piety}%"></span></div>
+            <div class="grid">
+                <button id="excommunicateRival">⚡ Excommunicate a Defiant Ruler (−20 piety)</button>
+                <button id="papalConclave">🗳️ Convene a Papal Conclave (−40 gold)</button>
+            </div>
+            ${game.worldFlags.dynastyPope ? `<p class="house-note">A Pope of your own circle already sits on the throne of St. Peter.</p>` : ""}
+        `;
+
+    } else if (game.house === "medici") {
+
+        mechanicCard.innerHTML = `
+            <h2>🏦 The House That Lends to Kings</h2>
+            <p class="muted">You hold no crown and command no army — but half of Christendom's rulers owe you something, and that is its own kind of power.</p>
+            <button id="medicLendAbroad">📜 Extend Fresh Credit to a Foreign Crown</button>
+        `;
+
+    } else {
+
+        mechanicCard.innerHTML = `
+            <h2>⚡ Realm Powers</h2>
+            <p class="muted">Your house has no unique mechanic of its own beyond what the Bank above already offers — but every court has its own currents to navigate through Diplomacy and Court.</p>
+        `;
+
+    }
+
+    content.appendChild(mechanicCard);
+
+    const bind = (id, fn) => { const el = document.getElementById(id); if (el) el.addEventListener("click", fn); };
+
+    bind("rebellionCoalition", formRebellionCoalition);
+    bind("retainMercs", retainMercenaries);
+    bind("fundReconquista", fundReconquista);
+    bind("courtElectors", courtElectors);
+    bind("charterVoyage", charterExplorationVoyage);
+    bind("excommunicateRival", excommunicateRival);
+    bind("papalConclave", papalConclave);
+    bind("medicLendAbroad", medicLendAbroad);
+
+    content.querySelectorAll("[data-fund]").forEach(btn => btn.addEventListener("click", () => fundClaimant(btn.dataset.fund)));
+    content.querySelectorAll("[data-conduit]").forEach(btn => btn.addEventListener("click", () => wealthDiplomacyConduit(btn.dataset.conduit, btn.dataset.label)));
+    content.querySelectorAll("[data-asylum]").forEach(btn => btn.addEventListener("click", () => leverageAsylum(btn.dataset.asylum)));
+    content.querySelectorAll("[data-vote]").forEach(btn => btn.addEventListener("click", () => auctionElectoralVote(btn.dataset.vote)));
 
 }
 
@@ -2827,30 +4356,21 @@ function performAction(type) {
 
 
 /* =========================================================
-   DIPLOMACY
-========================================================= */
-
-function diplomacy(country) {
-
-    game.influence += 2;
-
-    game.chronicle.unshift(
-        `${game.year}: You opened a diplomatic channel with ${country}.`
-    );
-
-    showEvent(
-        "Diplomatic Contact",
-        `${country} has interests of its own. Your family will be judged by what you can offer, what you might threaten and what relationships you possess.`
-    );
-
-    render();
-
-}
-
-
-/* =========================================================
    TIME
 ========================================================= */
+
+// Shared aging-mortality curve — used for the player and, separately, for a spouse who
+// isn't tied to a scripted historical death (so widowhood isn't only ever scripted).
+function mortalityChance(age, health) {
+    let c = 0.005;
+    if (age > 50) c = 0.02;
+    if (age > 65) c = 0.06;
+    if (health != null) {
+        if (health < 40) c += 0.05;
+        if (health < 20) c += 0.15;
+    }
+    return c;
+}
 
 function advanceTime(months) {
 
@@ -2868,6 +4388,8 @@ function advanceTime(months) {
             game.year++;
 
             game.age++;
+
+            if (game.married && game.spouseAge != null) game.spouseAge++;
 
             yearsPassed++;
 
@@ -2888,6 +4410,44 @@ function advanceTime(months) {
 
     // the wider world's own history keeps moving, whether you're watching or not
     checkWorldTimeline(recapLines);
+
+    // Loans run on a clock — miss it, and the Bank's "Credit Liquidation" event fires.
+    if (game.loansOutstanding.length) {
+        game.loansOutstanding.forEach(loan => { loan.monthsLeft -= months; });
+        const defaulted = game.loansOutstanding.filter(l => l.monthsLeft <= 0);
+        if (defaulted.length) {
+            game.loansOutstanding = game.loansOutstanding.filter(l => l.monthsLeft > 0);
+            defaulted.forEach(loan => game.pendingBankDefaults.push(loan));
+        }
+    }
+
+    // A spouse not tied to a scripted historical death (Charles the Bold's fall at Nancy
+    // being tracked separately) still ages and can die naturally — widowhood shouldn't
+    // only ever come from a scripted event.
+    if (game.married && game.spouseAge != null && game.spouseRelKey !== "Charles" && !game.pendingWidowhood) {
+
+        for (let y = 0; y < yearsPassed; y++) {
+
+            if (Math.random() < mortalityChance(game.spouseAge, null)) {
+
+                const deceased = game.spouseName;
+
+                recapLines.push(`${deceased}'s health fails, and you are widowed.`);
+
+                game.married = false;
+                game.spouseName = null;
+                game.spouseCountry = null;
+                game.spouseAge = null;
+                game.spouseRelKey = null;
+                game.pendingWidowhood = deceased;
+
+                break;
+
+            }
+
+        }
+
+    }
 
     if (recapLines.length === 0) {
 
@@ -2928,14 +4488,7 @@ function advanceTime(months) {
 
     for (let y = 0; y < yearsPassed; y++) {
 
-        let deathChance = 0.005;
-
-        if (game.age > 50) deathChance = 0.02;
-        if (game.age > 65) deathChance = 0.06;
-        if (game.health < 40) deathChance += 0.05;
-        if (game.health < 20) deathChance += 0.15;
-
-        if (Math.random() < deathChance) {
+        if (Math.random() < mortalityChance(game.age, game.health)) {
             deathReason = `${game.person}'s health finally fails, and the chronicle of this life closes.`;
             break;
         }
@@ -2962,6 +4515,21 @@ function advanceTime(months) {
             const dead = game.pendingWidowhood;
             game.pendingWidowhood = null;
             widowedDecision(dead);
+            return;
+        }
+
+        // A monarch dying in the country you currently reside in demands a real answer:
+        // whose side are you actually on?
+        if (game.pendingLoyaltyEvents && game.pendingLoyaltyEvents.length) {
+            const loy = game.pendingLoyaltyEvents.shift();
+            showLoyaltyPledgeEvent(loy);
+            return;
+        }
+
+        // A defaulted loan's consequence lands next — the Bank does not wait politely.
+        if (game.pendingBankDefaults && game.pendingBankDefaults.length) {
+            const loan = game.pendingBankDefaults.shift();
+            showLoanDefaultEvent(loan);
             return;
         }
 
@@ -3142,6 +4710,101 @@ function tryHistoricalEvent() {
 
     }
 
+    if ((game.year > 1483 || (game.year === 1483 && game.month >= 4)) && !game.flags.edwardDeathCrisis && !game.worldFlags.edwardDead && game.location === "England") {
+
+        game.flags.edwardDeathCrisis = true;
+        game.worldFlags.edwardDead = true;
+
+        const ev = {
+            title: "👑 The King Is Dead",
+            text: `King Edward IV has died suddenly, still short of his fortieth year, leaving the throne to his twelve-year-old son as Edward V. Within hours the court has split in two: the boy's mother, Elizabeth Woodville, and her Woodville kin move to keep the new king close and the government in their own hands, while the late King's brother, Richard, Duke of Gloucester, rides hard for London claiming the office of Lord Protector is his by right and by Edward IV's own dying wish. Everyone at court is being quietly asked, one way or another, which side they mean to stand on.`,
+            choices: [
+                { label: "Side with the Woodvilles and Queen Elizabeth", effect: () => {
+                    game.relationships.Elizabeth = Math.min(100, (game.relationships.Elizabeth || 30) + 15);
+                    game.relationships.Woodville = Math.min(100, (game.relationships.Woodville || 30) + 10);
+                    game.worldFlags.backedWoodvilles = true;
+                    return { msg: "You throw your support behind the Queen Dowager and her family's hold on the young King. It is a wager on the Woodvilles keeping their grip." };
+                }},
+                { label: "Side with Richard of Gloucester's claim to the Protectorate", effect: () => {
+                    game.relationships.Edward = Math.min(100, (game.relationships.Edward || 30) + 12);
+                    game.relationships.Elizabeth = Math.max(0, (game.relationships.Elizabeth || 30) - 10);
+                    game.worldFlags.backedGloucester = true;
+                    return { msg: "You declare for Gloucester's right to the Protectorate. The Woodvilles will not forget where you stood, whichever way this turns." };
+                }},
+                { label: "Commit to neither side yet", effect: () => {
+                    game.prestige = Math.max(0, game.prestige - 3);
+                    return { msg: "You hold your tongue and wait to see which way the wind actually blows. It costs you a little standing with both sides for the hedge." };
+                }},
+            ]
+        };
+
+        showChoiceEvent(ev);
+        return true;
+
+    }
+
+    if ((game.year > 1483 || (game.year === 1483 && game.month >= 6)) && !game.flags.princesCrisis && game.worldFlags.edwardDead && !game.worldFlags.richardIsKing && game.location === "England") {
+
+        game.flags.princesCrisis = true;
+        game.worldFlags.richardIsKing = true;
+
+        const ev = {
+            title: "⚰️ A Sudden Silence in the Council Chamber",
+            text: `Word spreads through Westminster like a chill: Lord Hastings, once Edward IV's closest friend, has been dragged from a council meeting and beheaded within the hour, on Gloucester's own order, without trial. Elizabeth Woodville has fled into sanctuary at Westminster Abbey with her younger children. Days later, the young Edward V and his brother are moved into the Tower of London — for their own protection, the proclamation says. Richard, Duke of Gloucester, is crowned King Richard III within weeks, the boys' claim set aside on grounds of their parents' marriage being declared unlawful. No one at court says aloud what everyone is quietly wondering about the princes.`,
+            choices: [
+                { label: "Voice your unease, whatever the cost", effect: () => {
+                    game.relationships.Edward = Math.max(0, (game.relationships.Edward || 30) - 15);
+                    game.prestige += 8;
+                    return { msg: "You say, plainly, that this does not sit right with you. It is noticed — and not by Richard's regime alone." };
+                }},
+                { label: "Keep your composure and say nothing", effect: () => {
+                    return { msg: "You keep your own counsel, as most of the court is quietly doing. It is the safer course, if not the braver one." };
+                }},
+                { label: "Publicly welcome Richard III's kingship", effect: () => {
+                    game.relationships.Edward = Math.min(100, (game.relationships.Edward || 30) + 15);
+                    game.prestige = Math.max(0, game.prestige - 5);
+                    return { msg: "You declare for the new King without hesitation. Some call it prudence. Others call it something less flattering." };
+                }},
+            ]
+        };
+
+        showChoiceEvent(ev);
+        return true;
+
+    }
+
+    if ((game.year > 1474 || (game.year === 1474 && game.month >= 12)) && !game.flags.castilianSuccessionChoice && !game.worldFlags.isabellaIsQueen && game.location === "Castile") {
+
+        game.flags.castilianSuccessionChoice = true;
+        game.worldFlags.isabellaIsQueen = true;
+
+        const ev = {
+            title: "👑 The Castilian Succession",
+            text: `King Henry IV of Castile is dead, and the court splits over who should follow him. His half-sister Isabella has moved fast, proclaiming herself Queen at Segovia within hours of the news. But Henry's own daughter, Joanna, has her defenders too — and behind Joanna stands King Afonso V of Portugal, said to already be arranging to marry her and press her claim by force of arms. Every household at this court is being asked, quietly but urgently, which claim it recognizes.`,
+            choices: [
+                { label: "Recognize Isabella as Queen", effect: () => {
+                    game.relationships.Castile = Math.min(100, (game.relationships.Castile || 20) + 15);
+                    game.worldFlags.backedIsabella = true;
+                    return { msg: "You declare for Isabella's claim. It is, history will likely judge, the stronger horse to have backed." };
+                }},
+                { label: "Recognize Joanna's claim, backed by Portugal", effect: () => {
+                    game.relationships.Castile = Math.max(0, (game.relationships.Castile || 20) - 10);
+                    game.relationships.Portugal = Math.min(100, (game.relationships.Portugal || 20) + 12);
+                    game.worldFlags.backedJoanna = true;
+                    return { msg: "You throw your support behind Joanna and her Portuguese match. Isabella's court will not soon forget it." };
+                }},
+                { label: "Declare for neither, and wait", effect: () => {
+                    game.prestige = Math.max(0, game.prestige - 4);
+                    return { msg: "You commit to no claim yet, hoping the matter resolves itself before it costs you anything. It rarely works out that cleanly." };
+                }},
+            ]
+        };
+
+        showChoiceEvent(ev);
+        return true;
+
+    }
+
     if ((game.year > 1483 || (game.year === 1483 && game.month >= 10)) && !game.flags.buckinghamRebellion && !game.worldFlags.buckinghamRebellionHappened && game.location === "England") {
 
         game.flags.buckinghamRebellion = true;
@@ -3172,6 +4835,35 @@ function tryHistoricalEvent() {
 
     }
 
+    if ((game.year > 1484 || (game.year === 1484 && game.month >= 3)) && !game.flags.margaretBeaufortApproach && game.worldFlags.richardIsKing && !game.worldFlags.richardDead && game.location === "England") {
+
+        game.flags.margaretBeaufortApproach = true;
+
+        const ev = {
+            title: "✉️ A Visit From Lady Margaret",
+            text: `Margaret Beaufort, Countess of Richmond — a woman known for her piety, her sharp mind, and her unwavering devotion to the son she has not seen in years — arranges to speak with you privately, ostensibly about a matter of estate business. The conversation turns quickly to her son, Henry Tudor, still in exile in Brittany, and to a marriage she has long been quietly arranging: Henry to Elizabeth of York, uniting Lancaster's remaining claim with York's. She does not ask you outright to commit to anything. She asks only whether, when the time comes, she might count on you.`,
+            choices: [
+                { label: "Promise her your quiet support", effect: () => {
+                    game.worldFlags.pledgedMargaretBeaufort = true;
+                    game.influence = Math.max(0, game.influence - 3);
+                    return { msg: "You give her your word, quietly. Lady Margaret is not a woman who forgets who kept theirs." };
+                }},
+                { label: "Decline, carefully but firmly", effect: () => {
+                    return { msg: "You decline, as gently as the conversation allows. She thanks you for your honesty and troubles you no further about it." };
+                }},
+                { label: "Report the approach to King Richard's court", effect: () => {
+                    game.relationships.Edward = Math.min(100, (game.relationships.Edward || 30) + 15);
+                    game.worldFlags.betrayedMargaretBeaufort = true;
+                    return { msg: "You carry word of the meeting to the King's men. It buys you favor with Richard's regime — and, should Lady Margaret's son ever have his day, a debt of an entirely different kind." };
+                }},
+            ]
+        };
+
+        showChoiceEvent(ev);
+        return true;
+
+    }
+
     if ((game.year > 1485 || (game.year === 1485 && game.month >= 8)) && !game.flags.bosworth && !game.worldFlags.richardDead && game.location === "England") {
 
         game.flags.bosworth = true;
@@ -3192,6 +4884,14 @@ function tryHistoricalEvent() {
                     game.worldFlags.henryVIITudor = true;
                     game.relationships.Edward = Math.min(100, (game.relationships.Edward || 30) + 20);
                     game.influence += 12;
+                    if (game.worldFlags.pledgedMargaretBeaufort) {
+                        game.prestige += 10;
+                        return { msg: "Richard III falls at Bosworth. Henry Tudor is crowned King Henry VII — and word reaches you that Lady Margaret Beaufort has not forgotten the promise you made her, years ago, when his cause still looked hopeless. Few things are worth more at a new court than that kind of memory." };
+                    }
+                    if (game.worldFlags.betrayedMargaretBeaufort) {
+                        game.prestige = Math.max(0, game.prestige - 8);
+                        return { msg: "Richard III falls at Bosworth. Henry Tudor is crowned King Henry VII — and Lady Margaret Beaufort, now the new King's own mother, has a long memory for who once carried word of her plans to Richard's court. Your sudden loyalty is received, but not warmly." };
+                    }
                     return { msg: "Richard III falls at Bosworth. Henry Tudor is crowned King Henry VII, and your name is remembered among those who backed him when it still mattered." };
                 }},
                 { label: "Keep your household away from the battlefield", effect: () => {
@@ -3790,6 +5490,24 @@ const RANDOM_EVENTS = [
         ]
     })},
 
+    // ===== LANCASTRIAN NOBLE MARRIAGE — hedging the family's bets =====
+
+    { eligible: (g) => g.worldFlags.provenLancastrianLoyalty && g.location === "England" &&
+        g.children.some(c => !c.married && Math.max(0, g.year - c.birthYear) >= 12), build: () => ({
+        title: "Hedging the Family's Bets",
+        text: `A cautious kinsman murmurs what several others are already thinking: having tied your house to the Lancastrian cause, it might be shrewd — and safer, come the next turn of the wheel — to marry one of your own children into a Yorkist family instead. Nothing forces your hand, but the suggestion isn't wrong either.`,
+        choices: [
+            { label: "Take the advice seriously", effect: () => {
+                game.influence += 4;
+                return { msg: "You resolve to look into a Yorkist match for one of your children when the right moment comes — visit the Children tab whenever you're ready to arrange it." };
+            }},
+            { label: "You've made your choice, and you'll live with it", effect: () => {
+                game.prestige += 3;
+                return { msg: "You decline to hedge. Whatever comes, your house knows where it stands." };
+            }},
+        ]
+    })},
+
 ];
 
 function pickRandomEvent() {
@@ -3973,7 +5691,15 @@ document
     .getElementById("enterWorld")
     .addEventListener(
         "click",
-        showHouses
+        showRealms
+    );
+
+
+document
+    .getElementById("backToRealms")
+    .addEventListener(
+        "click",
+        showRealms
     );
 
 
@@ -3981,7 +5707,7 @@ document
     .getElementById("backToHouses")
     .addEventListener(
         "click",
-        showHouses
+        () => chooseRealm(selectedRealm)
     );
 
 
