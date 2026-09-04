@@ -1152,13 +1152,38 @@ function resolveHeirTitle(oldRole, heirGender) {
     return adaptTitleGender(stripped, heirGender);
 }
 
-// A courtesy title for a child, reflecting the parent's actual current standing —
-// so a duchess's children read as more than just "Lord/Lady Firstname."
-function childCourtesyTitle(child) {
+// A courtesy title for a child, reflecting the parent's actual current standing AND
+// the child's own place in the succession — the recognized heir reads as genuinely
+// grander than a younger sibling, not just the same style with a suffix tacked on.
+function childCourtesyTitle(child, isHeir) {
+
     const base = child.gender === "F" ? "Lady" : "Lord";
-    if (/King|Queen/.test(game.role)) return `${child.gender === "F" ? "Princess" : "Prince"} ${child.name}`;
-    if (/Duke|Duchess/.test(game.role)) return `${base} ${child.name} of ${game.location}`;
+    const role = game.role || "";
+
+    if (/King|Queen/.test(role)) {
+        const royalBase = child.gender === "F" ? "Princess" : "Prince";
+        if (isHeir) return `${child.gender === "F" ? "Crown Princess" : "Crown Prince"} ${child.name}, Heir Apparent to the Throne of ${game.location}`;
+        return `${royalBase} ${child.name}`;
+    }
+
+    if (/Archduke|Archduchess/.test(role)) {
+        if (isHeir) return `${base} ${child.name}, Heir to the Archduchy of ${game.location}`;
+        return `${base} ${child.name}`;
+    }
+
+    if (/Duke|Duchess/.test(role)) {
+        if (isHeir) return `${base} ${child.name}, Heir to the Duchy of ${game.location}`;
+        return `${base} ${child.name}`;
+    }
+
+    if (/Earl|Countess/.test(role)) {
+        if (isHeir) return `${base} ${child.name}, Heir to the Earldom of ${game.location}`;
+        return `${base} ${child.name}`;
+    }
+
+    if (isHeir) return `${base} ${child.name}, named heir to the family's holdings`;
     return `${base} ${child.name}`;
+
 }
 
 
@@ -1323,6 +1348,8 @@ function countryProfile() {
     if (game.location === "Castile") {
         if (game.worldFlags.castilianSuccessionWar) {
             desc = `You are at the Castilian court in the midst of open war — Isabella's claim to the throne is contested by Portugal, which has invaded in support of her rival Joanna's claim. Every conversation here is shadowed by the fighting.`;
+        } else if (game.worldFlags.spainUnited) {
+            desc = `You are at the Castilian court under Queen Isabella I and her husband King Ferdinand of Aragon — two crowns, one household, and the closest thing Iberia has ever had to a single ruling will. The long war against Granada continues under both their banners now.`;
         } else if (game.worldFlags.isabellaIsQueen) {
             desc = `You are at the Castilian court, now under Queen Isabella I, whose reign has begun amid faith, ambition, and the long war against Granada.`;
         }
@@ -1358,7 +1385,9 @@ function countryProfile() {
         desc = `You are at the Austrian archducal court, now under ${d.ruler.gender === "F" ? "Archduchess" : "Archduke"} ${d.ruler.name}${d.marriedToPlayer ? ", your own spouse" : ""} — the Habsburg custodianship of the Imperial crown continuing into a new generation.`;
     }
 
-    if (game.location === "Aragon" && DYNASTIES.Aragon.ruler.name !== "John II of Aragon") {
+    if (game.location === "Aragon" && DYNASTIES.Aragon.unitedWithCastile) {
+        desc = `You are at the Aragonese court — its own laws, its own Cortes, its own coinage still very much intact, and yet everyone here speaks of Castile in the same breath as Aragon now. Since Ferdinand's marriage to Isabella, the two crowns move as one in everything but name.`;
+    } else if (game.location === "Aragon" && DYNASTIES.Aragon.ruler.name !== "John II of Aragon") {
         const d = DYNASTIES.Aragon;
         desc = `You are at the Aragonese court, now under ${d.ruler.gender === "F" ? "Queen" : "King"} ${d.ruler.name}${d.marriedToPlayer ? ", your own spouse" : ""} — the Mediterranean crown's own politics continuing regardless of who last held it.`;
     }
@@ -1366,6 +1395,15 @@ function countryProfile() {
     if (game.location === "Brittany" && DYNASTIES.Brittany.ruler.name !== "Francis II") {
         const d = DYNASTIES.Brittany;
         desc = `You are at the Breton ducal court, now under ${d.ruler.gender === "F" ? "Duchess" : "Duke"} ${d.ruler.name}${d.marriedToPlayer ? ", your own spouse" : ""} — independence still a narrow, carefully walked line between France and England.`;
+    }
+
+    // Generic override, checked last so it wins regardless of which of the above
+    // blocks would otherwise have matched: once a dynasty's line has actually been
+    // absorbed by a rival power, the court you're describing no longer exists as its
+    // own master, whichever realm it was.
+    const absorbedHere = DYNASTIES[game.location];
+    if (absorbedHere && absorbedHere.absorbedBy) {
+        desc = `You are at what remains of the ${absorbedHere.realmNoun} court — but ${absorbedHere.realmNoun} is no longer its own master. With its ruling line extinguished and no heir to hold it, ${absorbedHere.absorbedBy} pressed its own claim and folded these lands into its own crown. Old titles are still used out of habit and courtesy, but the political reality here now runs through ${absorbedHere.absorbedBy}.`;
     }
 
     return { desc, people: base.people };
@@ -1625,13 +1663,43 @@ function domainNoun(title) {
     return map[title] || "realm";
 }
 
+// When a dynasty's line runs out with no heir, a stronger neighbor doesn't just let a
+// collateral relative sort it out — it presses its own claim. This is how duchies
+// actually get absorbed and borders actually move, the way Louis XI absorbed Burgundy
+// proper the moment Charles the Bold died without a son. Every dynasty the game tracks
+// carries a real historical pressure of this kind except France itself, which in this
+// era is the great power usually doing the absorbing rather than suffering it.
+const RIVAL_CLAIMANTS = {
+    Burgundy: "France",
+    Brittany: "France",
+    Aragon: "Castile",
+    Portugal: "Castile",
+    Scotland: "England",
+    Austria: "Hungary",
+};
+
 function simulateDynasties(recapLines) {
 
     Object.entries(DYNASTIES).forEach(([country, d]) => {
 
+        if (d.absorbedBy) return;
+
         if (!d.active) {
             if (d.activatesOn && game.worldFlags[d.activatesOn]) d.active = true;
             else return;
+        }
+
+        // If you rule this realm yourself, in your own right, the dynasty IS your own
+        // ongoing life — the main game's own mortality and succession systems already
+        // handle you. The simulation must not independently "kill" the ruler you're
+        // actively playing.
+        if (game.rulingRealm === country && game.rulingStatus === "sovereign") {
+            d.ruler = { name: game.person, gender: game.gender, age: game.age };
+            d.heir = game.heir
+                ? { name: game.heir.name, gender: game.heir.gender, age: Math.max(0, game.year - (game.heir.birthYear || game.year)), married: !!game.heir.married, fromPlayer: true }
+                : null;
+            d.marriedToPlayer = false;
+            return;
         }
 
         // If you're actually married to this dynasty's ruler, the wider world defers
@@ -1659,6 +1727,14 @@ function simulateDynasties(recapLines) {
                 d.heir = null;
 
                 recapLines.push(`News from ${d.realmNoun}: ${oldRulerName} has died. ${d.ruler.name} succeeds as ${d.ruler.gender === "F" ? d.titleF : d.titleM} of ${d.realmNoun}.`);
+
+            } else if (RIVAL_CLAIMANTS[country] && Math.random() < 0.4) {
+
+                const absorber = RIVAL_CLAIMANTS[country];
+                d.active = false;
+                d.absorbedBy = absorber;
+
+                recapLines.push(`News from ${d.realmNoun}: with ${oldRulerName} dead and no clear heir, ${absorber} presses its own claim and formally absorbs ${d.realmNoun} into its own crown lands. ${d.realmNoun} is no longer its own master — the map itself has changed.`);
 
             } else {
 
@@ -1704,7 +1780,15 @@ function simulateDynasties(recapLines) {
 
 }
 
+const DYNASTY_COUNTRY_FOR_KEY = { Charles: "Burgundy", France: "France", Portugal: "Portugal", Scotland: "Scotland", Austria: "Austria", Aragon: "Aragon", Brittany: "Brittany" };
+
 function livingLabel(key, defaultLabel) {
+
+    const absorbedCountry = DYNASTY_COUNTRY_FOR_KEY[key];
+    if (absorbedCountry && DYNASTIES[absorbedCountry].absorbedBy) {
+        const d = DYNASTIES[absorbedCountry];
+        return `${d.realmNoun} (no longer independent — absorbed into ${d.absorbedBy})`;
+    }
 
     if (key === "Charles") {
         if (DYNASTIES.Burgundy.active) {
@@ -2055,6 +2139,14 @@ function startGame(index) {
         spouseAge: null,
         spouseRelKey: null,
 
+        // Which realm you actually govern, and on what footing — a title alone isn't
+        // rule. "sovereign" means the claim is your own blood right (it survives your
+        // spouse and passes to your own heir); "consort" means it's borrowed through
+        // marriage (it ends if the marriage does); "dowager" is a widow holding on
+        // without the underlying blood claim.
+        rulingRealm: null,
+        rulingStatus: null,
+
         negotiation: null,
         pendingCountry: null,
         pendingTier: null,
@@ -2288,7 +2380,25 @@ function renderCharacter(content) {
                 <strong>${game.married ? "Wed to " + game.spouseName : "Unmarried"}</strong>
             </div>
 
+            <div class="stat">
+                Governing
+                <strong>${
+                    !game.rulingRealm ? "No realm of your own"
+                    : game.rulingStatus === "sovereign" ? `${game.rulingRealm}, in your own right`
+                    : game.rulingStatus === "consort" ? `${game.rulingRealm}, as consort`
+                    : `${game.rulingRealm}, as dowager`
+                }</strong>
+            </div>
+
         </div>
+
+        ${game.rulingRealm ? `<div class="house-note">${
+            game.rulingStatus === "sovereign"
+                ? `Your claim to ${game.rulingRealm} is your own blood right — it survives your spouse, and passes to your own heir.`
+                : game.rulingStatus === "consort"
+                    ? `Your standing in ${game.rulingRealm} is borrowed through your marriage — if that marriage ends, so, most likely, does your authority there.`
+                    : `You hold ${game.rulingRealm} as a widow, without the underlying blood claim — a position of standing, not of true right.`
+        }</div>` : ""}
 
         <div class="card">
             <h2>👁️ Appearance</h2>
@@ -2448,6 +2558,14 @@ function renderFamily(content) {
 
 // Which relationship key represents "your own sovereign" for the realm you actually
 // belong to — used so a land grant petition (or similar favors) target the right figure.
+// Which realm your Powers/Diplomacy access should actually key off — the realm you
+// currently rule (by marriage or by blood) if you rule one, otherwise your birth realm.
+// Ruling Burgundy in truth is what should unlock Burgundy's own mechanics, not merely
+// having been born in England.
+function effectiveRealm() {
+    return game.rulingRealm || game.homeCountry;
+}
+
 function homeCrownRelKey() {
     const map = {
         England: "Edward", France: "France", Burgundy: "Charles", Scotland: "Scotland",
@@ -2674,7 +2792,21 @@ function renderMarriage(content) {
 
     Object.entries(MARRIAGE_MARKET).forEach(([id, c]) => {
 
+        const dynastyKey = c.country in DYNASTIES ? c.country : null;
+        const absorbedInto = dynastyKey && DYNASTIES[dynastyKey].absorbedBy;
+
         const btn = document.createElement("button");
+
+        if (absorbedInto) {
+            btn.innerHTML = `
+                <strong>${c.country}</strong>
+                <br>
+                <span class="muted">No longer its own court — absorbed into ${absorbedInto}</span>
+            `;
+            btn.disabled = true;
+            grid.appendChild(btn);
+            return;
+        }
 
         btn.innerHTML = `
             <strong>${c.country}</strong>
@@ -2783,7 +2915,21 @@ function renderChildren(content) {
 
         Object.entries(MARRIAGE_MARKET).forEach(([id, c]) => {
 
+            const dynastyKey = c.country in DYNASTIES ? c.country : null;
+            const absorbedInto = dynastyKey && DYNASTIES[dynastyKey].absorbedBy;
+
             const btn = document.createElement("button");
+
+            if (absorbedInto) {
+                btn.innerHTML = `
+                    <strong>${c.country}</strong>
+                    <br>
+                    <span class="muted">No longer its own court — absorbed into ${absorbedInto}</span>
+                `;
+                btn.disabled = true;
+                grid.appendChild(btn);
+                return;
+            }
 
             btn.innerHTML = `
                 <strong>${c.country}</strong>
@@ -2827,13 +2973,13 @@ function renderChildren(content) {
 
         const age = Math.max(0, game.year - child.birthYear);
         const isHeir = game.heir === child;
-        const title = childCourtesyTitle(child);
+        const title = childCourtesyTitle(child, isHeir);
 
         const card = document.createElement("div");
         card.className = "card";
 
         card.innerHTML = `
-            <h3>${title}${isHeir ? " — Heir" : ""}</h3>
+            <h3>${title}</h3>
             <p class="muted">${appearanceDescription(child.appearance)}</p>
             <div class="stat">Temperament <strong>${child.trait || "Unremarked"}</strong></div>
             ${child.cohortNote ? `<p class="muted">Born ${child.cohortNote}.</p>` : ""}
@@ -3339,6 +3485,8 @@ function resolveNegotiationRound() {
 
             if (neg.consortTitle) {
                 game.role = neg.consortTitle;
+                game.rulingRealm = neg.countryId;
+                game.rulingStatus = "consort";
             }
 
             if (relocated) {
@@ -3697,6 +3845,16 @@ function resolveBirth(withPhysician) {
 // hold your position in your own right, look to remarry, or go home.
 function widowedDecision(deceasedName, contextLine) {
 
+    // A sovereign in your own right doesn't stop ruling because your spouse died —
+    // that claim was always yours, not borrowed through the marriage. Only a consort's
+    // position was ever contingent on it.
+    if (game.rulingStatus === "sovereign") {
+        const text = contextLine || `${deceasedName} has died.`;
+        game.chronicle.unshift(`${game.year}: ${text} Your own throne is not in question — this is a private grief, not a political one.`);
+        showEvent("A Private Grief", `${text} Whatever else changes, your own rule here does not.`);
+        return;
+    }
+
     const dowagerTitle = /Duke|Duchess|King|Queen/.test(game.role) ? `Dowager ${game.role}` : game.role;
 
     document.getElementById("event").innerHTML = `
@@ -3714,13 +3872,16 @@ function widowedDecision(deceasedName, contextLine) {
 
     document.getElementById("widowStay").addEventListener("click", () => {
         game.role = dowagerTitle;
+        game.rulingStatus = game.rulingRealm ? "dowager" : null;
         game.prestige += 5;
-        game.chronicle.unshift(`${game.year}: You remain at the ${game.location} court in your own right, now as ${dowagerTitle}.`);
+        game.chronicle.unshift(`${game.year}: You remain at the ${game.location} court in your own right, now as ${dowagerTitle} — holding the place, not the true claim.`);
         document.getElementById("event").innerHTML = "";
         render();
     });
 
     document.getElementById("widowRemarry").addEventListener("click", () => {
+        game.rulingRealm = null;
+        game.rulingStatus = null;
         game.chronicle.unshift(`${game.year}: You resolve to look for a new match when the time is right.`);
         document.getElementById("event").innerHTML = "";
         render();
@@ -3731,6 +3892,8 @@ function widowedDecision(deceasedName, contextLine) {
         game.arrivedYear = game.year;
         game.arrivedMonth = game.month;
         game.role = game.gender === "F" ? "Lady" : "Lord";
+        game.rulingRealm = null;
+        game.rulingStatus = null;
         game.prestige = Math.max(0, game.prestige - 5);
         game.chronicle.unshift(`${game.year}: You return home to ${game.homeCountry}, leaving the life you built at ${game.spouseCountry || "that court"} behind.`);
         document.getElementById("event").innerHTML = "";
@@ -3792,6 +3955,8 @@ function succeedToHeir(reason) {
     const oldName = game.person;
     const oldRole = game.role;
     const oldLocation = game.location;
+    const oldRulingRealm = game.rulingRealm;
+    const oldRulingStatus = game.rulingStatus;
     const heirAge = Math.max(0, game.year - (heir.birthYear || game.year));
 
     game.person = heir.name;
@@ -3804,6 +3969,32 @@ function succeedToHeir(reason) {
     // to the heir's own gender — it does not just reset to a bare "Lady"/"Lord"
     const inheritable = /Duke|Duchess|King|Queen|Earl|Countess/.test((oldRole || "").replace(/^Dowager\s+/, ""));
     game.role = resolveHeirTitle(oldRole, heir.gender);
+
+    // Sovereignty passes by blood, not by marriage: your own claim (sovereign, or a
+    // dowager's residual hold) reaches your heir; a claim you only ever held as a
+    // consort dies with the marriage that granted it — UNLESS the wider world's own
+    // dynasty simulation already recognized this specific heir as that realm's real
+    // heir (the adaptation hook from marrying into a ruling house).
+    const dynastyRecognizesHeir = oldRulingRealm && DYNASTIES[oldRulingRealm] &&
+        DYNASTIES[oldRulingRealm].heir && DYNASTIES[oldRulingRealm].heir.fromPlayer &&
+        DYNASTIES[oldRulingRealm].heir.name === heir.name;
+
+    if (inheritable && oldRulingRealm && (oldRulingStatus === "sovereign" || oldRulingStatus === "dowager" || dynastyRecognizesHeir)) {
+        game.rulingRealm = oldRulingRealm;
+        game.rulingStatus = "sovereign";
+        if (DYNASTIES[oldRulingRealm]) {
+            DYNASTIES[oldRulingRealm].ruler = { name: heir.name, gender: heir.gender, age: heirAge };
+            DYNASTIES[oldRulingRealm].heir = null;
+            DYNASTIES[oldRulingRealm].active = true;
+            DYNASTIES[oldRulingRealm].marriedToPlayer = false;
+        }
+    } else if (inheritable) {
+        game.rulingRealm = game.homeCountry;
+        game.rulingStatus = "sovereign";
+    } else {
+        game.rulingRealm = null;
+        game.rulingStatus = null;
+    }
 
     game.wealth = Math.max(10, Math.round(game.wealth * 0.6));
     game.influence = Math.max(5, Math.round(game.influence * 0.5));
@@ -4009,7 +4200,7 @@ function renderDiplomacyActions(content, country) {
 
     actions.forEach(a => {
         const btn = document.createElement("button");
-        const discounted = a.militaryGate && a.cost.gold && country === "Burgundy" && game.homeCountry === "Burgundy" && game.worldFlags.burgundianMercenaries;
+        const discounted = a.militaryGate && a.cost.gold && country === "Burgundy" && effectiveRealm() === "Burgundy" && game.worldFlags.burgundianMercenaries;
         const effectiveGold = discounted ? Math.round(a.cost.gold / 2) : a.cost.gold;
         const costText = a.cost.gold ? `−${effectiveGold} gold${discounted ? " (mercenary discount)" : ""}` : a.cost.land ? `−${a.cost.land} land` : "no cost";
         const obsoleteWarning = a.militaryGate && a.cost.land && game.worldFlags.gunpowderEra && !game.worldFlags.hasTercios
@@ -4029,7 +4220,7 @@ function performDiplomacyAction(country, action) {
 
     // Burgundy's retained mercenary company halves the gold cost of raising men —
     // its whole "Wealth-Diplomacy Conduit" identity in miniature.
-    const discounted = action.militaryGate && action.cost.gold && game.homeCountry === "Burgundy" && game.worldFlags.burgundianMercenaries;
+    const discounted = action.militaryGate && action.cost.gold && effectiveRealm() === "Burgundy" && game.worldFlags.burgundianMercenaries;
     const goldCost = discounted ? Math.round(action.cost.gold / 2) : action.cost.gold;
 
     if (goldCost && game.wealth < goldCost) {
@@ -4784,12 +4975,15 @@ function renderPowers(content) {
 
     }
 
-    // ---- realm-specific unique mechanic ----
+    // ---- realm-specific unique mechanic — keyed to whichever realm you actually
+    // rule right now, not just where you were born ----
 
     const mechanicCard = document.createElement("div");
     mechanicCard.className = "card";
 
-    if (game.homeCountry === "England") {
+    const realm = effectiveRealm();
+
+    if (realm === "England") {
 
         const legitimacy = crownLegitimacy();
         mechanicCard.innerHTML = `
@@ -4801,7 +4995,7 @@ function renderPowers(content) {
             <button id="rebellionCoalition">⚔️ Form a Rebellion Coalition</button>
         `;
 
-    } else if (game.homeCountry === "France") {
+    } else if (realm === "France") {
 
         mechanicCard.innerHTML = `
             <h2>🕸️ Fund a Claimant</h2>
@@ -4812,7 +5006,7 @@ function renderPowers(content) {
             </div>
         `;
 
-    } else if (game.homeCountry === "Burgundy") {
+    } else if (realm === "Burgundy") {
 
         mechanicCard.innerHTML = `
             <h2>💰 The Wealth-Diplomacy Conduit</h2>
@@ -4824,7 +5018,7 @@ function renderPowers(content) {
             </div>
         `;
 
-    } else if (game.homeCountry === "Brittany") {
+    } else if (realm === "Brittany") {
 
         mechanicCard.innerHTML = `
             <h2>🏰 The Asylum Leverage Protocol</h2>
@@ -4835,7 +5029,7 @@ function renderPowers(content) {
             </div>
         `;
 
-    } else if (game.homeCountry === "Castile" || game.homeCountry === "Aragon") {
+    } else if (realm === "Castile" || realm === "Aragon") {
 
         mechanicCard.innerHTML = `
             <h2>⚔️ The Reconquista Buffer</h2>
@@ -4845,7 +5039,7 @@ function renderPowers(content) {
             ${game.worldFlags.granadaFallen ? "" : `<button id="fundReconquista">⚔️ Fund the Campaign (−25 gold)</button>`}
         `;
 
-    } else if (game.homeCountry === "Austria") {
+    } else if (realm === "Austria") {
 
         mechanicCard.innerHTML = `
             <h2>💍 Bella Gerant Alii, Tu Felix Austria Nube</h2>
@@ -4855,7 +5049,7 @@ function renderPowers(content) {
             <button id="courtElectors">👑 Court the Prince-Electors (−30 gold)</button>
         `;
 
-    } else if (["Saxony", "Brandenburg", "Palatinate"].includes(game.homeCountry)) {
+    } else if (["Saxony", "Brandenburg", "Palatinate"].includes(realm)) {
 
         mechanicCard.innerHTML = `
             <h2>🗳️ The Electoral Veto</h2>
@@ -4866,7 +5060,7 @@ function renderPowers(content) {
             </div>
         `;
 
-    } else if (game.homeCountry === "Portugal") {
+    } else if (realm === "Portugal") {
 
         mechanicCard.innerHTML = `
             <h2>🌊 The Exploration Venture</h2>
@@ -4948,12 +5142,23 @@ function renderDynasties(content) {
         const card = document.createElement("div");
         card.className = "card";
 
+        if (d.absorbedBy) {
+            card.innerHTML = `
+                <h3>${country} <span class="muted">— absorbed</span></h3>
+                <p class="muted"><em>${d.realmNoun} died out with no heir to hold it and was formally absorbed into ${d.absorbedBy}. It no longer exists as an independent power — the map itself has changed.</em></p>
+            `;
+            content.appendChild(card);
+            return;
+        }
+
         const rulerTitle = d.ruler.gender === "F" ? d.titleF : d.titleM;
         const status = !d.active
             ? `<p class="muted"><em>Still following the historical record — no independent succession yet.</em></p>`
-            : d.marriedToPlayer
-                ? `<p class="muted"><em>You are married into this house — its heir is your own child.</em></p>`
-                : "";
+            : (game.rulingRealm === country && game.rulingStatus === "sovereign")
+                ? `<p class="muted"><em>You rule this realm yourself, in your own right.</em></p>`
+                : d.marriedToPlayer
+                    ? `<p class="muted"><em>You are married into this house — its heir is your own child.</em></p>`
+                    : "";
 
         card.innerHTML = `
             <h3>${country}</h3>
@@ -5496,6 +5701,45 @@ function tryHistoricalEvent() {
                     game.popularLoyalty = Math.max(0, game.popularLoyalty - 8);
                     game.piety = Math.min(100, game.piety + 5);
                     return { msg: "It buys the Church's quiet approval and your own tenants' quiet resentment in roughly equal measure." };
+                }},
+            ]
+        };
+
+        showChoiceEvent(ev);
+        return true;
+
+    }
+
+    // A concrete "boundaries changing" event — not absorption this time, but a
+    // dynastic marriage that quietly redraws the map anyway. This fires once both
+    // real prerequisite conditions are actually true — Isabella already reigning in
+    // Castile, and Ferdinand grown enough to wed — never a hardcoded date, and never
+    // if the player has already claimed Ferdinand for themselves at the marriage market.
+    if (game.worldFlags.isabellaIsQueen && !game.worldFlags.spainUnited &&
+        !DYNASTIES.Aragon.absorbedBy &&
+        !(game.married && game.spouseRelKey === "Aragon") &&
+        DYNASTIES.Aragon.heir && DYNASTIES.Aragon.heir.name === "Ferdinand of Aragon" &&
+        DYNASTIES.Aragon.heir.age >= 14 && !DYNASTIES.Aragon.heir.married) {
+
+        game.worldFlags.spainUnited = true;
+        DYNASTIES.Aragon.heir.married = true;
+        DYNASTIES.Aragon.unitedWithCastile = true;
+
+        const ev = {
+            title: "👑 A Marriage That Redraws the Map",
+            text: `Word reaches you of a wedding conducted at Valladolid almost in secret, before the Pope's own dispensation had even arrived: Ferdinand, heir to Aragon, has married Isabella, Queen of Castile. Neither crown has formally merged into the other — Aragon keeps its own laws, its own Cortes, its own coinage — but every court in Christendom understands at once what has actually happened. Two of Iberia's three Christian kingdoms now answer, in practice, to the same husband and wife. Only Portugal stands apart.`,
+            choices: [
+                { label: "Send warm congratulations to both crowns", effect: () => {
+                    game.relationships.Aragon = Math.min(100, (game.relationships.Aragon || 20) + 10);
+                    game.relationships.Castile = Math.min(100, (game.relationships.Castile || 20) + 10);
+                    return { msg: "You write warmly to both courts. A union this large is worth being remembered as an early well-wisher of." };
+                }},
+                { label: "Quietly worry what this means for the balance of power", effect: () => {
+                    game.influence += 5;
+                    return { msg: "You keep your unease to yourself, but you are not alone in feeling it. A single household now commands most of Iberia." };
+                }},
+                { label: "Take little notice — Iberian politics rarely touch you directly", effect: () => {
+                    return { msg: "You note the news and move on. Whether it touches you directly is a question the years ahead will answer." };
                 }},
             ]
         };
