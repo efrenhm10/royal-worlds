@@ -814,7 +814,13 @@ const MARRIAGE_MARKET = {
   england: {
     country: "England",
     countryKey: "england",
-    royal: null,
+    royal: {
+      tierLabel: "Royal match",
+      prospects: {
+        F: [{ id: "richard_gloucester", name: "Richard, Duke of Gloucester", relKey: "Edward", demandGold: 60, demandLand: 2, consortTitle: null }],
+        M: [{ id: "margaret_york", name: "Margaret of York, the King's sister", relKey: "Edward", demandGold: 60, demandLand: 2, consortTitle: null }]
+      }
+    },
     noble: {
       tierLabel: "Noble match",
       houses: {
@@ -856,7 +862,13 @@ const MARRIAGE_MARKET = {
   scotland: {
     country: "Scotland",
     countryKey: "scotland",
-    royal: null,
+    royal: {
+      tierLabel: "Royal match",
+      prospects: {
+        F: [{ id: "stewart_prince", name: "A prince of the House of Stewart", relKey: "Scotland", demandGold: 45, demandLand: 1, consortTitle: null }],
+        M: [{ id: "stewart_princess", name: "A princess of the House of Stewart", relKey: "Scotland", demandGold: 45, demandLand: 1, consortTitle: null }]
+      }
+    },
     noble: { tierLabel: "Noble match", relKey: "Scotland", demandGold: 30, demandLand: 1 },
     merchant: { tierLabel: "Merchant match", relKey: "ScottishMerchants", demandGold: 10, demandLand: 0 }
   },
@@ -1584,6 +1596,9 @@ function startGame(index) {
 
         gender: person[3] || "F",
 
+        appearance: generateAppearance(selectedHouse, null),
+        trait: generateTrait(selectedHouse, null),
+
         year: 1461,
 
         month: 1,
@@ -1623,6 +1638,10 @@ function startGame(index) {
         estateHealth: 55,
         popularLoyalty: 55,
         taxRate: "balanced",
+
+        // Tracks print culture's spread rather than a hardcoded date — the Printing
+        // Press event fires once this crosses a threshold, not on a fixed year.
+        printTech: 0,
 
         relationships: {
 
@@ -1897,6 +1916,12 @@ function renderCharacter(content) {
         </div>
 
         <div class="card">
+            <h2>👁️ Appearance</h2>
+            <p>${appearanceDescription(game.appearance)}</p>
+            <div class="stat">Temperament <strong>${game.trait || "Unremarked"}</strong></div>
+        </div>
+
+        <div class="card">
 
             <h2>Political Position</h2>
 
@@ -2046,6 +2071,42 @@ function renderFamily(content) {
    COURT
 ========================================================= */
 
+// Which relationship key represents "your own sovereign" for the realm you actually
+// belong to — used so a land grant petition (or similar favors) target the right figure.
+function homeCrownRelKey() {
+    const map = {
+        England: "Edward", France: "France", Burgundy: "Charles", Scotland: "Scotland",
+        Castile: "Castile", Portugal: "Portugal", Brittany: "Brittany", Aragon: "Aragon", Austria: "Austria"
+    };
+    return map[game.homeCountry] || null;
+}
+
+function petitionForLandGrant(key) {
+
+    const rel = game.relationships[key] || 20;
+
+    if (rel < 55) {
+        showEvent("Petition Declined", "Your standing isn't yet strong enough to be worth a grant of land.");
+        return;
+    }
+
+    const success = Math.random() < 0.4 + (rel - 55) / 150;
+
+    if (success) {
+        game.land += 1;
+        game.relationships[key] = Math.max(0, rel - 12);
+        game.chronicle.unshift(`${game.year}: In recognition of your loyal service, you are granted a new parcel of land.`);
+        showEvent("A Grant of Land", "Your petition is heard favorably, and a new parcel of land is formally granted to your household.");
+    } else {
+        game.relationships[key] = Math.max(0, rel - 5);
+        game.chronicle.unshift(`${game.year}: You petition for a grant of land, but are turned away this time.`);
+        showEvent("Petition Turned Away", "Land is not given lightly, however good your standing. You'll need to ask again another time.");
+    }
+
+    render();
+
+}
+
 function renderCourt(content) {
 
     const profile = countryProfile();
@@ -2119,11 +2180,18 @@ function renderCourt(content) {
                 🎁 Offer Gift / Favor
             </button>
 
+            ${key === homeCrownRelKey() ? `<button data-landgrant="${key}">🏞️ Petition for a Land Grant</button>` : ""}
+
         `;
 
         content.appendChild(card);
 
     });
+
+    content.querySelectorAll("[data-landgrant]")
+        .forEach(button => {
+            button.addEventListener("click", () => petitionForLandGrant(button.dataset.landgrant));
+        });
 
     content.querySelectorAll("[data-rel]")
         .forEach(button => {
@@ -2391,6 +2459,9 @@ function renderChildren(content) {
 
         card.innerHTML = `
             <h3>${title}${isHeir ? " — Heir" : ""}</h3>
+            <p class="muted">${appearanceDescription(child.appearance)}</p>
+            <div class="stat">Temperament <strong>${child.trait || "Unremarked"}</strong></div>
+            ${child.cohortNote ? `<p class="muted">Born ${child.cohortNote}.</p>` : ""}
             <div class="stat">Age <strong>${age}</strong></div>
             <div class="stat">Schooling <strong>${child.schooling || "None yet"}</strong></div>
             <div class="stat">Marital status <strong>${child.married ? "Wed to " + child.spouseName + " (" + child.spouseCountry + ")" : "Unmarried"}</strong></div>
@@ -2590,6 +2661,7 @@ function renderRoyalProspects(content, market, subjectGender, subjectName) {
 
     const prospects = (market.royal.prospects[subjectGender] || market.royal.prospects.F)
         .filter(p => !(p.id === "charles_bold" && game.worldFlags.charlesDead))
+        .filter(p => !(p.id === "richard_gloucester" && (game.worldFlags.richardIsKing || game.worldFlags.richardDead)))
         .map(p => {
             if (p.id === "charles_bold" && game.worldFlags.charlesIsDuke) {
                 return Object.assign({}, p, { name: "Charles the Bold, Duke of Burgundy" });
@@ -3031,6 +3103,126 @@ function pickChildName(gender) {
     return finalPool[Math.floor(Math.random() * finalPool.length)];
 }
 
+
+/* =========================================================
+   APPEARANCE — no portraits in a static file, but a real,
+   procedurally generated physical description that a child
+   plausibly inherits pieces of from whichever parent you play.
+========================================================= */
+
+const APPEARANCE_BUILD = ["tall and lean", "short and sturdy", "of middling height, broad-shouldered", "slight and quick", "tall and imposing", "compact and wiry", "strikingly statuesque", "delicate-framed"];
+const APPEARANCE_HAIR = ["dark hair", "fair hair", "auburn hair", "raven-black hair", "chestnut hair", "flaxen hair", "copper-red hair", "deep brown hair"];
+const APPEARANCE_EYES = ["sharp dark eyes", "pale blue eyes", "clear grey eyes", "warm brown eyes", "striking green eyes", "hooded eyes that give little away"];
+const APPEARANCE_FEATURE = ["a strong jaw", "a notably long nose", "a ready, easy smile", "a faint scar above one brow", "an unusually loud laugh", "a habit of steepling the fingers when thinking", "a birthmark on the left cheek", "a scholar's stoop", "a soldier's bearing", "unusually delicate hands"];
+
+function generateAppearance(houseKey, parentAppearance) {
+
+    const hair = (parentAppearance && Math.random() < 0.5) ? parentAppearance.hair : randomFrom(APPEARANCE_HAIR);
+    const eyes = (parentAppearance && Math.random() < 0.35) ? parentAppearance.eyes : randomFrom(APPEARANCE_EYES);
+    const build = randomFrom(APPEARANCE_BUILD);
+
+    const featurePool = APPEARANCE_FEATURE.slice();
+    if (houseKey === "habsburg") featurePool.push("the noted Habsburg lip");
+    if (["york", "lancaster", "beaufort"].includes(houseKey)) featurePool.push("a strong Plantagenet jaw");
+
+    const feature = (parentAppearance && Math.random() < 0.25) ? parentAppearance.feature : randomFrom(featurePool);
+
+    return { build, hair, eyes, feature };
+
+}
+
+function appearanceDescription(app) {
+    if (!app) return "";
+    return `${app.build.charAt(0).toUpperCase()}${app.build.slice(1)}, with ${app.hair} and ${app.eyes}, known for ${app.feature}.`;
+}
+
+
+/* =========================================================
+   TRAITS — a scoped version of the Genetic / Dynastic / Historical
+   Cohort inheritance engine: every child's temperament leans on
+   what their house tends to produce, what their family has
+   actually become known for in this playthrough, and who else
+   was being born into the same world at the same time.
+========================================================= */
+
+const HOUSE_GENETIC_TRAITS = {
+    york: ["Ambitious", "Proud", "Bold"],
+    lancaster: ["Melancholic", "Stubborn", "Pious"],
+    beaufort: ["Pious", "Shrewd", "Patient"],
+    neville: ["Ambitious", "Cunning", "Proud"],
+    woodville: ["Charismatic", "Ambitious", "Graceful"],
+    burgundy: ["Proud", "Generous", "Bold"],
+    valois: ["Cunning", "Melancholic", "Suspicious"],
+    montfort: ["Patient", "Wary", "Stubborn"],
+    trastamara: ["Devout", "Shrewd", "Proud"],
+    aragon: ["Shrewd", "Patient", "Ambitious"],
+    aviz: ["Bold", "Restless", "Devout"],
+    habsburg: ["Patient", "Pious", "Melancholic"],
+    saxony: ["Stubborn", "Shrewd", "Proud"],
+    brandenburg: ["Wary", "Ambitious", "Patient"],
+    palatinate: ["Proud", "Cunning", "Stubborn"],
+    curia: ["Devout", "Cunning", "Patient"],
+    medici: ["Shrewd", "Generous", "Ambitious"],
+};
+
+const GENERIC_TRAITS = ["Bold", "Shrewd", "Gentle", "Proud", "Cunning", "Frail", "Hot-Tempered", "Patient", "Generous", "Suspicious", "Charismatic", "Reckless"];
+
+// Dynastic Modifier — a trait a newborn picks up from the family's own actual
+// reputation in this playthrough, not from blood at all.
+function dynasticModifierTrait() {
+    // Guards against being called while `game = {...}` is still under construction (the
+    // player's own starting trait is generated before the assignment completes, so the
+    // global `game` is still null/the previous game at that instant).
+    if (!game || !game.worldFlags) return null;
+    if (game.worldFlags.debtSoldToRival || game.worldFlags.bankFundedRebels) return "Untrustworthy Debtor";
+    if (game.worldFlags.excommunicated) return "Born Under a Cloud";
+    if (game.worldFlags.knownForVice) return "Born Amid Scandal";
+    if (game.worldFlags.dynastyPope) return "Touched by Rome's Favor";
+    if (game.worldFlags.provenLancastrianLoyalty) return "Born to a Divided House";
+    if (game.worldFlags.pledgedMargaretBeaufort) return "Marked by an Old Promise";
+    return null;
+}
+
+function generateTrait(houseKey, parentTrait) {
+    const pool = HOUSE_GENETIC_TRAITS[houseKey] || GENERIC_TRAITS;
+    const roll = Math.random();
+    if (roll < 0.5) {
+        // Genetic (50%): usually the parent's own trait, otherwise the house's own tendency.
+        if (parentTrait && Math.random() < 0.6) return parentTrait;
+        return randomFrom(pool);
+    }
+    if (roll < 0.75) {
+        // Dynastic modifier (25%): the family's actual reputation in this playthrough,
+        // falling back to the house's own tendency if nothing notable has happened yet.
+        const dyn = dynasticModifierTrait();
+        if (dyn) return dyn;
+        return randomFrom(pool);
+    }
+    // The remaining quarter draws from the wider, non-dynastic pool — the ordinary
+    // variation every generation has regardless of blood or reputation.
+    return randomFrom(GENERIC_TRAITS);
+}
+
+// Historical Cohort Placement — ties a child's birth year and home realm to the real
+// generation of rulers-to-be growing up alongside them, without needing a full
+// simulation of every other royal house's own family tree.
+const HISTORICAL_COHORTS = [
+    { country: "England", from: 1470, to: 1485, note: "of an age with the ill-fated young princes of the House of York" },
+    { country: "England", from: 1486, to: 1500, note: "of an age with the first Tudor princes, born into a kingdom finally at peace" },
+    { country: "France", from: 1465, to: 1478, note: "of an age with the future King Charles VIII of France" },
+    { country: "Burgundy", from: 1475, to: 1485, note: "of an age with Philip the Handsome, heir to both Burgundy and the House of Habsburg" },
+    { country: "Austria", from: 1455, to: 1465, note: "of an age with Maximilian of Habsburg, who will one day be Emperor" },
+    { country: "Castile", from: 1470, to: 1480, note: "of an age with the Infanta who will one day be remembered as Catherine of Aragon" },
+    { country: "Portugal", from: 1465, to: 1475, note: "of an age with Manuel, a distant cousin who will one day inherit the Portuguese crown" },
+    { country: "Aragon", from: 1450, to: 1462, note: "of an age with Ferdinand, heir to the Crown of Aragon" },
+];
+
+function historicalCohortNote(birthYear, homeCountry) {
+    const hit = HISTORICAL_COHORTS.find(e => e.country === homeCountry && birthYear >= e.from && birthYear <= e.to);
+    if (hit) return hit.note;
+    return "growing up alongside a generation of Christendom's rulers whose own stories are only just beginning";
+}
+
 function resolveBirth(withPhysician) {
 
     if (withPhysician) game.wealth = Math.max(0, game.wealth - 20);
@@ -3051,7 +3243,10 @@ function resolveBirth(withPhysician) {
             schooling: null,
             married: false,
             spouseName: null,
-            spouseCountry: null
+            spouseCountry: null,
+            appearance: generateAppearance(game.house, game.appearance),
+            trait: generateTrait(game.house, game.trait),
+            cohortNote: historicalCohortNote(game.year, game.homeCountry)
         };
         game.children.push(child);
         game.family.push({ name: childName, relation: "Your child", loyalty: 70 });
@@ -3227,6 +3422,8 @@ function succeedToHeir(reason) {
     game.person = heir.name;
     game.age = heirAge;
     game.gender = heir.gender;
+    game.appearance = heir.appearance || generateAppearance(game.house, null);
+    game.trait = heir.trait || generateTrait(game.house, null);
 
     // a real title (Duke, Duchess, King, Queen, Earl, Countess) carries forward, adapted
     // to the heir's own gender — it does not just reset to a bare "Lady"/"Lord"
@@ -3514,13 +3711,20 @@ function performDiplomacyAction(country, action) {
    about you.
 ========================================================= */
 
+// A cost can be a flat number or a function of current state (land purchases get more
+// expensive the more you already hold, so it's never a free snowball).
+function estateOptCost(opt) {
+    return typeof opt.cost === "function" ? opt.cost() : opt.cost;
+}
+
 const ESTATE_INVESTMENTS = [
+    { id: "purchase_land", label: "🏞️ Purchase Additional Land", cost: () => 25 + game.land * 6, desc: "Acquire more land outright — the foundation everything else here is built on.", effect: () => { game.land += 1; } },
     { id: "roads", label: "🛣️ Build Roads & Bridges", cost: 15, desc: "Trade moves faster and safer across your lands.", effect: () => { game.estateHealth = Math.min(100, game.estateHealth + 10); game.prestige += 2; } },
     { id: "farmland", label: "🌾 Clear Forest for Farmland", cost: 15, desc: "More land under the plow means more grain, and fewer hungry tenants.", effect: () => { game.estateHealth = Math.min(100, game.estateHealth + 6); game.popularLoyalty = Math.min(100, game.popularLoyalty + 6); } },
     { id: "walls", label: "🏰 Upgrade Fortress Walls", cost: 20, desc: "A stronger seat is a safer one, and a more respected one.", effect: () => { game.estateHealth = Math.min(100, game.estateHealth + 12); game.prestige += 4; } },
     { id: "ports", label: "⚓ Subsidize Ports & Trade", cost: 20, desc: "Merchants remember whose harbors are worth using.", effect: () => { game.estateHealth = Math.min(100, game.estateHealth + 8); game.influence += 4; } },
     { id: "health", label: "🏥 Fund Almshouses & Physicians (Health)", cost: 15, desc: "Fewer of your people die of things that don't have to kill them.", effect: () => { game.popularLoyalty = Math.min(100, game.popularLoyalty + 10); game.health = Math.min(100, game.health + 3); } },
-    { id: "education", label: "📚 Endow a Local School (Education)", cost: 15, desc: "Literate stewards and clerks pay for themselves many times over.", effect: () => { game.prestige += 5; game.popularLoyalty = Math.min(100, game.popularLoyalty + 4); } },
+    { id: "education", label: "📚 Endow a Local School (Education)", cost: 15, desc: "Literate stewards and clerks pay for themselves many times over.", effect: () => { game.prestige += 5; game.popularLoyalty = Math.min(100, game.popularLoyalty + 4); game.printTech = Math.min(100, game.printTech + 6); } },
 ];
 
 function investInEstate(id) {
@@ -3528,12 +3732,14 @@ function investInEstate(id) {
     const opt = ESTATE_INVESTMENTS.find(o => o.id === id);
     if (!opt) return;
 
-    if (game.wealth < opt.cost) {
+    const cost = estateOptCost(opt);
+
+    if (game.wealth < cost) {
         showEvent("Not Enough Wealth", "Your treasury cannot support this investment right now.");
         return;
     }
 
-    game.wealth -= opt.cost;
+    game.wealth -= cost;
     opt.effect();
 
     game.chronicle.unshift(`${game.year}: You invest in your estates — ${opt.label.replace(/^[^\w]+/, "").trim()}.`);
@@ -3658,7 +3864,7 @@ function renderEstates(content) {
 
     ESTATE_INVESTMENTS.forEach(opt => {
         const btn = document.createElement("button");
-        btn.innerHTML = `<strong>${opt.label} (−${opt.cost} gold)</strong><br><span class="muted">${opt.desc}</span>`;
+        btn.innerHTML = `<strong>${opt.label} (−${estateOptCost(opt)} gold)</strong><br><span class="muted">${opt.desc}</span>`;
         btn.addEventListener("click", () => investInEstate(opt.id));
         investGrid.appendChild(btn);
     });
@@ -4455,14 +4661,25 @@ function performAction(type) {
 // Shared aging-mortality curve — used for the player and, separately, for a spouse who
 // isn't tied to a scripted historical death (so widowhood isn't only ever scripted).
 function mortalityChance(age, health) {
-    let c = 0.005;
-    if (age > 50) c = 0.02;
-    if (age > 65) c = 0.06;
+    let c = 0.01;
+    if (age > 40) c = 0.02;
+    if (age > 55) c = 0.045;
+    if (age > 65) c = 0.09;
+    if (age > 75) c = 0.15;
     if (health != null) {
-        if (health < 40) c += 0.05;
-        if (health < 20) c += 0.15;
+        if (health < 40) c += 0.06;
+        if (health < 20) c += 0.18;
     }
     return c;
+}
+
+// Childhood mortality was brutal in this era — far higher than the adult curve, and
+// heaviest in infancy — before settling onto the normal adult risk from about age 10.
+function childMortalityChance(age) {
+    if (age < 1) return 0.12;
+    if (age < 5) return 0.06;
+    if (age < 10) return 0.03;
+    return mortalityChance(age, null);
 }
 
 // Favor ebbs and flows — nothing you earn just sits at its peak forever. Every value
@@ -4506,6 +4723,24 @@ function advanceTime(months) {
             if (game.married && game.spouseAge != null) game.spouseAge++;
 
             applyAnnualDrift();
+
+            // Movable type keeps spreading across Europe whether or not you're
+            // watching — the threshold it crosses triggers the event, not a fixed year.
+            if (game.year >= 1465) game.printTech = Math.min(100, game.printTech + 2);
+
+            // Childhood in this era is genuinely dangerous — a living child isn't
+            // automatically safe just because they survived being born.
+            for (let ci = game.children.length - 1; ci >= 0; ci--) {
+                const child = game.children[ci];
+                const childAge = game.year - child.birthYear;
+                if (Math.random() < childMortalityChance(childAge)) {
+                    const wasHeir = game.heir === child;
+                    recapLines.push(`Word comes that ${child.name}${childAge < 1 ? ", still an infant," : ""} has died${childAge < 5 ? " of a childhood fever" : ""} — a grief no household in this age is truly spared.${wasHeir ? " With no heir now named, the succession is suddenly an open question again." : ""}`);
+                    game.children.splice(ci, 1);
+                    game.family = game.family.filter(f => f.name !== child.name);
+                    if (wasHeir) game.heir = game.children.length ? game.children[0] : null;
+                }
+            }
 
             yearsPassed++;
 
@@ -4729,6 +4964,42 @@ function showTimeRecap(lines, months, onContinue) {
 ========================================================= */
 
 function tryHistoricalEvent() {
+
+    // Condition-triggered, not date-triggered: this fires once print culture's spread
+    // (game.printTech) crosses a threshold, not on a hardcoded year. It grows a little
+    // every year after a plausible earliest floor, and faster wherever someone has
+    // actually invested in local education — so it can arrive earlier or later
+    // depending on what you and the wider world have actually done, not a fixed date.
+    if (game.printTech >= 60 && !game.flags.printingPressArrives) {
+
+        game.flags.printingPressArrives = true;
+
+        const ev = {
+            title: "📜 A Press Comes to Town",
+            text: `A printer newly arrived from the Rhineland sets up shop nearby with one of the new movable-type presses — the same device, it's said, that a goldsmith named Gutenberg perfected in Mainz. Broadsheets, pamphlets, and cheaply copied prayer books begin appearing where once only a scribe's careful hand could produce them. Word — and rumor, and grievance — will travel faster from here on than any of the old ways of governing quite know how to answer.`,
+            choices: [
+                { label: "Patronize the press", effect: () => {
+                    if (game.wealth < 20) return { fail: true, msg: "You cannot afford to back this right now." };
+                    game.wealth -= 20;
+                    game.prestige += 8;
+                    return { msg: "You fund the printer's early work. Your own name, sensibly enough, appears rather favorably in what gets printed." };
+                }},
+                { label: "Keep your distance and watch", effect: () => {
+                    game.influence += 4;
+                    return { msg: "You let others test the waters of this new thing first." };
+                }},
+                { label: "Lean on the printer to mind what he sets in type", effect: () => {
+                    game.popularLoyalty = Math.max(0, game.popularLoyalty - 8);
+                    game.piety = Math.min(100, game.piety + 5);
+                    return { msg: "It buys the Church's quiet approval and your own tenants' quiet resentment in roughly equal measure." };
+                }},
+            ]
+        };
+
+        showChoiceEvent(ev);
+        return true;
+
+    }
 
     if (game.year >= 1464 && !game.flags.edwardMarriage) {
 
@@ -5201,15 +5472,18 @@ const RANDOM_EVENTS = [
 
     { eligible: null, build: () => ({
         title: "Sickness in the Household",
-        text: `A fever moves through your household this season.`,
+        text: `A fever moves through your household this season — the kind that, in these years, takes the strong along with the weak often enough that no one treats it lightly.`,
         choices: [
             { label: "Send for a physician (−15 gold)", effect: () => {
                 if (game.wealth < 15) return { fail: true, msg: "You cannot afford a physician right now." };
                 game.wealth -= 15;
+                if (Math.random() < 0.04) return { fatal: true, msg: `Even the physician's best efforts aren't enough — the fever takes ${game.person} despite every care money could buy.` };
                 return { msg: "The household recovers quickly under proper care." };
             }},
             { label: "Rely on prayer and rest", effect: () => {
                 if (Math.random() < 0.5) return { msg: "The household mends on its own, given time." };
+                if (Math.random() < 0.18) return { fatal: true, msg: `The fever settles in ${game.person}'s chest and does not lift. Without a physician's care, it proves fatal.` };
+                game.health = Math.max(0, game.health - 10);
                 game.prestige = Math.max(0, game.prestige - 4);
                 return { msg: "It lingers longer than hoped, and word gets around that your household went without care." };
             }},
@@ -5295,7 +5569,7 @@ const RANDOM_EVENTS = [
 
     { eligible: (g) => isYoungUnmarriedNoblewoman(g) && g.age < 26, build: () => ({
         title: "Your Mother's Expectations",
-        text: `Cecily Neville presses you, not for the first time, on your prospects and your conduct — a marriage well made could secure the family's fortunes for a generation, and she means to see it done properly.`,
+        text: `A senior kinswoman of the household presses you, not for the first time, on your prospects and your conduct — a marriage well made could secure the family's fortunes for a generation, and she means to see it done properly.`,
         choices: [
             { label: "Reassure her you understand the stakes", effect: () => {
                 game.prestige += 4;
@@ -5313,12 +5587,12 @@ const RANDOM_EVENTS = [
 
     { eligible: isYoungUnmarriedNoblewoman, build: () => ({
         title: "A Foreign Envoy's Compliment",
-        text: `A Burgundian envoy, visiting on other business entirely, pays you rather more attention and rather finer compliments than strict diplomacy requires. It may mean nothing. It may mean everything.`,
+        text: `A foreign envoy, visiting on other business entirely, pays you rather more attention and rather finer compliments than strict diplomacy requires. It may mean nothing. It may mean everything.`,
         choices: [
             { label: "Receive him warmly", effect: () => {
-                game.relationships.Charles = Math.min(100, (game.relationships.Charles || 30) + 12);
-                game.influence += 4;
-                return { msg: "You receive him graciously. Word of your charm will travel back to Burgundy with him, one way or another." };
+                game.influence += 6;
+                game.prestige += 3;
+                return { msg: "You receive him graciously. Word of your charm will travel home with him, one way or another." };
             }},
             { label: "Keep a polite distance", effect: () => {
                 game.prestige += 4;
@@ -5348,8 +5622,8 @@ const RANDOM_EVENTS = [
         text: `Your family's household asks you to help entertain an important visitor at a gathering — your presence and grace are, apparently, a political asset in themselves, whether or not anyone asks your opinion of it.`,
         choices: [
             { label: "Do it, and do it well", effect: () => {
-                game.relationships.Edward = Math.min(100, (game.relationships.Edward || 30) + 8);
-                game.influence += 5;
+                game.influence += 6;
+                game.prestige += 3;
                 return { msg: "You play your part beautifully, and everyone notices — including, uncomfortably, exactly how useful you were." };
             }},
             { label: "Decline, uninterested in being used this way", effect: () => {
@@ -5399,7 +5673,7 @@ const RANDOM_EVENTS = [
 
     { eligible: (g) => isStillAdjusting(), build: () => ({
         title: "Homesick",
-        text: `Word from England reaches you rarely, and always late by the time it does. You find yourself missing it more than you expected to.`,
+        text: `Word from ${game.homeCountry} reaches you rarely, and always late by the time it does. You find yourself missing it more than you expected to.`,
         choices: [
             { label: "Write long letters home", effect: () => {
                 const fam = game.family[Math.floor(Math.random() * game.family.length)];
@@ -5630,6 +5904,207 @@ const RANDOM_EVENTS = [
         ]
     })},
 
+    // ===== BRITTANY =====
+
+    { eligible: (g) => g.location === "Brittany", build: () => ({
+        title: "The Duke's Narrow Path",
+        text: `Duke Francis II walks a careful line between France and England, and everyone at his court is expected to help him walk it — a wrong word to the wrong envoy could cost Brittany dearly.`,
+        choices: [
+            { label: "Cultivate ties with the French faction at court", effect: () => {
+                game.relationships.France = Math.min(100, (game.relationships.France || 15) + 10);
+                game.prestige += 3;
+                return { msg: "You build quiet goodwill with those who favor accommodation with Paris." };
+            }},
+            { label: "Cultivate ties with the English faction instead", effect: () => {
+                game.relationships.Edward = Math.min(100, (game.relationships.Edward || 30) + 10);
+                game.prestige += 3;
+                return { msg: "You build quiet goodwill with those who'd rather lean on England to keep France at bay." };
+            }},
+        ]
+    })},
+
+    { eligible: (g) => g.location === "Brittany", build: () => ({
+        title: "Worry Over the Succession",
+        text: `Quiet talk at court keeps returning to the same anxious question: Duke Francis II has no son, and an independent Brittany without a clear male heir is exactly the kind of weakness France has always been patient enough to wait for.`,
+        choices: [
+            { label: "Voice confidence in the Duke's line", effect: () => {
+                game.prestige += 5;
+                return { msg: "You speak up for stability, whatever your private doubts. It's noticed as loyalty." };
+            }},
+            { label: "Quietly hedge your own position", effect: () => {
+                game.influence += 5;
+                return { msg: "You keep your own options open without saying so aloud. Prudent, if a little cold." };
+            }},
+        ]
+    })},
+
+    // ===== ARAGON =====
+
+    { eligible: (g) => g.location === "Aragon", build: () => ({
+        title: "The Mediterranean's Own Politics",
+        text: `Talk at court turns as often to Naples, Sicily, and the trade routes of the western Mediterranean as to anything happening north of the Pyrenees — a different set of rivalries than most of Christendom bothers to track.`,
+        choices: [
+            { label: "Learn the Mediterranean players properly", effect: () => {
+                game.influence += 6;
+                return { msg: "You start to actually understand who matters here, which is more than most outsiders manage." };
+            }},
+            { label: "Leave it to those who care more", effect: () => {
+                game.prestige += 3;
+                return { msg: "You let the specialists handle it. No one holds it against you." };
+            }},
+        ]
+    })},
+
+    { eligible: (g) => g.location === "Aragon", build: () => ({
+        title: "Talk of a Castilian Match",
+        text: `Court gossip keeps circling one particular question: whether the crown's own succession should be bound to Castile through marriage — a union that would reshape the entire peninsula, for better or worse.`,
+        choices: [
+            { label: "Speak in favor of the Castilian match", effect: () => {
+                game.relationships.Castile = Math.min(100, (game.relationships.Castile || 20) + 10);
+                return { msg: "You back the idea openly. Time will tell if it comes to anything, but you've placed your name behind it early." };
+            }},
+            { label: "Voice caution about tying the crown's hands", effect: () => {
+                game.prestige += 4;
+                return { msg: "You counsel patience. Not everyone agrees, but no one thinks less of the caution." };
+            }},
+        ]
+    })},
+
+    // ===== AUSTRIA =====
+
+    { eligible: (g) => g.location === "Austria", build: () => ({
+        title: "The Emperor's Patience",
+        text: `Frederick III is famous even among his own court for a patience that borders on inertia — decisions here move at the pace of decades, not seasons, and everyone learns to work within it or grows frustrated trying not to.`,
+        choices: [
+            { label: "Adapt to the slow, careful pace", effect: () => {
+                game.prestige += 5;
+                return { msg: "You learn to think in terms of years rather than weeks. It suits this court far better than urgency ever would." };
+            }},
+            { label: "Try to force something forward anyway", effect: () => {
+                game.influence += 5;
+                game.prestige = Math.max(0, game.prestige - 3);
+                return { msg: "You push for a faster decision than the court is used to. It gets you noticed — not always favorably." };
+            }},
+        ]
+    })},
+
+    { eligible: (g) => g.location === "Austria", build: () => ({
+        title: "A Marriage Proposal Considered",
+        text: `Word arrives of yet another foreign marriage under discussion for the House of Habsburg — this family's preferred instrument of conquest, used far more often than any army.`,
+        choices: [
+            { label: "Encourage the match", effect: () => {
+                game.electorFavor = Math.min(100, game.electorFavor + 8);
+                return { msg: "You speak in favor of it. The Habsburgs have never needed much encouragement to marry well, but it's noted who backed it early." };
+            }},
+            { label: "Stay out of the negotiations entirely", effect: () => {
+                game.prestige += 3;
+                return { msg: "You leave the matchmaking to those whose business it actually is." };
+            }},
+        ]
+    })},
+
+    // ===== THE HOLY ROMAN EMPIRE — ELECTORATES =====
+
+    { eligible: (g) => ["Saxony", "Brandenburg", "Palatinate"].includes(g.location), build: () => ({
+        title: "Courted by Vienna",
+        text: `An Imperial envoy arrives with gifts, flattery, and the unmistakable air of someone sent to make sure your Electorate's vote stays exactly where Vienna wants it.`,
+        choices: [
+            { label: "Receive him warmly", effect: () => {
+                game.relationships.Austria = Math.min(100, (game.relationships.Austria || 20) + 12);
+                game.prestige += 3;
+                return { msg: "You let Vienna know its attention is appreciated. That kind of goodwill is rarely wasted." };
+            }},
+            { label: "Receive him coolly", effect: () => {
+                game.influence += 5;
+                return { msg: "You make clear your Electorate's vote isn't simply assumed. It's a small, deliberate assertion of your own leverage." };
+            }},
+        ]
+    })},
+
+    { eligible: (g) => ["Saxony", "Brandenburg", "Palatinate"].includes(g.location), build: () => ({
+        title: "A Rival Elector's Envy",
+        text: `One of the other Electorates has been grumbling that your court gets more attention from Vienna than its own — pettiness dressed up as principle, but pettiness with real teeth in a body this small.`,
+        choices: [
+            { label: "Smooth it over diplomatically", effect: () => {
+                game.prestige += 5;
+                return { msg: "A little tact goes a long way among princes who all know exactly how much their votes are worth." };
+            }},
+            { label: "Let them stew in it", effect: () => {
+                game.influence += 4;
+                return { msg: "You decide their jealousy isn't your problem to manage. It costs you nothing today." };
+            }},
+        ]
+    })},
+
+    // ===== THE ROMAN CHURCH =====
+
+    { eligible: (g) => g.house === "curia", build: () => ({
+        title: "A Question of Simony",
+        text: `A wealthy petitioner offers a substantial "donation" in exchange for a benefice that should, by any honest reading of canon law, go to someone else entirely.`,
+        choices: [
+            { label: "Accept the donation quietly (+gold)", effect: () => {
+                game.wealth += 30;
+                game.piety = Math.max(0, game.piety - 12);
+                return { msg: "The gold is real, and useful. So is the quiet erosion of your own standing within the Curia, should it ever come out." };
+            }},
+            { label: "Refuse, and appoint on merit", effect: () => {
+                game.piety = Math.min(100, game.piety + 10);
+                return { msg: "You refuse the offer. It costs you gold you could have used, but your own conscience — and your reputation among the more devout cardinals — stays intact." };
+            }},
+        ]
+    })},
+
+    { eligible: (g) => g.house === "curia", build: () => ({
+        title: "Pilgrims and Petitioners",
+        text: `Rome fills, as it always does, with pilgrims and petitioners of every rank — most of them wanting something only the Curia can grant.`,
+        choices: [
+            { label: "Hold audiences personally", effect: () => {
+                game.piety = Math.min(100, game.piety + 8);
+                game.prestige += 3;
+                return { msg: "Your visible attentiveness to the faithful is exactly the kind of thing that gets remembered when offices come open." };
+            }},
+            { label: "Delegate it to junior clerks", effect: () => {
+                game.influence += 4;
+                return { msg: "You save your own time for matters that actually require it. Efficient, if a little cold." };
+            }},
+        ]
+    })},
+
+    // ===== THE MEDICI BANK =====
+
+    { eligible: (g) => g.house === "medici", build: () => ({
+        title: "A Debtor's Excuses",
+        text: `A crown that owes your house a considerable sum sends an envoy with elaborate, well-rehearsed excuses instead of gold.`,
+        choices: [
+            { label: "Press firmly for payment", effect: () => {
+                game.wealth += 15;
+                game.bankFavor = Math.max(0, game.bankFavor - 5);
+                return { msg: "You get at least partial payment, though the relationship cools noticeably." };
+            }},
+            { label: "Extend patience, for now", effect: () => {
+                game.bankFavor = Math.min(100, game.bankFavor + 10);
+                return { msg: "Your patience is remembered — and remembered debts, collected later with interest, tend to be worth more than gold collected early." };
+            }},
+        ]
+    })},
+
+    { eligible: (g) => g.house === "medici", build: () => ({
+        title: "The Guild's Jealousy",
+        text: `Rival Florentine banking families make no secret of their resentment at how much of Europe's business flows through your house instead of theirs.`,
+        choices: [
+            { label: "Ignore it and keep expanding", effect: () => {
+                game.wealth += 15;
+                game.prestige = Math.max(0, game.prestige - 3);
+                return { msg: "You keep growing regardless. Envy has never once slowed a ledger down." };
+            }},
+            { label: "Make a gesture of civic goodwill", effect: () => {
+                game.prestige += 8;
+                game.wealth = Math.max(0, game.wealth - 15);
+                return { msg: "A visible act of civic generosity softens some of the resentment, at real cost." };
+            }},
+        ]
+    })},
+
     // ===== LANCASTRIAN NOBLE MARRIAGE — hedging the family's bets =====
 
     { eligible: (g) => g.worldFlags.provenLancastrianLoyalty && g.location === "England" &&
@@ -5709,6 +6184,15 @@ function showChoiceEvent(ev, warning) {
             }
 
             const msg = result ? result.msg : "The matter is resolved.";
+
+            // A choice's own consequence can be fatal — hand off to the same death
+            // flow natural mortality uses (heir succession or the chronicle ending)
+            // instead of a plain "Continue" popup.
+            if (result && result.fatal) {
+                render();
+                handleDeath(msg);
+                return;
+            }
 
             game.chronicle.unshift(`${game.year}: ${msg}`);
 
