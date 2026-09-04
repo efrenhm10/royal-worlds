@@ -367,6 +367,7 @@ queen — a niece, a cousin, or a minor lord shapes this world too.
 <button data-tab="diplomacy">🤝 Diplomacy</button>
 <button data-tab="estates">🌾 Estates</button>
 <button data-tab="powers">⚡ Powers</button>
+<button data-tab="dynasties">🌳 Dynasties</button>
 <button data-tab="chronicle">📜 Chronicle</button>
 
 <button id="newGame" class="secondary">
@@ -1144,7 +1145,10 @@ function countryProfile() {
     let desc = base.desc;
 
     if (game.location === "Burgundy") {
-        if (game.worldFlags.charlesDead) {
+        if (game.worldFlags.charlesDead && DYNASTIES.Burgundy.ruler.name !== "Mary of Burgundy") {
+            const d = DYNASTIES.Burgundy;
+            desc = `You are at the Burgundian court, generations on from Charles the Bold's fall at Nancy, now under ${d.ruler.gender === "F" ? "Duchess" : "Duke"} ${d.ruler.name}${d.marriedToPlayer ? " — your own spouse" : ""}. England is now a distant political environment reached through letters, marriage, and memory.`;
+        } else if (game.worldFlags.charlesDead) {
             desc = `You are at the Burgundian court, now held by the young Duchess Mary after her father Charles the Bold fell at Nancy — a court more uncertain of itself than it once was. England is now a distant political environment reached through letters, marriage, and memory.`;
         } else if (game.worldFlags.charlesIsDuke) {
             desc = `You are at Duke Charles the Bold's Burgundian court, now his alone since his father Philip's death — no less wealthy or ceremonious, if a touch more restless under its new ruler. England is now a distant political environment reached through letters, marriage, and memory.`;
@@ -1172,13 +1176,41 @@ function countryProfile() {
     if (game.location === "Portugal") {
         if (game.worldFlags.castilianSuccessionWar) {
             desc = `You are at the Portuguese court, consumed by King Afonso V's war in Castile to press his wife Joanna's claim to that throne — a costly, uncertain campaign that dominates every conversation here.`;
+        } else if (game.worldFlags.afonsoDead && DYNASTIES.Portugal.ruler.name !== "John II") {
+            const d = DYNASTIES.Portugal;
+            desc = `You are at the Portuguese court, now under ${d.ruler.gender === "F" ? "Queen" : "King"} ${d.ruler.name}${d.marriedToPlayer ? ", your own spouse" : ""} — still a restless, outward-looking place, generations on from the voyages that first made this court famous.`;
         } else if (game.worldFlags.afonsoDead) {
             desc = `You are at the Portuguese court under King John II, a court still oriented toward the voyages down the African coast that made his father's reign famous.`;
         }
     }
 
     if (game.location === "Scotland" && game.worldFlags.jamesIIIDead) {
-        desc = `You are at the Scottish court under the young King James IV, whose father died at the hands of rebels not long ago — a court still finding its footing after that violent transition.`;
+        if (DYNASTIES.Scotland.ruler.name !== "James IV") {
+            const d = DYNASTIES.Scotland;
+            desc = `You are at the Scottish court, now under ${d.ruler.gender === "F" ? "Queen" : "King"} ${d.ruler.name}${d.marriedToPlayer ? ", your own spouse" : ""} — a court that has seen more than one violent transition since James III's death.`;
+        } else {
+            desc = `You are at the Scottish court under the young King James IV, whose father died at the hands of rebels not long ago — a court still finding its footing after that violent transition.`;
+        }
+    }
+
+    if (game.location === "France" && DYNASTIES.France.active && DYNASTIES.France.ruler.name !== "Charles VIII") {
+        const d = DYNASTIES.France;
+        desc = `You are at the French court, now under ${d.ruler.gender === "F" ? "Queen" : "King"} ${d.ruler.name}${d.marriedToPlayer ? ", your own spouse" : ""} — Valois centralization continuing into a new generation, whoever now wears the crown.`;
+    }
+
+    if (game.location === "Austria" && DYNASTIES.Austria.ruler.name !== "Frederick III") {
+        const d = DYNASTIES.Austria;
+        desc = `You are at the Austrian archducal court, now under ${d.ruler.gender === "F" ? "Archduchess" : "Archduke"} ${d.ruler.name}${d.marriedToPlayer ? ", your own spouse" : ""} — the Habsburg custodianship of the Imperial crown continuing into a new generation.`;
+    }
+
+    if (game.location === "Aragon" && DYNASTIES.Aragon.ruler.name !== "John II of Aragon") {
+        const d = DYNASTIES.Aragon;
+        desc = `You are at the Aragonese court, now under ${d.ruler.gender === "F" ? "Queen" : "King"} ${d.ruler.name}${d.marriedToPlayer ? ", your own spouse" : ""} — the Mediterranean crown's own politics continuing regardless of who last held it.`;
+    }
+
+    if (game.location === "Brittany" && DYNASTIES.Brittany.ruler.name !== "Francis II") {
+        const d = DYNASTIES.Brittany;
+        desc = `You are at the Breton ducal court, now under ${d.ruler.gender === "F" ? "Duchess" : "Duke"} ${d.ruler.name}${d.marriedToPlayer ? ", your own spouse" : ""} — independence still a narrow, carefully walked line between France and England.`;
     }
 
     return { desc, people: base.people };
@@ -1223,8 +1255,23 @@ const WORLD_TIMELINE = [
       text: `News from Burgundy: Charles the Bold has fallen at the Battle of Nancy. His daughter Mary inherits the duchy.`,
       apply: (g, recapLines) => {
           g.worldFlags.charlesDead = true;
+          DYNASTIES.Burgundy.active = true;
           g.worldFlags.charlesIsDuke = false;
           g.worldFlags.maryIsDuchess = true;
+
+          // Adaptation: if you were actually married to Charles and have an heir, that
+          // child — not the history-book Mary of Burgundy — is who the wider world now
+          // recognizes as Burgundy's heir. Captured here, before widowhood clears
+          // g.married/g.heir's relevance to this marriage.
+          if (g.married && g.spouseRelKey === "Charles" && g.heir) {
+              DYNASTIES.Burgundy.heir = {
+                  name: g.heir.name,
+                  gender: g.heir.gender,
+                  age: Math.max(0, g.year - (g.heir.birthYear || g.year)),
+                  married: false,
+                  fromPlayer: true
+              };
+          }
 
           if (g.married && g.spouseName && g.spouseName.indexOf("Charles the Bold") !== -1) {
               const oldSpouse = g.spouseName;
@@ -1269,7 +1316,7 @@ const WORLD_TIMELINE = [
     { id: "afonso_dies", year: 1481, month: 8,
       loyaltyIfPresent: { country: "Portugal", relKey: "Portugal", newRulerLabel: "King John II" },
       text: `News from Portugal: King Afonso V has died. His son succeeds as King John II.`,
-      apply: (g) => { g.worldFlags.afonsoDead = true; } },
+      apply: (g) => { g.worldFlags.afonsoDead = true; DYNASTIES.Portugal.active = true; } },
 
     { id: "edward_dies", year: 1483, month: 4,
       eligible: (g) => g.location !== "England",
@@ -1315,12 +1362,12 @@ const WORLD_TIMELINE = [
     { id: "louis_dies", year: 1483, month: 8,
       loyaltyIfPresent: { country: "France", relKey: "France", newRulerLabel: "King Charles VIII" },
       text: `News from France: King Louis XI has died. His young son succeeds as Charles VIII.`,
-      apply: (g) => { g.worldFlags.louisDead = true; } },
+      apply: (g) => { g.worldFlags.louisDead = true; DYNASTIES.France.active = true; } },
 
     { id: "james_iii_dies", year: 1488, month: 6,
       loyaltyIfPresent: { country: "Scotland", relKey: "Scotland", newRulerLabel: "King James IV" },
       text: `News from Scotland: King James III has been killed after a rebellion led by disaffected nobles — and, uncomfortably, his own son. James IV succeeds him.`,
-      apply: (g) => { g.worldFlags.jamesIIIDead = true; } },
+      apply: (g) => { g.worldFlags.jamesIIIDead = true; DYNASTIES.Scotland.active = true; } },
 
     { id: "imperial_election_maximilian", year: 1486, month: 2,
       text: `News from the Holy Roman Empire: the Prince-Electors have chosen Maximilian of Habsburg as King of the Romans, securing the Imperial succession for his father Frederick III's house for another generation.`,
@@ -1371,10 +1418,144 @@ function checkWorldTimeline(recapLines) {
 // How a real historical figure should currently be referred to, given what's actually
 // happened to them in this playthrough — so a dead duke doesn't keep being invited to
 // feasts, and an heir who's succeeded stops being called "heir."
+/* =========================================================
+   DYNASTY SIMULATION ENGINE — the wider world doesn't freeze
+   once the hand-scripted history for a given realm runs out.
+   Each entry here picks up the moment its last scripted ruler
+   dies (or, for realms with no scripted arc at all — Austria,
+   Aragon, Brittany — from the very start of the game) and keeps
+   generating real successions, heirs, and cross-dynasty
+   marriages on its own for the rest of the playthrough.
+
+   Adaptation: if you marry into one of these houses and have an
+   heir when its ruler dies, YOUR child is recognized as the new
+   heir instead of a generated name — the geopolitics stay real,
+   but the actual bloodline is whatever you made it.
+========================================================= */
+
+const DYNASTIES = {
+
+    Burgundy: { relKey: "Charles", houseKey: "burgundy", titleM: "Duke", titleF: "Duchess", realmNoun: "Burgundy",
+        active: false, activatesOn: "charlesDead",
+        ruler: { name: "Mary of Burgundy", gender: "F", age: 20 }, heir: null, marriedToPlayer: false },
+
+    France: { relKey: "France", houseKey: "france", titleM: "King", titleF: "Queen", realmNoun: "France",
+        active: false, activatesOn: "louisDead",
+        ruler: { name: "Charles VIII", gender: "M", age: 13 }, heir: null, marriedToPlayer: false },
+
+    Portugal: { relKey: "Portugal", houseKey: "portugal", titleM: "King", titleF: "Queen", realmNoun: "Portugal",
+        active: false, activatesOn: "afonsoDead",
+        ruler: { name: "John II", gender: "M", age: 26 }, heir: null, marriedToPlayer: false },
+
+    Scotland: { relKey: "Scotland", houseKey: "scotland", titleM: "King", titleF: "Queen", realmNoun: "Scotland",
+        active: false, activatesOn: "jamesIIIDead",
+        ruler: { name: "James IV", gender: "M", age: 15 }, heir: null, marriedToPlayer: false },
+
+    Austria: { relKey: "Austria", houseKey: "austria", titleM: "Archduke", titleF: "Archduchess", realmNoun: "Austria",
+        active: true, activatesOn: null,
+        ruler: { name: "Frederick III", gender: "M", age: 46 }, heir: { name: "Maximilian", gender: "M", age: 2, married: false }, marriedToPlayer: false },
+
+    Aragon: { relKey: "Aragon", houseKey: "aragon", titleM: "King", titleF: "Queen", realmNoun: "Aragon",
+        active: true, activatesOn: null,
+        ruler: { name: "John II of Aragon", gender: "M", age: 63 }, heir: { name: "Ferdinand of Aragon", gender: "M", age: 9, married: false }, marriedToPlayer: false },
+
+    Brittany: { relKey: "Brittany", houseKey: "brittany", titleM: "Duke", titleF: "Duchess", realmNoun: "Brittany",
+        active: true, activatesOn: null,
+        ruler: { name: "Francis II", gender: "M", age: 28 }, heir: null, marriedToPlayer: false },
+
+};
+
+function domainNoun(title) {
+    const map = { King: "kingdom", Queen: "kingdom", Duke: "duchy", Duchess: "duchy", Archduke: "archduchy", Archduchess: "archduchy" };
+    return map[title] || "realm";
+}
+
+function simulateDynasties(recapLines) {
+
+    Object.entries(DYNASTIES).forEach(([country, d]) => {
+
+        if (!d.active) {
+            if (d.activatesOn && game.worldFlags[d.activatesOn]) d.active = true;
+            else return;
+        }
+
+        // If you're actually married to this dynasty's ruler, the wider world defers
+        // to your own family — your own heir (if any) IS this dynasty's heir.
+        if (game.married && game.spouseRelKey === d.relKey) {
+            d.marriedToPlayer = true;
+            d.heir = game.heir
+                ? { name: game.heir.name, gender: game.heir.gender, age: Math.max(0, game.year - (game.heir.birthYear || game.year)), married: !!game.heir.married, fromPlayer: true }
+                : null;
+            return;
+        }
+
+        d.marriedToPlayer = false;
+
+        d.ruler.age++;
+        if (d.heir) d.heir.age++;
+
+        if (Math.random() < mortalityChance(d.ruler.age, null)) {
+
+            const oldRulerName = d.ruler.name;
+
+            if (d.heir) {
+
+                d.ruler = { name: d.heir.name, gender: d.heir.gender, age: d.heir.age };
+                d.heir = null;
+
+                recapLines.push(`News from ${d.realmNoun}: ${oldRulerName} has died. ${d.ruler.name} succeeds as ${d.ruler.gender === "F" ? d.titleF : d.titleM} of ${d.realmNoun}.`);
+
+            } else {
+
+                const newGender = Math.random() < 0.5 ? "M" : "F";
+                const pool = NOBLE_NAME_POOLS[d.houseKey] || NOBLE_NAME_POOLS.england;
+                const newName = generatePeriodName(d.houseKey, newGender, pool.surnames || MERCHANT_SURNAMES.england);
+                d.ruler = { name: newName, gender: newGender, age: 20 + Math.floor(Math.random() * 15) };
+
+                recapLines.push(`News from ${d.realmNoun}: ${oldRulerName} has died without a clear heir. After a tense interval, a collateral relative, ${newName}, is recognized as the new ${newGender === "F" ? d.titleF : d.titleM} — though not every neighboring court is satisfied with the claim.`);
+
+            }
+
+            return;
+
+        }
+
+        if (!d.heir && d.ruler.age >= 18 && d.ruler.age <= 45 && Math.random() < 0.12) {
+
+            const childGender = Math.random() < 0.5 ? "M" : "F";
+            const pool = NOBLE_NAME_POOLS[d.houseKey] || NOBLE_NAME_POOLS.england;
+            const childName = generatePeriodName(d.houseKey, childGender, pool.surnames || MERCHANT_SURNAMES.england);
+            d.heir = { name: childName, gender: childGender, age: 0, married: false };
+
+            recapLines.push(`News from ${d.realmNoun}: word arrives of the birth of ${childName}, recognized as heir to the ${domainNoun(d.ruler.gender === "F" ? d.titleF : d.titleM)}.`);
+
+        }
+
+        if (d.heir && d.heir.age >= 14 && !d.heir.married && Math.random() < 0.06) {
+
+            const partners = Object.entries(DYNASTIES)
+                .filter(([c2, d2]) => c2 !== country && d2.active && d2.heir && !d2.heir.married && d2.heir.gender !== d.heir.gender);
+
+            if (partners.length) {
+                const [partnerCountry, partnerDynasty] = partners[Math.floor(Math.random() * partners.length)];
+                d.heir.married = true;
+                partnerDynasty.heir.married = true;
+                recapLines.push(`News reaches you of a match: ${d.heir.name} of ${d.realmNoun} is to marry ${partnerDynasty.heir.name} of ${partnerCountry} — the kind of alliance that redraws maps without a single battle fought.`);
+            }
+
+        }
+
+    });
+
+}
+
 function livingLabel(key, defaultLabel) {
 
     if (key === "Charles") {
-        if (game.worldFlags.charlesDead) return "Mary, Duchess of Burgundy (Charles the Bold's heir)";
+        if (DYNASTIES.Burgundy.active) {
+            const d = DYNASTIES.Burgundy;
+            return `${d.ruler.name}, ${d.ruler.gender === "F" ? d.titleF : d.titleM} of Burgundy${d.marriedToPlayer ? " (your own spouse)" : ""}`;
+        }
         if (game.worldFlags.charlesIsDuke) return "Charles the Bold, Duke of Burgundy";
         return defaultLabel;
     }
@@ -1387,7 +1568,10 @@ function livingLabel(key, defaultLabel) {
     }
 
     if (key === "France") {
-        if (game.worldFlags.louisDead) return "King Charles VIII of France";
+        if (DYNASTIES.France.active) {
+            const d = DYNASTIES.France;
+            return `${d.ruler.gender === "F" ? "Queen" : "King"} ${d.ruler.name} of France`;
+        }
         return defaultLabel;
     }
 
@@ -1397,13 +1581,34 @@ function livingLabel(key, defaultLabel) {
     }
 
     if (key === "Portugal") {
-        if (game.worldFlags.afonsoDead) return "King John II of Portugal";
+        if (DYNASTIES.Portugal.active) {
+            const d = DYNASTIES.Portugal;
+            return `${d.ruler.gender === "F" ? "Queen" : "King"} ${d.ruler.name} of Portugal`;
+        }
         return defaultLabel;
     }
 
     if (key === "Scotland") {
-        if (game.worldFlags.jamesIIIDead) return "King James IV of Scotland";
+        if (DYNASTIES.Scotland.active) {
+            const d = DYNASTIES.Scotland;
+            return `${d.ruler.gender === "F" ? "Queen" : "King"} ${d.ruler.name} of Scotland`;
+        }
         return defaultLabel;
+    }
+
+    if (key === "Austria") {
+        const d = DYNASTIES.Austria;
+        return `${d.ruler.gender === "F" ? "Archduchess" : "Archduke"} ${d.ruler.name} of Austria${d.marriedToPlayer ? " (your own spouse)" : ""}`;
+    }
+
+    if (key === "Aragon") {
+        const d = DYNASTIES.Aragon;
+        return `${d.ruler.gender === "F" ? "Queen" : "King"} ${d.ruler.name} of Aragon${d.marriedToPlayer ? " (your own spouse)" : ""}`;
+    }
+
+    if (key === "Brittany") {
+        const d = DYNASTIES.Brittany;
+        return `${d.ruler.gender === "F" ? "Duchess" : "Duke"} ${d.ruler.name} of Brittany${d.marriedToPlayer ? " (your own spouse)" : ""}`;
     }
 
     return defaultLabel;
@@ -1785,6 +1990,9 @@ function render() {
 
     if (currentTab === "powers")
         renderPowers(content);
+
+    if (currentTab === "dynasties")
+        renderDynasties(content);
 
     if (currentTab === "chronicle")
         renderChronicle(content);
@@ -4493,6 +4701,50 @@ function renderPowers(content) {
 
 
 /* =========================================================
+   DYNASTIES — makes the simulation visible: every tracked
+   ruling house, its current ruler and heir, and whether its
+   history is still following the scripted record or has
+   already moved past it into whatever the simulation (or your
+   own marriage) has actually produced.
+========================================================= */
+
+function renderDynasties(content) {
+
+    content.innerHTML = `
+        <div class="card">
+            <h2>🌳 The Ruling Houses of Europe</h2>
+            <p>England, Castile, and the Wars of the Roses remain the fixed spine of this history — but every other great house keeps aging, marrying, and dying whether or not anyone is chronicling it. Marry into one of these families yourself, and your own children become the ones history remembers.</p>
+        </div>
+    `;
+
+    Object.entries(DYNASTIES).forEach(([country, d]) => {
+
+        const card = document.createElement("div");
+        card.className = "card";
+
+        const rulerTitle = d.ruler.gender === "F" ? d.titleF : d.titleM;
+        const status = !d.active
+            ? `<p class="muted"><em>Still following the historical record — no independent succession yet.</em></p>`
+            : d.marriedToPlayer
+                ? `<p class="muted"><em>You are married into this house — its heir is your own child.</em></p>`
+                : "";
+
+        card.innerHTML = `
+            <h3>${country}</h3>
+            <div class="stat">${rulerTitle} <strong>${d.ruler.name}${d.marriedToPlayer ? " (your spouse)" : ""}</strong></div>
+            <div class="stat">Age <strong>${d.ruler.age}</strong></div>
+            <div class="stat">Heir <strong>${d.heir ? `${d.heir.name} (age ${d.heir.age})${d.heir.fromPlayer ? " — your child" : ""}` : "None yet"}</strong></div>
+            ${status}
+        `;
+
+        content.appendChild(card);
+
+    });
+
+}
+
+
+/* =========================================================
    CHRONICLE
 ========================================================= */
 
@@ -4727,6 +4979,10 @@ function advanceTime(months) {
             // Movable type keeps spreading across Europe whether or not you're
             // watching — the threshold it crosses triggers the event, not a fixed year.
             if (game.year >= 1465) game.printTech = Math.min(100, game.printTech + 2);
+
+            // The wider world's dynasties keep living, dying, and marrying whether or
+            // not their hand-scripted history has run out yet.
+            simulateDynasties(recapLines);
 
             // Childhood in this era is genuinely dangerous — a living child isn't
             // automatically safe just because they survived being born.
