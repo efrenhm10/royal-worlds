@@ -961,6 +961,74 @@ people: [
 
 
 /* =========================================================
+   HISTORICAL DEATHS — if you actually chose to play a real
+   figure from the historical record (not one of the "Plausible"
+   fictional slots below), your own life should track roughly
+   what actually happened to them, not run on forever past the
+   point history recorded them dying. This is a soft, escalating
+   bias on top of the normal mortality curve, not a scripted
+   instant death — you can still outlast it briefly, but not by
+   decades. It stops applying the moment you succeed to an heir,
+   since only the original historical figure is bound by it.
+========================================================= */
+
+const HISTORICAL_DEATHS = {
+    "Charles the Bold": { year: 1477, month: 1,
+        cause: "Charles the Bold falls in battle outside Nancy, his body found stripped and half-frozen in a frozen moat days later — the Burgundian dream of a realm between France and Germany dies with him." },
+    "Philip the Good": { year: 1467, month: 6,
+        cause: "Philip the Good, Duke of Burgundy for forty-eight years, dies at Bruges — the richest court in Christendom passes to his son." },
+    "Richard Neville, Earl of Warwick": { year: 1471, month: 4,
+        cause: "\"The Kingmaker\" falls at the Battle of Barnet, cut down trying to reach his horse after his own line broke." },
+    "Henry VI": { year: 1471, month: 5,
+        cause: "Found dead in the Tower of London mere hours after Edward IV's triumphant return to the city — murdered, nearly everyone assumes, though no one will ever say so aloud." },
+    "Margaret of York": { year: 1503, month: 11,
+        cause: "Margaret of York, Dowager Duchess of Burgundy, dies at Mechelen — outliving the husband, the stepdaughter, and the House of York she spent thirty years scheming to restore." },
+    "George, Duke of Clarence": { year: 1478, month: 2,
+        cause: "Clarence is executed within the Tower on his own brother Edward's order — condemned for treason, and, as legend already insists, drowned in a butt of Malmsey wine." },
+    "Richard, Duke of Gloucester": { year: 1485, month: 8,
+        cause: "Richard III is killed at the Battle of Bosworth Field, the last English king to die in battle — his crown, the stories already say, found afterward in a hawthorn bush." },
+    "Cecily Neville": { year: 1495, month: 5,
+        cause: "Cecily Neville, mother of two kings, dies at Berkhamsted at nearly eighty years old — outliving nearly everyone whose story she once shaped." },
+    "Isabel Neville": { year: 1476, month: 12,
+        cause: "Isabel Neville dies at Warwick Castle, not yet twenty-five, most likely of complications following childbirth or consumption." },
+    "Anne Neville": { year: 1485, month: 3,
+        cause: "Queen Anne Neville dies at Westminster, likely of consumption, during a solar eclipse more than a few at court whisper is an ill omen." },
+    "George Neville": { year: 1476, month: 6,
+        cause: "George Neville, Archbishop of York, dies in disgrace and poverty, his once-immense wealth confiscated years before by a king who never forgave the Neville name." },
+    "Elizabeth Woodville": { year: 1492, month: 6,
+        cause: "Elizabeth Woodville dies at Bermondsey Abbey, having spent her final years in comfortable but marginalized retirement." },
+    "Anthony Woodville": { year: 1483, month: 6,
+        cause: "Anthony Woodville, Earl Rivers, is executed at Pontefract Castle on Richard of Gloucester's order, swept aside in the same purge that clears the way for the Protectorate." },
+    "Richard Woodville, Earl Rivers": { year: 1469, month: 8,
+        cause: "Richard Woodville, Earl Rivers, is captured after the Yorkist defeat at Edgcote and beheaded on Warwick's order without even the pretense of a trial." },
+    "Jacquetta of Luxembourg": { year: 1472, month: 5,
+        cause: "Jacquetta of Luxembourg dies not long after successfully clearing her own name of the witchcraft accusations Warwick's faction once leveled against her." },
+    "Margaret of Anjou": { year: 1482, month: 8,
+        cause: "Margaret of Anjou dies in France, ransomed years before out of English captivity, having outlived her husband, her only son, and the Lancastrian cause she fought a generation for." },
+    "Edward of Westminster": { year: 1471, month: 5,
+        cause: "Edward of Westminster, Prince of Wales, is killed at the Battle of Tewkesbury or cut down in its immediate aftermath — the last direct Lancastrian heir, dead at seventeen." },
+    "Margaret Beaufort": { year: 1509, month: 6,
+        cause: "Lady Margaret Beaufort dies at Westminster, not long after seeing both her son crowned and, weeks earlier, her grandson succeed him as Henry VIII." },
+    "Anne of France": { year: 1522, month: 11,
+        cause: "Anne de Beaujeu, who once ruled France in all but name as regent for her young brother, dies at Chantelle in quiet retirement." },
+    "Pierre de Beaujeu": { year: 1503, month: 10,
+        cause: "Pierre de Beaujeu, Duke of Bourbon, dies at Moulins." },
+    "Louis, Duke of Orléans": { year: 1515, month: 1,
+        cause: "King Louis XII — the Duke of Orléans who spent years as Charles VIII's prisoner before inheriting the throne himself — dies at the Hôtel des Tournelles in Paris." },
+};
+
+// Escalates sharply the longer you survive past the historical date — likely within
+// a few years, not a hard wall on the date itself.
+function historicalMortalityChance(yearsPast) {
+    return Math.min(0.9, 0.35 + Math.max(0, yearsPast) * 0.15);
+}
+
+function isPlayingHistoricalSelf() {
+    return !!(game.startingPersonName && game.person === game.startingPersonName && HISTORICAL_DEATHS[game.startingPersonName]);
+}
+
+
+/* =========================================================
    MARRIAGE MARKET — real negotiation, not a popup
    Each country has one or more prospects. Prospects are keyed by
    the gender they'd realistically be offered as a match for.
@@ -1107,7 +1175,8 @@ const NOBLE_NAME_POOLS = {
   austria: { M: ["Maximilian","Sigismund","Albrecht","Leopold","Ernst"], F: ["Kunigunde","Margarete","Elisabeth","Katharina","Eleonore"], surnames: ["von Liechtenstein","von Starhemberg","von Kuenring","von Auersperg","von Rosenberg"] },
   saxony: { M: ["Ernst","Albrecht","Friedrich","Wilhelm","Georg"], F: ["Sophie","Katharina","Margarete","Barbara","Anna"], surnames: ["von Miltitz","von Schönberg","von Einsiedel","von Bünau"] },
   brandenburg: { M: ["Albrecht","Johann","Friedrich","Sigismund","Otto"], F: ["Barbara","Anna","Dorothea","Ursula","Margarete"], surnames: ["von Bredow","von Quitzow","von der Schulenburg","von Rochow"] },
-  palatinate: { M: ["Friedrich","Philipp","Ludwig","Ruprecht","Otto"], F: ["Margarete","Katharina","Elisabeth","Mechthild","Klara"], surnames: ["von Sickingen","von Hirschhorn","von Erbach","von Sponheim"] }
+  palatinate: { M: ["Friedrich","Philipp","Ludwig","Ruprecht","Otto"], F: ["Margarete","Katharina","Elisabeth","Mechthild","Klara"], surnames: ["von Sickingen","von Hirschhorn","von Erbach","von Sponheim"] },
+  italy: { M: ["Lorenzo","Cosimo","Giovanni","Piero","Niccolò","Filippo"], F: ["Lucrezia","Caterina","Bianca","Contessina","Maddalena","Clarice"], surnames: ["Ridolfi","Pazzi","Strozzi","Tornabuoni","Salviati","Albizzi"] }
 };
 
 const MERCHANT_SURNAMES = {
@@ -1429,7 +1498,7 @@ function isStillAdjusting() {
 ========================================================= */
 
 const WORLD_TIMELINE = [
-    { id: "philip_dies", year: 1467, month: 6,
+    { id: "philip_dies", year: 1467, month: 6, personalTo: "Philip the Good",
       text: `News from Burgundy: Duke Philip the Good has died. His son Charles the Bold succeeds him as Duke of Burgundy.`,
       apply: (g) => { g.worldFlags.charlesIsDuke = true; } },
 
@@ -1437,15 +1506,15 @@ const WORLD_TIMELINE = [
       text: `News from France: a league of great nobles — Burgundy foremost among them — has risen against King Louis XI's centralizing rule, in what is already being called the War of the Public Weal.`,
       apply: (g) => { g.worldFlags.publicWeal = true; } },
 
-    { id: "warwick_dies", year: 1471, month: 4,
+    { id: "warwick_dies", year: 1471, month: 4, personalTo: "Richard Neville, Earl of Warwick",
       text: `News from England: Richard Neville, Earl of Warwick — "the Kingmaker" — has fallen at the Battle of Barnet.`,
       apply: (g) => { g.worldFlags.warwickDead = true; } },
 
-    { id: "henryvi_dies", year: 1471, month: 5,
+    { id: "henryvi_dies", year: 1471, month: 5, personalTo: "Henry VI",
       text: `News from England: the deposed Henry VI has died in the Tower of London. The Lancastrian male line is all but extinguished.`,
       apply: (g) => { g.worldFlags.henryVIDead = true; } },
 
-    { id: "charles_dies", year: 1477, month: 1,
+    { id: "charles_dies", year: 1477, month: 1, personalTo: "Charles the Bold",
       text: `News from Burgundy: Charles the Bold has fallen at the Battle of Nancy. His daughter Mary inherits the duchy.`,
       apply: (g, recapLines) => {
           g.worldFlags.charlesDead = true;
@@ -1595,6 +1664,14 @@ function checkWorldTimeline(recapLines) {
 
         if (game.firedWorldEvents.includes(ev.id)) return;
 
+        // A handful of these entries are actually about a figure you might be
+        // playing yourself (Philip the Good, Warwick, Henry VI, Charles the Bold).
+        // While you're still that person, don't narrate their death as ambient
+        // third-person news — your own historical mortality check handles the
+        // moment you actually die, and applyPersonalHistoricalWorldEvent() fires
+        // this same event's world-state consequences right then instead.
+        if (ev.personalTo && game.person === ev.personalTo) return;
+
         if (game.year > ev.year || (game.year === ev.year && game.month >= ev.month)) {
             if (ev.eligible && !ev.eligible(game)) return; // not applicable yet — will recheck later
             game.firedWorldEvents.push(ev.id);
@@ -1607,6 +1684,17 @@ function checkWorldTimeline(recapLines) {
 
     });
 
+}
+
+// Fires a personalTo WORLD_TIMELINE entry's world-state side effects (but not its
+// third-person news text) at the moment you actually die as that figure, so
+// Burgundy still activates, flags still get set, etc. — just synced to when your
+// own life actually ends rather than a fixed date you may have already outlived.
+function applyPersonalHistoricalWorldEvent() {
+    const ev = WORLD_TIMELINE.find(e => e.personalTo === game.person && !game.firedWorldEvents.includes(e.id));
+    if (!ev) return;
+    game.firedWorldEvents.push(ev.id);
+    ev.apply(game, []);
 }
 
 // How a real historical figure should currently be referred to, given what's actually
@@ -1679,6 +1767,62 @@ const RIVAL_CLAIMANTS = {
     Austria: "Hungary",
 };
 
+// Builds a proper game-side descendant record (matching the shape of an entry in
+// game.children / game.heir) for a grandchild who was only ever tracked inside a
+// foreign dynasty's own simulated birth — so they can actually become your heir.
+function synthesizeDescendant(name, gender, age) {
+    return {
+        name, gender,
+        birthYear: game.year - age,
+        appearance: generateAppearance(game.house, null),
+        trait: generateTrait(game.house, null),
+        schooling: null,
+        married: false,
+        spouseName: null,
+        spouseCountry: null,
+    };
+}
+
+// Keeps your own succession honest when one of your descendants dies ruling a
+// foreign realm: a grandchild who was actually born continues both that
+// succession and your own; with no grandchild, this branch of your family is
+// finished, whether or not the realm itself passes to a collateral relative or
+// is absorbed outright.
+function syncForeignDescendantDeath(deadName, country, newRulerRecord, recapLines) {
+
+    const deadIndex = game.children.findIndex(c => c.rulingAbroad === country && c.name === deadName);
+    const wasHeir = !!(game.heir && game.heir.name === deadName && game.heir.rulingAbroad === country);
+
+    if (deadIndex !== -1) game.children.splice(deadIndex, 1);
+    game.family = game.family.filter(f => f.name !== deadName);
+
+    if (!wasHeir) return;
+
+    const realmNoun = DYNASTIES[country].realmNoun;
+
+    if (newRulerRecord) {
+
+        const grandchild = synthesizeDescendant(newRulerRecord.name, newRulerRecord.gender, newRulerRecord.age);
+        grandchild.rulingAbroad = country;
+        game.heir = grandchild;
+
+        recapLines.push(`Word reaches you from ${realmNoun}: with ${deadName}'s death, your own grandchild ${newRulerRecord.name} inherits both the succession there and, one day, your own — the line continues.`);
+
+    } else {
+
+        const fallback = game.children.find(c => c.name !== deadName);
+        game.heir = fallback || null;
+
+        if (fallback) {
+            recapLines.push(`Word reaches you from ${realmNoun}: ${deadName} has died without heirs of their own. The succession there passes elsewhere, and at home, ${fallback.name} is recognized as your heir instead.`);
+        } else {
+            recapLines.push(`Word reaches you from ${realmNoun}: ${deadName} has died without heirs of their own — and with them, your own direct line now stands with no heir at all.`);
+        }
+
+    }
+
+}
+
 function simulateDynasties(recapLines) {
 
     Object.entries(DYNASTIES).forEach(([country, d]) => {
@@ -1721,13 +1865,23 @@ function simulateDynasties(recapLines) {
         if (Math.random() < mortalityChance(d.ruler.age, null)) {
 
             const oldRulerName = d.ruler.name;
+            const rulerWasFromPlayer = !!d.ruler.fromPlayer;
+            const heirWasFromPlayer = !!(d.heir && d.heir.fromPlayer);
 
             if (d.heir) {
 
-                d.ruler = { name: d.heir.name, gender: d.heir.gender, age: d.heir.age };
+                d.ruler = { name: d.heir.name, gender: d.heir.gender, age: d.heir.age, fromPlayer: heirWasFromPlayer };
                 d.heir = null;
 
                 recapLines.push(`News from ${d.realmNoun}: ${oldRulerName} has died. ${d.ruler.name} succeeds as ${d.ruler.gender === "F" ? d.titleF : d.titleM} of ${d.realmNoun}.`);
+
+                // The very first time your own child is promoted from heir-in-waiting
+                // to actual ruler here, flag the matching game-side record so the main
+                // childhood-mortality check stops double-tracking them — from here on,
+                // this dynasty simulation alone owns their fate.
+                if (heirWasFromPlayer && game.heir && game.heir.name === d.ruler.name && !game.heir.rulingAbroad) {
+                    game.heir.rulingAbroad = country;
+                }
 
             } else if (RIVAL_CLAIMANTS[country] && Math.random() < 0.4) {
 
@@ -1748,6 +1902,15 @@ function simulateDynasties(recapLines) {
 
             }
 
+            // If the ruler who just died was actually your own descendant, ruling
+            // abroad, sync that death back into your own family line — a
+            // grandchild continues it if one was born, otherwise this branch of
+            // your own family is genuinely finished, whatever becomes of the
+            // realm itself (absorbed, collateral relative, or your own grandchild).
+            if (rulerWasFromPlayer) {
+                syncForeignDescendantDeath(oldRulerName, country, heirWasFromPlayer ? d.ruler : null, recapLines);
+            }
+
             return;
 
         }
@@ -1757,7 +1920,7 @@ function simulateDynasties(recapLines) {
             const childGender = Math.random() < 0.5 ? "M" : "F";
             const pool = NOBLE_NAME_POOLS[d.houseKey] || NOBLE_NAME_POOLS.england;
             const childName = generatePeriodName(d.houseKey, childGender, pool.surnames || MERCHANT_SURNAMES.england);
-            d.heir = { name: childName, gender: childGender, age: 0, married: false };
+            d.heir = { name: childName, gender: childGender, age: 0, married: false, fromPlayer: !!d.ruler.fromPlayer };
 
             recapLines.push(`News from ${d.realmNoun}: word arrives of the birth of ${childName}, recognized as heir to the ${domainNoun(d.ruler.gender === "F" ? d.titleF : d.titleM)}.`);
 
@@ -1978,6 +2141,48 @@ function chooseRealm(realm) {
    HOUSE SELECTION
 ========================================================= */
 
+// "Plausible" is an internal placeholder role for the made-up noble slots in
+// HOUSES — it should never actually appear in front of a player. Real historical
+// roles (Duke, Earl, Cardinal, Steward, ...) pass through unchanged.
+function resolvedRoleForPerson(houseKey, person) {
+    const role = person[2];
+    if (role !== "Plausible") return role;
+    const gender = person[3] || "F";
+    if (houseKey === "habsburg" && /archdu/i.test(person[0])) return gender === "F" ? "Archduchess" : "Archduke";
+    return gender === "F" ? "Lady" : "Lord";
+}
+
+// A person whose name literally starts with "A "/"An " is one of HOUSES' made-up
+// noble slots (e.g. "A Habsburg archduke"), not a real historical figure — real
+// figures in this data are always given by their actual name. Selecting one of
+// these should hand you a real invented name, not the descriptive placeholder
+// itself, and never ask the player to type one in.
+function isGenericPlaceholderName(name) {
+    return /^(A|An)\s/.test(name || "");
+}
+
+// A few HOUSES keys don't line up 1:1 with NOBLE_NAME_POOLS' country-keyed
+// entries (e.g. the Valois court's house key is "valois", but its name pool is
+// filed under "france") — this maps those through to the right pool.
+const HOUSE_NAME_POOL_KEY = {
+    valois: "france",
+    montfort: "brittany",
+    trastamara: "castile",
+    aviz: "portugal",
+    habsburg: "austria",
+    curia: "italy",
+};
+
+function generateStartingCharacterName(houseKey, gender) {
+    if (houseKey === "medici") {
+        const pool = NOBLE_NAME_POOLS.italy;
+        return `${randomFrom(pool[gender] || pool.M)} de' Medici`;
+    }
+    const poolKey = HOUSE_NAME_POOL_KEY[houseKey] || houseKey;
+    const pool = NOBLE_NAME_POOLS[poolKey] || NOBLE_NAME_POOLS.england;
+    return generatePeriodName(poolKey, gender, pool.surnames);
+}
+
 function chooseHouse(key) {
 
     selectedHouse = key;
@@ -2002,7 +2207,7 @@ function chooseHouse(key) {
             <strong>${person[0]}</strong>
             <br>
             <span class="muted">
-                ${person[2]} · Age ${person[1]}
+                ${resolvedRoleForPerson(key, person)} · Age ${person[1]}
             </span>
         `;
 
@@ -2029,17 +2234,23 @@ function startGame(index) {
     const house = HOUSES[selectedHouse];
     const person = house.people[index];
 
+    const resolvedGender = person[3] || "F";
+    const resolvedName = isGenericPlaceholderName(person[0])
+        ? generateStartingCharacterName(selectedHouse, resolvedGender)
+        : person[0];
+
     game = {
 
         house: selectedHouse,
 
-        person: person[0],
+        person: resolvedName,
+        startingPersonName: resolvedName,
 
-        role: person[2],
+        role: resolvedRoleForPerson(selectedHouse, person),
 
         age: person[1],
 
-        gender: person[3] || "F",
+        gender: resolvedGender,
 
         appearance: generateAppearance(selectedHouse, null),
         trait: generateTrait(selectedHouse, null),
@@ -4132,6 +4343,8 @@ function handleDeath(reason) {
 
     game.chronicle.unshift(`${game.year}: ${reason}`);
 
+    applyPersonalHistoricalWorldEvent();
+
     if (game.heir) {
         succeedToHeir(reason);
     } else {
@@ -5640,9 +5853,14 @@ function advanceTime(months) {
             simulateDynasties(recapLines);
 
             // Childhood in this era is genuinely dangerous — a living child isn't
-            // automatically safe just because they survived being born.
+            // automatically safe just because they survived being born. A child
+            // who has left home to rule a foreign realm (tagged rulingAbroad by
+            // simulateDynasties) is an independent adult now, not a "child" at
+            // risk of childhood fever — their own dynasty simulation alone tracks
+            // their fate from here, so this loop leaves them alone.
             for (let ci = game.children.length - 1; ci >= 0; ci--) {
                 const child = game.children[ci];
+                if (child.rulingAbroad) continue;
                 const childAge = game.year - child.birthYear;
                 if (Math.random() < childMortalityChance(childAge)) {
                     const wasHeir = game.heir === child;
@@ -5769,13 +5987,23 @@ function advanceTime(months) {
 
     }
 
-    // age-based mortality risk, checked once per full year that just passed
+    // age-based mortality risk, checked once per full year that just passed. If
+    // you're still playing an actual historical figure (not an heir descended
+    // from one, and not one of the invented "Plausible" characters), your own
+    // odds escalate sharply once you live past the point the record actually has
+    // them dying — a soft push toward historical accuracy, not a scripted date.
     let deathReason = null;
+    const historicalSelf = isPlayingHistoricalSelf() ? HISTORICAL_DEATHS[game.startingPersonName] : null;
 
     for (let y = 0; y < yearsPassed; y++) {
 
-        if (Math.random() < mortalityChance(game.age, game.health)) {
-            deathReason = `${game.person}'s health finally fails, and the chronicle of this life closes.`;
+        const pastHistorical = historicalSelf && game.year >= historicalSelf.year;
+        const chance = pastHistorical
+            ? historicalMortalityChance(game.year - historicalSelf.year)
+            : mortalityChance(game.age, game.health);
+
+        if (Math.random() < chance) {
+            deathReason = pastHistorical ? historicalSelf.cause : `${game.person}'s health finally fails, and the chronicle of this life closes.`;
             break;
         }
 
