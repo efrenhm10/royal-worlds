@@ -16,12 +16,13 @@
     --parchment: #efe4c8;
     --parchment-deep: #e4d5ac;
     --parchment-panel: #faf3e2;
-    --gilt: #b3861f;
-    --gilt-bright: #d9ad3d;
-    --gules: #6e1423;
-    --gules-bright: #8f2035;
+    --gilt: #c9971a;
+    --gilt-bright: #f0c23d;
+    --gules: #a3182e;
+    --gules-bright: #c92a3e;
     --vert: #35502f;
-    --azure: #1f3a5c;
+    --azure: #1a3d8f;
+    --azure-bright: #2f5fc9;
     --shadow-warm: rgba(60, 38, 12, 0.28);
 }
 
@@ -69,7 +70,7 @@ body {
 
 h1, h2, h3 {
     font-family: "Cinzel", "Times New Roman", serif;
-    color: var(--gules);
+    color: var(--azure);
     letter-spacing: 0.02em;
     margin-top: 0;
 }
@@ -101,29 +102,29 @@ button {
     width: 100%;
     padding: 13px 15px;
     margin: 5px 0;
-    background: linear-gradient(180deg, var(--gules-bright) 0%, var(--gules) 100%);
+    background: linear-gradient(180deg, var(--azure-bright) 0%, var(--azure) 100%);
     color: #fdf3df;
-    border: 1px solid #4a0e18;
+    border: 1px solid #0f2451;
     border-radius: 8px;
     font-family: "EB Garamond", Georgia, serif;
     font-size: 15.5px;
     font-weight: 600;
     letter-spacing: 0.01em;
     cursor: pointer;
-    box-shadow: 0 2px 0 rgba(74,14,24,0.5), 0 3px 8px var(--shadow-warm);
+    box-shadow: 0 2px 0 rgba(15,36,81,0.5), 0 3px 8px var(--shadow-warm);
     transition: transform .12s ease, box-shadow .12s ease, background .15s ease;
     text-align: center;
 }
 
 button:hover {
-    background: linear-gradient(180deg, #a3283f 0%, var(--gules-bright) 100%);
+    background: linear-gradient(180deg, #4576dd 0%, var(--azure-bright) 100%);
     transform: translateY(-1px);
-    box-shadow: 0 3px 0 rgba(74,14,24,0.5), 0 6px 14px var(--shadow-warm);
+    box-shadow: 0 3px 0 rgba(15,36,81,0.5), 0 6px 14px var(--shadow-warm);
 }
 
 button:active {
     transform: translateY(1px);
-    box-shadow: 0 1px 0 rgba(74,14,24,0.5);
+    box-shadow: 0 1px 0 rgba(15,36,81,0.5);
 }
 
 button.secondary {
@@ -260,7 +261,7 @@ button.secondary.active,
 
 .event {
     background: var(--parchment-panel);
-    border-color: var(--gilt);
+    border-color: var(--gules);
 }
 
 .good {
@@ -310,7 +311,7 @@ button.secondary.active,
   width: 100%;
   max-height: 85vh;
   overflow-y: auto;
-  box-shadow: 0 24px 60px rgba(20,12,4,0.55), 0 0 0 6px rgba(255,255,255,0.5), 0 0 0 7px var(--gilt);
+  box-shadow: 0 24px 60px rgba(20,12,4,0.55), 0 0 0 6px rgba(255,255,255,0.5), 0 0 0 7px var(--gules);
   animation: sealBreak .28s cubic-bezier(.2,.9,.3,1.2);
 }
 
@@ -2349,11 +2350,21 @@ function renderOverview(content) {
 
 function renderCharacter(content) {
 
+    const portrait = renderPortraitSVG(game.appearance, game.gender, {
+        size: 84,
+        seed: game.person,
+        crown: crownTierForRole(game.role),
+        ringColor: "var(--azure)",
+    });
+
     content.innerHTML = `
 
         <div class="card">
 
-            <h2>👤 ${game.person}</h2>
+            <div style="display:flex;align-items:center;gap:16px;">
+                ${portrait}
+                <h2 style="border-bottom:none;padding-bottom:0;margin-bottom:0;">👤 ${game.person}</h2>
+            </div>
 
             <div class="stat">
                 Age
@@ -2648,9 +2659,21 @@ function renderCourt(content) {
 
         card.className = "card";
 
+        const abstract = isAbstractCourtEntity(displayName);
+        const npcGender = guessGenderForName(displayName);
+        const npcPortrait = abstract ? "" : renderPortraitSVG(appearanceFor(displayName, npcGender), npcGender, {
+            size: 56,
+            seed: displayName,
+            crown: crownTierForRole(displayName),
+            ringColor: "var(--azure)",
+        });
+
         card.innerHTML = `
 
-            <h3>${displayName}</h3>
+            <div style="display:flex;align-items:center;gap:14px;">
+                ${npcPortrait}
+                <h3 style="margin:0;">${displayName}</h3>
+            </div>
 
             <p>
                 Relationship:
@@ -2974,12 +2997,21 @@ function renderChildren(content) {
         const age = Math.max(0, game.year - child.birthYear);
         const isHeir = game.heir === child;
         const title = childCourtesyTitle(child, isHeir);
+        const childPortrait = renderPortraitSVG(child.appearance, child.gender, {
+            size: 60,
+            seed: child.name,
+            crown: isHeir ? crownTierForRole(game.role) : null,
+            ringColor: isHeir ? "var(--gilt)" : "var(--azure)",
+        });
 
         const card = document.createElement("div");
         card.className = "card";
 
         card.innerHTML = `
-            <h3>${title}</h3>
+            <div style="display:flex;align-items:center;gap:14px;">
+                ${childPortrait}
+                <h3 style="margin:0;">${title}</h3>
+            </div>
             <p class="muted">${appearanceDescription(child.appearance)}</p>
             <div class="stat">Temperament <strong>${child.trait || "Unremarked"}</strong></div>
             ${child.cohortNote ? `<p class="muted">Born ${child.cohortNote}.</p>` : ""}
@@ -3204,15 +3236,27 @@ function renderRoyalProspects(content, market, subjectGender, subjectName) {
     }
 
     const grid = content.querySelector("#prospectGrid");
+    const prospectGender = subjectGender === "F" ? "M" : "F";
 
     prospects.forEach(p => {
 
         const btn = document.createElement("button");
+        const prospectPortrait = renderPortraitSVG(appearanceFor(p.name, prospectGender), prospectGender, {
+            size: 48,
+            seed: p.name,
+            crown: crownTierForRole(p.name) || "noble",
+            ringColor: "var(--gilt)",
+        });
 
         btn.innerHTML = `
-            <strong>${p.name}</strong>
-            <br>
-            <span class="muted">Expected to seek roughly ${p.demandGold} gold and ${p.demandLand} land in terms</span>
+            <div style="display:flex;align-items:center;gap:12px;text-align:left;">
+                ${prospectPortrait}
+                <span>
+                    <strong>${p.name}</strong>
+                    <br>
+                    <span class="muted">Expected to seek roughly ${p.demandGold} gold and ${p.demandLand} land in terms</span>
+                </span>
+            </div>
         `;
 
         btn.addEventListener("click", () => startNegotiation({ country: market.country, tier: "royal" }, p));
@@ -3657,6 +3701,154 @@ function generateAppearance(houseKey, parentAppearance) {
 function appearanceDescription(app) {
     if (!app) return "";
     return `${app.build.charAt(0).toUpperCase()}${app.build.slice(1)}, with ${app.hair} and ${app.eyes}, known for ${app.feature}.`;
+}
+
+
+/* =========================================================
+   PORTRAITS — a small procedural face for every named person,
+   so the court is a gallery of actual faces instead of a list of
+   names. Built entirely from inline SVG (no external art assets),
+   driven by the same appearance data already used in narration —
+   the player and their children carry a stored appearance; anyone
+   else (Court figures, foreign rulers, marriage prospects) gets one
+   deterministically derived from their own name, so the same person
+   always renders with the same face everywhere they appear.
+========================================================= */
+
+const HAIR_COLOR_MAP = {
+    "dark hair": "#2b1c12",
+    "fair hair": "#e8c77a",
+    "auburn hair": "#8a3b23",
+    "raven-black hair": "#100d0a",
+    "chestnut hair": "#5b3a21",
+    "flaxen hair": "#f0dfa0",
+    "copper-red hair": "#b5541f",
+    "deep brown hair": "#3b2416",
+};
+
+const EYE_COLOR_MAP = {
+    "sharp dark eyes": "#241a12",
+    "pale blue eyes": "#a9c8dd",
+    "clear grey eyes": "#9aa3ab",
+    "warm brown eyes": "#6b4423",
+    "striking green eyes": "#4c7a4f",
+    "hooded eyes that give little away": "#3a2c1f",
+};
+
+const SKIN_TONES = ["#f6dcc0", "#eecba3", "#dbaf82", "#c99668", "#a5723f", "#7c4f2c"];
+
+// A tiny deterministic PRNG seeded from a string, so a person's procedurally
+// generated face and appearance stay identical across every render and every
+// tab, without having to persist appearance data on every NPC in the game.
+function seededRandom(seed) {
+    let h = 1779033703 ^ String(seed).length;
+    for (let i = 0; i < String(seed).length; i++) {
+        h = Math.imul(h ^ String(seed).charCodeAt(i), 3432918353);
+        h = (h << 13) | (h >>> 19);
+    }
+    return function () {
+        h = Math.imul(h ^ (h >>> 16), 2246822507);
+        h = Math.imul(h ^ (h >>> 13), 3266489909);
+        h ^= h >>> 16;
+        return (h >>> 0) / 4294967296;
+    };
+}
+
+function pickSeeded(rand, arr) {
+    return arr[Math.floor(rand() * arr.length)];
+}
+
+// Appearance for anyone the game hasn't already generated one for — stable
+// per name+gender, so a Court figure or foreign ruler always looks the same.
+function appearanceFor(name, gender) {
+    const rand = seededRandom(`${name || "unknown"}|${gender || "M"}`);
+    return {
+        build: pickSeeded(rand, APPEARANCE_BUILD),
+        hair: pickSeeded(rand, APPEARANCE_HAIR),
+        eyes: pickSeeded(rand, APPEARANCE_EYES),
+        feature: pickSeeded(rand, APPEARANCE_FEATURE),
+        skin: pickSeeded(rand, SKIN_TONES),
+        hairStyleRoll: rand(),
+        beardRoll: rand(),
+    };
+}
+
+// Renders a small heraldic medallion portrait as an inline SVG string.
+// opts: { size, crown: "royal"|"noble"|null, ringColor, seed }
+function renderPortraitSVG(appearance, gender, opts = {}) {
+
+    const app = appearance || appearanceFor(opts.seed || "unknown", gender);
+    const rand = seededRandom((opts.seed || "") + "|" + (app.hair || "") + "|" + (app.eyes || ""));
+
+    const hairColor = HAIR_COLOR_MAP[app.hair] || "#3b2416";
+    const eyeColor = EYE_COLOR_MAP[app.eyes] || "#3a2c1f";
+    const skin = app.skin || pickSeeded(rand, SKIN_TONES);
+    const isFemale = gender === "F";
+    const longHair = isFemale ? rand() < 0.8 : rand() < 0.15;
+    const beard = !isFemale && rand() < 0.4;
+    const size = opts.size || 64;
+    const ringColor = opts.ringColor || "var(--azure)";
+    const crown = opts.crown || null;
+
+    return `
+    <svg viewBox="0 0 100 100" width="${size}" height="${size}" class="portrait" style="flex-shrink:0;">
+        <circle cx="50" cy="50" r="48" fill="${ringColor}" stroke="var(--gilt)" stroke-width="3"/>
+        <circle cx="50" cy="52" r="40" fill="#f4e6c9"/>
+        ${longHair ? `<path d="M17 47 Q12 86 30 97 L70 97 Q88 86 83 47 Q71 26 50 26 Q29 26 17 47 Z" fill="${hairColor}"/>` : ""}
+        <rect x="38" y="70" width="24" height="20" rx="6" fill="${skin}"/>
+        <ellipse cx="50" cy="53" rx="21" ry="25" fill="${skin}"/>
+        <path d="M27 45 Q29 19 50 19 Q71 19 73 45 Q65 31 50 31 Q35 31 27 45 Z" fill="${hairColor}"/>
+        ${isFemale
+            ? `<path d="M36 46.5 Q41 43.5 46 46" stroke="${hairColor}" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+               <path d="M54 46 Q59 43.5 64 46.5" stroke="${hairColor}" stroke-width="1.6" fill="none" stroke-linecap="round"/>`
+            : `<rect x="36" y="47" width="10" height="2.4" rx="1.2" fill="${hairColor}"/>
+               <rect x="54" y="47" width="10" height="2.4" rx="1.2" fill="${hairColor}"/>`
+        }
+        <ellipse cx="41" cy="55" rx="4" ry="3" fill="#fff"/>
+        <ellipse cx="59" cy="55" rx="4" ry="3" fill="#fff"/>
+        <circle cx="41" cy="55" r="2" fill="${eyeColor}"/>
+        <circle cx="59" cy="55" r="2" fill="${eyeColor}"/>
+        ${isFemale
+            ? `<path d="M37 52.5 L34.5 50.5" stroke="#000" stroke-width="0.9" stroke-linecap="round"/>
+               <path d="M63 52.5 L65.5 50.5" stroke="#000" stroke-width="0.9" stroke-linecap="round"/>`
+            : ""
+        }
+        <path d="M50 55 L47 65 Q50 67 53 65 Z" fill="none" stroke="#00000030" stroke-width="1"/>
+        ${beard
+            ? `<path d="M31 60 Q50 92 69 60 Q67 80 50 84 Q33 80 31 60 Z" fill="${hairColor}" opacity="0.92"/>`
+            : `<path d="M43 71 Q50 75 57 71" stroke="#7a3b3b" stroke-width="2" fill="none" stroke-linecap="round"/>`
+        }
+        ${crown === "royal"
+            ? `<path d="M29 27 L33 13 L42 22 L50 9 L58 22 L67 13 L71 27 Z" fill="var(--gilt-bright)" stroke="#8a6d1a" stroke-width="1.5"/>`
+            : ""
+        }
+        ${crown === "noble"
+            ? `<path d="M32 29 L37 17 L44 24 L50 15 L56 24 L63 17 L68 29 Z" fill="var(--gilt-bright)" stroke="#8a6d1a" stroke-width="1.2" opacity="0.9"/>`
+            : ""
+        }
+    </svg>`;
+
+}
+
+// Maps a role/title string to the crown tier a portrait should wear.
+function crownTierForRole(role) {
+    if (!role) return null;
+    if (/King|Queen|Emperor|Empress/.test(role)) return "royal";
+    if (/Duke|Duchess|Archduke|Archduchess|Earl|Countess|Prince|Princess/.test(role)) return "noble";
+    return null;
+}
+
+// Some Court/Dynasty entries are abstract institutions ("The French Crown",
+// "Woodville Family") rather than one actual face — no portrait for those.
+function isAbstractCourtEntity(name) {
+    return /Crown|Family/i.test(name || "");
+}
+
+// A light heuristic for the fixed cast of named historical figures in
+// COUNTRY_PROFILES, none of whom carry a stored gender field there.
+function guessGenderForName(name) {
+    const femaleHints = ["Elizabeth", "Isabella", "Isabel", "Margaret", "Mary", "Anne", "Catherine", "Joanna", "Cecily", "Duchess", "Queen", "Empress", "Princess", "Lady"];
+    return femaleHints.some(h => (name || "").includes(h)) ? "F" : "M";
 }
 
 
@@ -5160,8 +5352,18 @@ function renderDynasties(content) {
                     ? `<p class="muted"><em>You are married into this house — its heir is your own child.</em></p>`
                     : "";
 
+        const rulerPortrait = renderPortraitSVG(appearanceFor(d.ruler.name, d.ruler.gender), d.ruler.gender, {
+            size: 56,
+            seed: d.ruler.name,
+            crown: crownTierForRole(rulerTitle),
+            ringColor: "var(--azure)",
+        });
+
         card.innerHTML = `
-            <h3>${country}</h3>
+            <div style="display:flex;align-items:center;gap:14px;">
+                ${rulerPortrait}
+                <h3 style="margin:0;">${country}</h3>
+            </div>
             <div class="stat">${rulerTitle} <strong>${d.ruler.name}${d.marriedToPlayer ? " (your spouse)" : ""}</strong></div>
             <div class="stat">Age <strong>${d.ruler.age}</strong></div>
             <div class="stat">Heir <strong>${d.heir ? `${d.heir.name} (age ${d.heir.age})${d.heir.fromPlayer ? " — your child" : ""}` : "None yet"}</strong></div>
