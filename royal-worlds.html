@@ -5,22 +5,52 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Royal Worlds</title>
 
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+
 <style>
+:root {
+    --ink: #2a1c10;
+    --ink-soft: #5a4a34;
+    --parchment: #efe4c8;
+    --parchment-deep: #e4d5ac;
+    --parchment-panel: #faf3e2;
+    --gilt: #b3861f;
+    --gilt-bright: #d9ad3d;
+    --gules: #6e1423;
+    --gules-bright: #8f2035;
+    --vert: #35502f;
+    --azure: #1f3a5c;
+    --shadow-warm: rgba(60, 38, 12, 0.28);
+}
+
 * {
     box-sizing: border-box;
 }
 
+html {
+    scrollbar-color: var(--gilt) var(--parchment);
+}
+
 body {
     margin: 0;
-    background: #f6f0de;
-    color: #241a0f;
-    font-family: Georgia, serif;
+    color: var(--ink);
+    font-family: "EB Garamond", Georgia, serif;
+    font-size: 16.5px;
+    background:
+        radial-gradient(ellipse at top left, rgba(255,255,255,0.35), transparent 55%),
+        radial-gradient(ellipse at bottom right, rgba(110, 20, 35, 0.06), transparent 60%),
+        repeating-linear-gradient(0deg, rgba(90,60,20,0.025) 0px, rgba(90,60,20,0.025) 1px, transparent 1px, transparent 3px),
+        linear-gradient(160deg, var(--parchment) 0%, var(--parchment-deep) 100%);
+    background-attachment: fixed;
+    min-height: 100vh;
 }
 
 #app {
     max-width: 1150px;
     margin: auto;
-    padding: 18px;
+    padding: 22px 18px 60px;
 }
 
 .screen {
@@ -29,46 +59,126 @@ body {
 
 .screen.active {
     display: block;
+    animation: screenIn .35s ease both;
+}
+
+@keyframes screenIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 h1, h2, h3 {
-    color: #8c1f30;
+    font-family: "Cinzel", "Times New Roman", serif;
+    color: var(--gules);
+    letter-spacing: 0.02em;
+    margin-top: 0;
 }
+
+h1 {
+    font-weight: 700;
+    text-shadow: 0 1px 0 rgba(255,255,255,0.4);
+}
+
+h2 {
+    font-size: 1.28em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid rgba(179,134,31,0.4);
+    padding-bottom: 8px;
+    margin-bottom: 12px;
+}
+
+h3 {
+    font-size: 1.05em;
+    color: var(--ink);
+    font-weight: 700;
+}
+
+p { line-height: 1.55; }
 
 button {
     width: 100%;
-    padding: 13px;
+    padding: 13px 15px;
     margin: 5px 0;
-    background: #8c1f30;
-    color: #fdf7e7;
-    border: 1px solid #c98f2a;
-    border-radius: 9px;
-    font-family: Georgia, serif;
-    font-size: 15px;
+    background: linear-gradient(180deg, var(--gules-bright) 0%, var(--gules) 100%);
+    color: #fdf3df;
+    border: 1px solid #4a0e18;
+    border-radius: 8px;
+    font-family: "EB Garamond", Georgia, serif;
+    font-size: 15.5px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
     cursor: pointer;
+    box-shadow: 0 2px 0 rgba(74,14,24,0.5), 0 3px 8px var(--shadow-warm);
+    transition: transform .12s ease, box-shadow .12s ease, background .15s ease;
+    text-align: center;
 }
 
 button:hover {
-    background: #b3273b;
+    background: linear-gradient(180deg, #a3283f 0%, var(--gules-bright) 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 3px 0 rgba(74,14,24,0.5), 0 6px 14px var(--shadow-warm);
+}
+
+button:active {
+    transform: translateY(1px);
+    box-shadow: 0 1px 0 rgba(74,14,24,0.5);
 }
 
 button.secondary {
-    background: #ece0c0;
-    color: #241a0f;
-    border: 1px solid #c9b98a;
+    background: linear-gradient(180deg, #f3e6c2 0%, #e7d6a8 100%);
+    color: var(--ink);
+    border: 1px solid var(--gilt);
+    box-shadow: 0 2px 0 rgba(150,110,20,0.25), 0 3px 8px rgba(90,60,20,0.12);
 }
 
 button.secondary:hover {
-    background: #e0d2a8;
+    background: linear-gradient(180deg, #f7edd4 0%, #ecdcb4 100%);
+}
+
+/* Buttons carry a dark gules background by default, so nested .muted description text
+   (house/realm/prospect blurbs) needs a light tone here instead of the page's own
+   dark ink-soft muted color, or it goes nearly unreadable. */
+button .muted {
+    color: rgba(253, 243, 223, 0.8);
+}
+
+button.secondary .muted,
+button.active .muted {
+    color: var(--ink-soft);
+}
+
+button.secondary.active,
+.side button.active {
+    background: linear-gradient(180deg, var(--gilt-bright) 0%, var(--gilt) 100%);
+    color: #2a1c10;
+    border-color: #7a5a10;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35), 0 2px 8px var(--shadow-warm);
 }
 
 .card {
-    background: #fffaf0;
-    border: 1px solid #ddccA0;
-    border-radius: 12px;
-    padding: 16px;
-    margin: 10px 0;
-    box-shadow: 0 2px 8px rgba(140,90,30,0.08);
+    position: relative;
+    background: var(--parchment-panel);
+    border: 1px solid var(--parchment-deep);
+    outline: 1px solid rgba(179,134,31,0.35);
+    outline-offset: -5px;
+    border-radius: 10px;
+    padding: 18px 20px;
+    margin: 12px 0;
+    box-shadow: 0 3px 14px rgba(60,38,12,0.1);
+}
+
+.card::before {
+    content: "❧";
+    position: absolute;
+    top: -11px;
+    left: 16px;
+    background: var(--parchment-panel);
+    color: var(--gilt);
+    padding: 0 6px;
+    font-size: 15px;
+    line-height: 1;
 }
 
 .grid {
@@ -78,17 +188,20 @@ button.secondary:hover {
 }
 
 .muted {
-    color: #6b5a3e;
+    color: var(--ink-soft);
 }
 
 .pill {
     display: inline-block;
-    border: 1px solid #c98f2a;
-    background: #f3e6c2;
+    border: 1px solid var(--gilt);
+    background: linear-gradient(180deg, #f7ecc9 0%, #ecd9a2 100%);
+    color: var(--ink);
     border-radius: 20px;
-    padding: 5px 9px;
+    padding: 5px 11px;
     margin: 3px;
     font-size: 13px;
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(90,60,20,0.15);
 }
 
 .top {
@@ -101,45 +214,61 @@ button.secondary:hover {
 
 .layout {
     display: grid;
-    grid-template-columns: 190px 1fr;
-    gap: 14px;
+    grid-template-columns: 195px 1fr;
+    gap: 16px;
+}
+
+.side {
+    background: rgba(255,255,255,0.18);
+    border: 1px solid rgba(179,134,31,0.3);
+    border-radius: 10px;
+    padding: 8px;
+    align-self: start;
 }
 
 .side button {
     text-align: left;
+    font-size: 14.5px;
 }
 
 .stat {
     display: flex;
     justify-content: space-between;
     padding: 9px 0;
-    border-bottom: 1px solid #e6d9b0;
+    border-bottom: 1px dashed rgba(179,134,31,0.4);
+}
+
+.stat:last-child {
+    border-bottom: none;
 }
 
 .meter {
-    height: 8px;
-    background: #e6d9b0;
+    height: 9px;
+    background: rgba(90,60,20,0.15);
     border-radius: 10px;
     overflow: hidden;
+    box-shadow: inset 0 1px 2px rgba(60,38,12,0.25);
 }
 
 .meter span {
     display: block;
     height: 100%;
-    background: #c98f2a;
+    background: linear-gradient(90deg, var(--gilt) 0%, var(--gilt-bright) 60%, #f0d688 100%);
+    border-radius: 10px;
+    transition: width .5s ease;
 }
 
 .event {
-    background: #fbeecb;
-    border-color: #c98f2a;
+    background: var(--parchment-panel);
+    border-color: var(--gilt);
 }
 
 .good {
-    border-color: #4c8a5e;
+    border-color: var(--vert);
 }
 
 .danger {
-    border-color: #b3273b;
+    border-color: var(--gules);
 }
 
 .log {
@@ -147,12 +276,18 @@ button.secondary:hover {
     overflow-y: auto;
 }
 
+.log p {
+    padding: 6px 0;
+    border-bottom: 1px dotted rgba(179,134,31,0.3);
+}
+
 .house-note {
   font-size: 13px;
-  color: #6b5a3e;
-  background: rgba(201,143,42,0.12);
-  border: 1px solid #ddccA0;
-  border-radius: 8px;
+  color: var(--ink-soft);
+  background: rgba(179,134,31,0.12);
+  border: 1px solid var(--parchment-deep);
+  border-left: 3px solid var(--gilt);
+  border-radius: 4px;
   padding: 8px 12px;
   margin-top: 10px;
 }
@@ -160,27 +295,47 @@ button.secondary:hover {
 #event:not(:empty) {
   position: fixed;
   inset: 0;
-  background: rgba(36,26,15,0.55);
+  background: rgba(20,12,4,0.62);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
   z-index: 999;
-  animation: fadeIn .15s ease;
+  animation: fadeIn .18s ease;
+  backdrop-filter: blur(1.5px);
 }
 
 #event:not(:empty) .card {
-  max-width: 480px;
+  max-width: 500px;
   width: 100%;
   max-height: 85vh;
   overflow-y: auto;
-  box-shadow: 0 20px 50px rgba(30,20,10,0.4);
+  box-shadow: 0 24px 60px rgba(20,12,4,0.55), 0 0 0 6px rgba(255,255,255,0.5), 0 0 0 7px var(--gilt);
+  animation: sealBreak .28s cubic-bezier(.2,.9,.3,1.2);
+}
+
+#event:not(:empty) .card::after {
+    content: "🕯";
+    position: absolute;
+    top: -20px;
+    right: 18px;
+    font-size: 26px;
+    filter: drop-shadow(0 3px 4px rgba(0,0,0,0.35));
+}
+
+@keyframes sealBreak {
+  from { opacity: 0; transform: scale(.92) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
 }
+
+::-webkit-scrollbar { width: 10px; }
+::-webkit-scrollbar-track { background: var(--parchment); }
+::-webkit-scrollbar-thumb { background: var(--gilt); border-radius: 6px; }
 
 @media(max-width:700px) {
     .layout {
@@ -1848,6 +2003,10 @@ function startGame(index) {
         // Press event fires once this crosses a threshold, not on a fixed year.
         printTech: 0,
 
+        // Tracks gunpowder warfare's spread the same way — grows with time and with
+        // every campaign actually fought, not on a hardcoded year.
+        gunpowderTech: 0,
+
         relationships: {
 
             Edward: 30,
@@ -1929,9 +2088,17 @@ function startGame(index) {
    RENDER
 ========================================================= */
 
+function updateTabHighlight() {
+    document.querySelectorAll("[data-tab]").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.tab === currentTab);
+    });
+}
+
 function render() {
 
     if (!game) return;
+
+    updateTabHighlight();
 
     document.getElementById("characterName")
         .textContent = game.person;
@@ -3845,7 +4012,10 @@ function renderDiplomacyActions(content, country) {
         const discounted = a.militaryGate && a.cost.gold && country === "Burgundy" && game.homeCountry === "Burgundy" && game.worldFlags.burgundianMercenaries;
         const effectiveGold = discounted ? Math.round(a.cost.gold / 2) : a.cost.gold;
         const costText = a.cost.gold ? `−${effectiveGold} gold${discounted ? " (mercenary discount)" : ""}` : a.cost.land ? `−${a.cost.land} land` : "no cost";
-        btn.innerHTML = `<strong>${a.label}</strong><br><span class="muted">${a.desc} (${costText})</span>`;
+        const obsoleteWarning = a.militaryGate && a.cost.land && game.worldFlags.gunpowderEra && !game.worldFlags.hasTercios
+            ? " — feudal levies are badly outmatched now; consider hiring a Tercio company from the Bank first"
+            : "";
+        btn.innerHTML = `<strong>${a.label}</strong><br><span class="muted">${a.desc} (${costText})${obsoleteWarning}</span>`;
         btn.addEventListener("click", () => performDiplomacyAction(country, a));
         grid.appendChild(btn);
     });
@@ -3878,14 +4048,23 @@ function performDiplomacyAction(country, action) {
     const relKey = action.relKey;
     let msg;
 
+    if (action.militaryGate) game.gunpowderTech = Math.min(100, game.gunpowderTech + 3);
+
     if (action.cost.land) {
 
-        const success = Math.random() < 0.65;
+        // Once gunpowder warfare has arrived, feudal levies sent without modern arms
+        // are simply outmatched — unless you've actually hired a Tercio company.
+        const obsoleteLevies = game.worldFlags.gunpowderEra && !game.worldFlags.hasTercios;
+        const success = Math.random() < (obsoleteLevies ? 0.3 : 0.65);
 
         if (success) {
             game.relationships[relKey] = Math.min(100, (game.relationships[relKey] || 20) + 18);
             game.prestige += 8;
             msg = `Your men serve ${country}'s cause well. Word of it travels back to you with real gratitude attached.`;
+        } else if (obsoleteLevies) {
+            game.relationships[relKey] = Math.min(100, (game.relationships[relKey] || 20) + 4);
+            game.prestige = Math.max(0, game.prestige - 6);
+            msg = `Your levies march out in the old way — billhooks, longbows, a scattering of family arms — and are cut apart by pike and shot before they close the distance. Feudal muster is not what it once was.`;
         } else {
             game.relationships[relKey] = Math.min(100, (game.relationships[relKey] || 20) + 6);
             game.prestige = Math.max(0, game.prestige - 3);
@@ -3926,13 +4105,27 @@ function estateOptCost(opt) {
 }
 
 const ESTATE_INVESTMENTS = [
-    { id: "purchase_land", label: "🏞️ Purchase Additional Land", cost: () => 25 + game.land * 6, desc: "Acquire more land outright — the foundation everything else here is built on.", effect: () => { game.land += 1; } },
-    { id: "roads", label: "🛣️ Build Roads & Bridges", cost: 15, desc: "Trade moves faster and safer across your lands.", effect: () => { game.estateHealth = Math.min(100, game.estateHealth + 10); game.prestige += 2; } },
-    { id: "farmland", label: "🌾 Clear Forest for Farmland", cost: 15, desc: "More land under the plow means more grain, and fewer hungry tenants.", effect: () => { game.estateHealth = Math.min(100, game.estateHealth + 6); game.popularLoyalty = Math.min(100, game.popularLoyalty + 6); } },
-    { id: "walls", label: "🏰 Upgrade Fortress Walls", cost: 20, desc: "A stronger seat is a safer one, and a more respected one.", effect: () => { game.estateHealth = Math.min(100, game.estateHealth + 12); game.prestige += 4; } },
-    { id: "ports", label: "⚓ Subsidize Ports & Trade", cost: 20, desc: "Merchants remember whose harbors are worth using.", effect: () => { game.estateHealth = Math.min(100, game.estateHealth + 8); game.influence += 4; } },
-    { id: "health", label: "🏥 Fund Almshouses & Physicians (Health)", cost: 15, desc: "Fewer of your people die of things that don't have to kill them.", effect: () => { game.popularLoyalty = Math.min(100, game.popularLoyalty + 10); game.health = Math.min(100, game.health + 3); } },
-    { id: "education", label: "📚 Endow a Local School (Education)", cost: 15, desc: "Literate stewards and clerks pay for themselves many times over.", effect: () => { game.prestige += 5; game.popularLoyalty = Math.min(100, game.popularLoyalty + 4); game.printTech = Math.min(100, game.printTech + 6); } },
+    { id: "purchase_land", label: "🏞️ Purchase Additional Land", cost: () => 25 + game.land * 6, desc: "Acquire more land outright — the foundation everything else here is built on.",
+      scene: "A neighboring lord, pressed for coin, sends his steward with a sealed deed and a hopeful smile. You sign it before he can reconsider the price.",
+      effect: () => { game.land += 1; } },
+    { id: "roads", label: "🛣️ Build Roads & Bridges", cost: 15, desc: "Trade moves faster and safer across your lands.",
+      scene: "Gangs of laborers spend the season breaking new stone into the old rutted track, and by autumn a cart can make the journey in half the time, without losing a wheel to the mud.",
+      effect: () => { game.estateHealth = Math.min(100, game.estateHealth + 10); game.prestige += 2; } },
+    { id: "farmland", label: "🌾 Clear Forest for Farmland", cost: 15, desc: "More land under the plow means more grain, and fewer hungry tenants.",
+      scene: "Axes ring out at the forest's edge for a fortnight straight. By the time the stumps are burned and the field is turned, your tenants are already arguing pleasantly over who gets which strip to sow.",
+      effect: () => { game.estateHealth = Math.min(100, game.estateHealth + 6); game.popularLoyalty = Math.min(100, game.popularLoyalty + 6); } },
+    { id: "walls", label: "🏰 Upgrade Fortress Walls", cost: 20, desc: "A stronger seat is a safer one, and a more respected one.",
+      scene: "Masons spend months raising the old curtain wall a full course higher and packing the gaps with fresh mortar. Riders passing on the road slow to look up at it now, where they didn't before.",
+      effect: () => { game.estateHealth = Math.min(100, game.estateHealth + 12); game.prestige += 4; } },
+    { id: "ports", label: "⚓ Subsidize Ports & Trade", cost: 20, desc: "Merchants remember whose harbors are worth using.",
+      scene: "You quietly waive a season's mooring fees for the wool merchants working your stretch of coast. Word travels fast among that company, and faster still among their rivals wondering why business has moved.",
+      effect: () => { game.estateHealth = Math.min(100, game.estateHealth + 8); game.influence += 4; } },
+    { id: "health", label: "🏥 Fund Almshouses & Physicians (Health)", cost: 15, desc: "Fewer of your people die of things that don't have to kill them.",
+      scene: "A physician trained in Padua takes up residence near the market square, his fees quietly underwritten by your household. The old women who tend the sick no longer have to choose who gets the last of the good medicine.",
+      effect: () => { game.popularLoyalty = Math.min(100, game.popularLoyalty + 10); game.health = Math.min(100, game.health + 3); } },
+    { id: "education", label: "📚 Endow a Local School (Education)", cost: 15, desc: "Literate stewards and clerks pay for themselves many times over.",
+      scene: "A cleric is persuaded, with a modest stipend, to take on a dozen local boys and girls in reading and figures above the old chapel. Within a year your own account books are kept by someone who can actually add.",
+      effect: () => { game.prestige += 5; game.popularLoyalty = Math.min(100, game.popularLoyalty + 4); game.printTech = Math.min(100, game.printTech + 6); } },
 ];
 
 function investInEstate(id) {
@@ -3950,8 +4143,8 @@ function investInEstate(id) {
     game.wealth -= cost;
     opt.effect();
 
-    game.chronicle.unshift(`${game.year}: You invest in your estates — ${opt.label.replace(/^[^\w]+/, "").trim()}.`);
-    showEvent("Investment Made", opt.desc);
+    game.chronicle.unshift(`${game.year}: ${opt.scene}`);
+    showEvent(opt.label.replace(/^[^\w]+/, "").trim(), opt.scene);
 
     render();
 
@@ -4101,6 +4294,23 @@ const LOAN_OPTIONS = [
     { id: "fortress", label: "Pledge a Border Fortress", amount: 70, months: 24, desc: "A larger loan — the Bank takes a real interest in whether you keep the peace." },
     { id: "title", label: "Pledge a Court Title or Office", amount: 55, months: 24, desc: "The Bank accepts a claim on your own standing as collateral." },
 ];
+
+function hireTercios() {
+
+    if (game.wealth < 70) {
+        showEvent("Treasury Too Weak", "A company drilled in the new style does not come cheap, and the Bank will not finance the rest on trust alone.");
+        return;
+    }
+
+    game.wealth -= 70;
+    game.worldFlags.hasTercios = true;
+
+    game.chronicle.unshift(`${game.year}: You borrow deep against the Bank's patience to put a company of pikemen and handgunners into your own service — drilled in the new Spanish style, and worth more on a modern field than every levy your family has ever raised.`);
+    showEvent("A Modern Company", "Your household's men no longer march to war the old way. Whatever you send into the field from here on will actually be able to stand against gunpowder and pike.");
+
+    render();
+
+}
 
 function requestLoan(optionId) {
 
@@ -4558,6 +4768,22 @@ function renderPowers(content) {
         btn.addEventListener("click", () => repayLoan(btn.dataset.repay));
     });
 
+    if (game.worldFlags.gunpowderEra) {
+
+        const tercioCard = document.createElement("div");
+        tercioCard.className = "card";
+
+        tercioCard.innerHTML = game.worldFlags.hasTercios
+            ? `<h3>⚔️ A Tercio in Your Service</h3><p class="muted">Pike and shot, drilled and disciplined, paid for out of borrowed Medici gold — your household's men no longer march to war the old way.</p>`
+            : `<h3>⚔️ Hire a Tercio Company</h3><p class="muted">Feudal muster no longer wins battles on its own. The Bank will finance a company of pikemen and handgunners, drilled in the new Spanish style — for a price only a great debtor could afford.</p><button id="hireTercios">Hire a Tercio Company (−70 gold)</button>`;
+
+        content.appendChild(tercioCard);
+
+        const hireBtn = document.getElementById("hireTercios");
+        if (hireBtn) hireBtn.addEventListener("click", hireTercios);
+
+    }
+
     // ---- realm-specific unique mechanic ----
 
     const mechanicCard = document.createElement("div");
@@ -4779,6 +5005,31 @@ function renderChronicle(content) {
    RELATIONSHIPS
 ========================================================= */
 
+// Immersive World Delivery: never "+8 relationship" — always a physical scene, a
+// letter, a gesture at court. A pool per action so it doesn't repeat into wallpaper.
+const FAVOR_SCENES = [
+    (name) => `You arrange to be seated beside ${name} at the next feast, and spend the evening in easy, deliberate conversation — the kind that costs nothing and is remembered for years.`,
+    (name) => `A pair of fine hawking gloves finds its way to ${name}'s household, with your compliments and no explanation attached.`,
+    (name) => `You linger after Mass to exchange a few warm words with ${name}. Small moments like this are how real alliances are actually built.`,
+    (name) => `Word reaches ${name}, through a mutual friend, that you spoke well of them at court. It is the kind of favor that is never forgotten, and never needs repaying directly.`,
+    (name) => `You send ${name} a private letter — nothing of substance in it, only warmth. That, it turns out, is sometimes worth more than substance.`,
+];
+
+const PRESSURE_SCENES = [
+    (name) => `Your steward makes a quiet, pointed reference to an old debt in front of ${name}'s own men — nothing said outright, but the meaning lands all the same.`,
+    (name) => `You let ${name} discover, almost by accident, exactly how much you know about a matter they'd rather stayed buried.`,
+    (name) => `A carefully worded letter reaches ${name}, its courtesy thin enough to see the threat through.`,
+    (name) => `You decline, pointedly and publicly, a small favor ${name} had quietly been counting on. The message is not subtle, and isn't meant to be.`,
+    (name) => `Word is allowed to reach ${name} of exactly who has been asking questions about their affairs lately. It is not comfortable, being watched.`,
+];
+
+const GIFT_SCENES = [
+    (name) => `A chest of Flemish cloth and a dozen silver spoons arrives at ${name}'s door, sent with your compliments and nothing asked in return — for now.`,
+    (name) => `You have a fine horse delivered to ${name}'s stables, the kind of gift remembered every time it's ridden.`,
+    (name) => `A case of good wine reaches ${name}'s table before an important guest arrives, timed so the credit for the evening's success falls partly to you.`,
+    (name) => `You quietly settle a small debt on ${name}'s behalf before anyone else notices it was ever owed.`,
+];
+
 function changeRelationship(person, amount) {
 
     if (!game.relationships[person])
@@ -4793,22 +5044,15 @@ function changeRelationship(person, amount) {
             )
         );
 
-    if (amount > 0)
+    const displayName = livingLabel(person, person);
+
+    if (amount > 0) {
         game.influence += 2;
-
-    else
-        game.prestige =
-            Math.max(0, game.prestige - 1);
-
-    game.chronicle.unshift(
-
-        `${game.year}: You ${
-            amount > 0
-                ? "cultivated favor with"
-                : "pressured"
-        } ${person}.`
-
-    );
+        game.chronicle.unshift(`${game.year}: ${randomFrom(FAVOR_SCENES)(displayName)}`);
+    } else {
+        game.prestige = Math.max(0, game.prestige - 1);
+        game.chronicle.unshift(`${game.year}: ${randomFrom(PRESSURE_SCENES)(displayName)}`);
+    }
 
     render();
 
@@ -4842,9 +5086,9 @@ function giveGift(person) {
             game.relationships[person] + 12
         );
 
-    game.chronicle.unshift(
-        `${game.year}: You gave ${person} a valuable gift or favor.`
-    );
+    const displayName = livingLabel(person, person);
+
+    game.chronicle.unshift(`${game.year}: ${randomFrom(GIFT_SCENES)(displayName)}`);
 
     render();
 
@@ -4979,6 +5223,10 @@ function advanceTime(months) {
             // Movable type keeps spreading across Europe whether or not you're
             // watching — the threshold it crosses triggers the event, not a fixed year.
             if (game.year >= 1465) game.printTech = Math.min(100, game.printTech + 2);
+
+            // Gunpowder warfare spreads the same way — every real campaign fought
+            // anywhere accelerates it beyond the passive yearly drift.
+            if (game.year >= 1495) game.gunpowderTech = Math.min(100, game.gunpowderTech + 2);
 
             // The wider world's dynasties keep living, dying, and marrying whether or
             // not their hand-scripted history has run out yet.
@@ -5248,6 +5496,72 @@ function tryHistoricalEvent() {
                     game.popularLoyalty = Math.max(0, game.popularLoyalty - 8);
                     game.piety = Math.min(100, game.piety + 5);
                     return { msg: "It buys the Church's quiet approval and your own tenants' quiet resentment in roughly equal measure." };
+                }},
+            ]
+        };
+
+        showChoiceEvent(ev);
+        return true;
+
+    }
+
+    // A third condition-triggered shift: once print culture has fully saturated
+    // (game.printTech maxed) and a plausible earliest floor is reached, the same
+    // presses that once just sold prayer books start spreading something the Church
+    // can no longer fully control.
+    if (game.printTech >= 100 && game.year >= 1517 && !game.flags.windsOfReform) {
+
+        game.flags.windsOfReform = true;
+        game.worldFlags.reformSpreading = true;
+
+        const ev = {
+            title: "🔥 Winds of Reform",
+            text: `Pamphlets nailed to church doors and passed hand to hand in taverns carry a name now spoken everywhere, in tones ranging from reverence to fury: a German friar has publicly challenged the Church's sale of indulgences, and thanks to the press, his arguments have reached further and faster than any single sermon or bishop's decree ever could. Villages that once took their doctrine entirely on faith now argue theology over supper. Whatever comes of it, the Church's old monopoly on what people are allowed to think is already cracking.`,
+            choices: [
+                { label: "Quietly favor the reformers", effect: () => {
+                    game.popularLoyalty = Math.min(100, game.popularLoyalty + 10);
+                    game.piety = Math.max(0, game.piety - 15);
+                    game.worldFlags.favoredReform = true;
+                    return { msg: "You let it be known, quietly, that you see some sense in what the reformers are saying. Your own tenants notice, and approve. Rome, should it ever hear of it, will not." };
+                }},
+                { label: "Stand firmly with Rome", effect: () => {
+                    game.piety = Math.min(100, game.piety + 12);
+                    game.popularLoyalty = Math.max(0, game.popularLoyalty - 8);
+                    game.worldFlags.opposedReform = true;
+                    return { msg: "You declare your household's loyalty to the old Church without reservation. It costs you some sympathy among tenants who've been reading those pamphlets themselves." };
+                }},
+                { label: "Try to stay above the whole quarrel", effect: () => {
+                    game.influence += 4;
+                    return { msg: "You decline to take a side publicly. It's an increasingly uncomfortable position to hold as the quarrel deepens, but you hold it — for now." };
+                }},
+            ]
+        };
+
+        showChoiceEvent(ev);
+        return true;
+
+    }
+
+    // Another condition-triggered shift, not a fixed date: fires once accumulated
+    // gunpowder warfare (time, and every real campaign fought) crosses a threshold.
+    // It genuinely changes the rules from here — feudal levies sent to war the old way
+    // are simply outmatched, unless you actually invest in modern mercenary companies.
+    if (game.gunpowderTech >= 60 && game.year >= 1500 && !game.flags.gunpowderRevolution) {
+
+        game.flags.gunpowderRevolution = true;
+        game.worldFlags.gunpowderEra = true;
+
+        const ev = {
+            title: "💥 The Old Ways of War",
+            text: `News travels back from a battlefield somewhere on the Continent that unsettles every household with men still under arms: a force of armored knights and levied billmen, the kind that has decided wars for two hundred years, was broken in an afternoon by ranks of pikemen and handgunners moving in disciplined blocks, backed by cannon that made short, humiliating work of what used to be an unbreakable line. The lesson spreads faster than anyone would like. Raising your tenants and arming them with what the armory has always held no longer means what it used to.`,
+            choices: [
+                { label: "Resolve to modernize your household's forces", effect: () => {
+                    game.prestige += 5;
+                    return { msg: "You say, plainly, that the old muster rolls need rethinking. Not everyone wants to hear it, but you're not wrong." };
+                }},
+                { label: "Insist the old ways have served well enough", effect: () => {
+                    game.influence += 4;
+                    return { msg: "You hold to tradition publicly, whatever you privately suspect. It costs nothing today. It may cost more later." };
                 }},
             ]
         };
@@ -6361,6 +6675,51 @@ const RANDOM_EVENTS = [
         ]
     })},
 
+    // ===== WINDS OF REFORM — managing heresy spread once it's loose =====
+
+    { eligible: (g) => g.worldFlags.reformSpreading, build: () => ({
+        title: "A Preacher in the Marketplace",
+        text: `An unlicensed preacher has taken to arguing scripture in your own marketplace, drawing a real crowd, and quoting from a printed pamphlet rather than anything a bishop ever approved. Your steward wants to know what you'd have done about it.`,
+        choices: [
+            { label: "Let him speak", effect: () => {
+                game.popularLoyalty = Math.min(100, game.popularLoyalty + 6);
+                game.piety = Math.max(0, game.piety - 8);
+                return { msg: "You decide silencing him would only make a martyr of a man nobody outside the market square had heard of. Your tenants take it as a kind of respect." };
+            }},
+            { label: "Have him quietly removed", effect: () => {
+                game.piety = Math.min(100, game.piety + 8);
+                game.popularLoyalty = Math.max(0, game.popularLoyalty - 6);
+                return { msg: "He is escorted out of the parish before nightfall, no charges laid, no scene made. Rome would approve. Your own tenants are quieter about it than usual." };
+            }},
+            { label: "Report him formally to the Church", effect: () => {
+                game.piety = Math.min(100, game.piety + 15);
+                game.popularLoyalty = Math.max(0, game.popularLoyalty - 12);
+                if (Math.random() < 0.15) {
+                    return { msg: "Your report is received with unusual interest — it seems the Curia was already watching this particular preacher, and your diligence is specifically noted." };
+                }
+                return { msg: "Your report goes into a file with a great many others like it. It does you no harm with Rome, and no good at all with your own people." };
+            }},
+        ]
+    })},
+
+    { eligible: (g) => g.worldFlags.favoredReform && g.piety < 30, build: () => ({
+        title: "A Letter From an Unfamiliar Seal",
+        text: `A letter arrives bearing a cardinal's seal you don't recognize, its tone formally courteous and unmistakably a warning: your household's sympathies have been noticed in Rome, and the Curia does not extend its patience indefinitely.`,
+        choices: [
+            { label: "Write back with careful reassurances", effect: () => {
+                game.piety = Math.min(100, game.piety + 15);
+                return { msg: "You compose a reply thick with pieties and short on actual promises. It buys time, which is all you really needed." };
+            }},
+            { label: "Ignore it entirely", effect: () => {
+                if (Math.random() < 0.35) {
+                    applyExcommunication("Rome's patience, it turns out, was not infinite after all — the Curia moves to excommunicate you.");
+                    return { handled: true };
+                }
+                return { msg: "You set the letter aside. Nothing comes of it immediately, though you suspect that won't last." };
+            }},
+        ]
+    })},
+
     // ===== LANCASTRIAN NOBLE MARRIAGE — hedging the family's bets =====
 
     { eligible: (g) => g.worldFlags.provenLancastrianLoyalty && g.location === "England" &&
@@ -6447,6 +6806,13 @@ function showChoiceEvent(ev, warning) {
             if (result && result.fatal) {
                 render();
                 handleDeath(msg);
+                return;
+            }
+
+            // Some effects (like an excommunication) already render their own
+            // dedicated popup and chronicle line — don't overwrite it with the
+            // generic outcome card.
+            if (result && result.handled) {
                 return;
             }
 
