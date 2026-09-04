@@ -955,6 +955,77 @@ people: [
 
 ]
 
+},
+
+sforza: {
+
+name: "House Sforza",
+
+realm: "Duchy of Milan",
+homeCountry: "Milan",
+startStats: { wealth: 85, prestige: 60, influence: 40, land: 5 },
+
+description:
+"The ruling house of Milan — a fierce military powerhouse built on a mercenary captain's own sword arm, now trying to hold onto the duchy it seized right as England's own wars were brewing.",
+
+people: [
+
+["Francesco Sforza", 60, "Duke", "M"],
+
+["Galeazzo Maria Sforza", 17, "Heir", "M"],
+
+["Ludovico Sforza", 9, "Prince", "M"],
+
+["A Milanese noble", 25, "Plausible", "F"]
+
+]
+
+},
+
+venice: {
+
+name: "The Venetian Patriciate",
+
+realm: "Republic of Venice",
+homeCountry: "Venice",
+startStats: { wealth: 110, prestige: 55, influence: 45, land: 3 },
+
+description:
+"An old patrician family of the Most Serene Republic — an economic superpower run by merchant oligarchs, its Doge elected for life rather than born to the office, and its navy and trading routes the envy of every crown in Christendom.",
+
+people: [
+
+["A Venetian patrician", 27, "Plausible", "M"],
+
+["A Venetian noblewoman", 24, "Plausible", "F"],
+
+["A captain of the Arsenal fleets", 34, "Plausible", "M"]
+
+]
+
+},
+
+trastamara_naples: {
+
+name: "The House of Trastámara-Naples",
+
+realm: "Kingdom of Naples",
+homeCountry: "Naples",
+startStats: { wealth: 65, prestige: 55, influence: 35, land: 4 },
+
+description:
+"The Aragonese cadet dynasty ruling the whole southern half of Italy — a more traditionally feudal court than the mercantile north, and shadowed by a barons' revolt that never quite finishes being put down.",
+
+people: [
+
+["Ferdinand I of Naples", 37, "King", "M"],
+
+["Alfonso, Duke of Calabria", 13, "Heir", "M"],
+
+["A Neapolitan noble", 26, "Plausible", "M"]
+
+]
+
 }
 
 };
@@ -1015,6 +1086,16 @@ const HISTORICAL_DEATHS = {
         cause: "Pierre de Beaujeu, Duke of Bourbon, dies at Moulins." },
     "Louis, Duke of Orléans": { year: 1515, month: 1,
         cause: "King Louis XII — the Duke of Orléans who spent years as Charles VIII's prisoner before inheriting the throne himself — dies at the Hôtel des Tournelles in Paris." },
+    "Francesco Sforza": { year: 1466, month: 3,
+        cause: "Francesco Sforza, the mercenary captain who fought his way to a duke's coronet, dies at Milan — the dynasty he founded by the sword now rests on whether his son can hold it by anything else." },
+    "Galeazzo Maria Sforza": { year: 1476, month: 12,
+        cause: "Galeazzo Maria Sforza is stabbed to death by three conspirators in the Church of Santo Stefano on the feast of Saint Stephen — his own cruelty, more than a few in Milan quietly admit, made him easy to hate and not hard to catch alone." },
+    "Ludovico Sforza": { year: 1508, month: 5,
+        cause: "Ludovico Sforza — Il Moro, who ruled Milan in all but name for years before finally taking the title outright — dies a prisoner of the French crown at the castle of Loches, having never seen Milan again since his capture." },
+    "Ferdinand I of Naples": { year: 1494, month: 1,
+        cause: "King Ferdinand I of Naples — Ferrante, as all Italy calls him — dies at Naples just as a French army mustering beyond the Alps prepares to press its own ancient claim to his throne. His enemies abroad, and no small number of the barons he once crushed at home, do not mourn him long." },
+    "Alfonso, Duke of Calabria": { year: 1495, month: 12,
+        cause: "Alfonso II of Naples dies in exile in Sicily, having abdicated within a year of taking his father's crown rather than face the French army bearing down on his own capital." },
 };
 
 // Escalates sharply the longer you survive past the historical date — likely within
@@ -1157,6 +1238,64 @@ const MARRIAGE_MARKET = {
     },
     noble: { tierLabel: "Noble match", relKey: "AustrianNobles", demandGold: 35, demandLand: 1 },
     merchant: { tierLabel: "Merchant match", relKey: "AustrianMerchants", demandGold: 12, demandLand: 0 }
+  },
+
+  milan: {
+    country: "Milan",
+    countryKey: "milan",
+    royal: {
+      tierLabel: "Royal match",
+      prospects: {
+        F: [{ id: "galeazzo_maria", name: "Galeazzo Maria Sforza, heir to Milan", relKey: "Milan", demandGold: 55, demandLand: 2, consortTitle: null }],
+        M: [{ id: "ippolita_sforza", name: "Ippolita Sforza, Francesco's daughter", relKey: "Milan", demandGold: 55, demandLand: 2, consortTitle: null }]
+      }
+    },
+    noble: { tierLabel: "Noble match", relKey: "MilaneseNobles", demandGold: 32, demandLand: 1 },
+    merchant: { tierLabel: "Merchant match", relKey: "MilaneseMerchants", demandGold: 12, demandLand: 0 }
+  },
+
+  venice: {
+    country: "Venice",
+    countryKey: "venice",
+    // No royal tier at all — the Most Serene Republic has no royal house to marry
+    // into, only the patrician families whose votes actually elect the Doge.
+    royal: null,
+    noble: { tierLabel: "Patrician match", relKey: "VenetianNobles", demandGold: 40, demandLand: 1 },
+    merchant: { tierLabel: "Merchant match", relKey: "VenetianMerchants", demandGold: 15, demandLand: 0 }
+  },
+
+  naples: {
+    country: "Naples",
+    countryKey: "naples",
+    royal: {
+      tierLabel: "Royal match",
+      prospects: {
+        F: [{ id: "alfonso_calabria", name: "Alfonso, Duke of Calabria, heir to Naples", relKey: "Naples", demandGold: 55, demandLand: 2, consortTitle: null }],
+        M: [{ id: "naples_infanta", name: "An Infanta of Naples", relKey: "Naples", demandGold: 55, demandLand: 2, consortTitle: null }]
+      }
+    },
+    noble: { tierLabel: "Noble match", relKey: "NeapolitanNobles", demandGold: 32, demandLand: 1 },
+    merchant: { tierLabel: "Merchant match", relKey: "NeapolitanMerchants", demandGold: 12, demandLand: 0 }
+  },
+
+  florence: {
+    country: "Florence",
+    countryKey: "florence",
+    // Florence is nominally a republic — there's no crown to marry into, only the
+    // Medici's own orbit, which is worth rather more than most actual coronets.
+    royal: null,
+    noble: { tierLabel: "Medici-aligned match", relKey: "FlorentineNobles", demandGold: 45, demandLand: 1 },
+    merchant: { tierLabel: "Merchant match", relKey: "FlorentineMerchants", demandGold: 15, demandLand: 0 }
+  },
+
+  rome: {
+    country: "Rome",
+    countryKey: "rome",
+    // No crown here either — a cardinal's own family (nepotism was very much a real
+    // political tool in this era) is the closest thing Rome has to a noble match.
+    royal: null,
+    noble: { tierLabel: "Curial family match", relKey: "RomanNobles", demandGold: 30, demandLand: 1 },
+    merchant: { tierLabel: "Merchant match", relKey: "RomanMerchants", demandGold: 12, demandLand: 0 }
   }
 
 };
@@ -1176,8 +1315,15 @@ const NOBLE_NAME_POOLS = {
   saxony: { M: ["Ernst","Albrecht","Friedrich","Wilhelm","Georg"], F: ["Sophie","Katharina","Margarete","Barbara","Anna"], surnames: ["von Miltitz","von Schönberg","von Einsiedel","von Bünau"] },
   brandenburg: { M: ["Albrecht","Johann","Friedrich","Sigismund","Otto"], F: ["Barbara","Anna","Dorothea","Ursula","Margarete"], surnames: ["von Bredow","von Quitzow","von der Schulenburg","von Rochow"] },
   palatinate: { M: ["Friedrich","Philipp","Ludwig","Ruprecht","Otto"], F: ["Margarete","Katharina","Elisabeth","Mechthild","Klara"], surnames: ["von Sickingen","von Hirschhorn","von Erbach","von Sponheim"] },
-  italy: { M: ["Lorenzo","Cosimo","Giovanni","Piero","Niccolò","Filippo"], F: ["Lucrezia","Caterina","Bianca","Contessina","Maddalena","Clarice"], surnames: ["Ridolfi","Pazzi","Strozzi","Tornabuoni","Salviati","Albizzi"] }
+  italy: { M: ["Lorenzo","Cosimo","Giovanni","Piero","Niccolò","Filippo"], F: ["Lucrezia","Caterina","Bianca","Contessina","Maddalena","Clarice"], surnames: ["Ridolfi","Pazzi","Strozzi","Tornabuoni","Salviati","Albizzi"] },
+  milan: { M: ["Galeazzo","Ludovico","Ercole","Gian","Ascanio","Bianco"], F: ["Bianca","Ippolita","Beatrice","Caterina","Chiara","Camilla"], surnames: ["Trivulzio","Borromeo","Landriani","Pallavicino","Rossi","Visconti"] },
+  venice: { M: ["Marco","Andrea","Zaccaria","Vettore","Nicolò","Pietro"], F: ["Cassandra","Elena","Marina","Chiara","Paola","Franceschina"], surnames: ["Contarini","Mocenigo","Foscari","Dandolo","Morosini","Barbarigo"] },
+  naples: { M: ["Ferrante","Alfonso","Enrico","Federico","Giovanni","Antonello"], F: ["Ippolita","Eleonora","Isabella","Giulia","Beatrice","Sancia"], surnames: ["Caracciolo","Sanseverino","Carafa","del Balzo","Piccolomini","Orsini"] }
 };
+NOBLE_NAME_POOLS.florence = NOBLE_NAME_POOLS.italy;
+NOBLE_NAME_POOLS.rome = NOBLE_NAME_POOLS.italy;
+NOBLE_NAME_POOLS.curia = NOBLE_NAME_POOLS.italy;
+NOBLE_NAME_POOLS.medici = NOBLE_NAME_POOLS.italy;
 
 const MERCHANT_SURNAMES = {
   england: ["Canynges","Chalton","Philpot","Shaa","Tate"],
@@ -1188,7 +1334,12 @@ const MERCHANT_SURNAMES = {
   portugal: ["Fernandes","Lopes","Gonçalves","Eanes"],
   brittany: ["Le Barbu","Le Bihan","Coatanlem","Le Roux"],
   aragon: ["Santángel","de Paternoy","Sánchez","Gralla"],
-  austria: ["Fugger","Baumgartner","Höchstetter","Welser"]
+  austria: ["Fugger","Baumgartner","Höchstetter","Welser"],
+  milan: ["Rossi","Landriani","Borromeo","Crivelli"],
+  venice: ["Bembo","Zorzi","Priuli","Gritti"],
+  naples: ["Caracciolo","Carafa","Piccolomini","Origlia"],
+  florence: ["Rucellai","Tornabuoni","Strozzi","Pitti"],
+  rome: ["Cenci","Colonna","Orsini","Savelli"]
 };
 
 function randomFrom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
@@ -1386,6 +1537,33 @@ const COUNTRY_PROFILES = {
     ]
   },
 
+  Milan: {
+    desc: "You are at the Sforza court in Milan, under Duke Francesco Sforza — a mercenary captain who fought his way to a duke's coronet, now trying to make a hereditary dynasty out of what he won by the sword.",
+    people: [
+      ["Milan", "Duke Francesco Sforza"],
+      ["France", "King Louis XI"],
+      ["Naples", "King Ferdinand I of Naples"],
+    ]
+  },
+
+  Venice: {
+    desc: "You are among the patrician houses of the Most Serene Republic — a city that answers to no single ruler, where the Doge is elected for life by his fellow nobles and the real business of the state is trade, fleets, and the careful management of everyone else's wars.",
+    people: [
+      ["Venice", "The Doge and the Great Council"],
+      ["Milan", "Duke Francesco Sforza"],
+      ["Rome", "The Holy Father"],
+    ]
+  },
+
+  Naples: {
+    desc: "You are at the Neapolitan court under King Ferdinand I — called Ferrante — a shrewd and occasionally ruthless ruler holding together the whole southern half of Italy against a baronage that has revolted against him once already and has not forgotten how.",
+    people: [
+      ["Naples", "King Ferdinand I of Naples"],
+      ["Aragon", "The Crown of Aragon"],
+      ["Milan", "Duke Francesco Sforza"],
+    ]
+  },
+
 };
 
 function countryProfile() {
@@ -1465,6 +1643,40 @@ function countryProfile() {
     if (game.location === "Brittany" && DYNASTIES.Brittany.ruler.name !== "Francis II") {
         const d = DYNASTIES.Brittany;
         desc = `You are at the Breton ducal court, now under ${d.ruler.gender === "F" ? "Duchess" : "Duke"} ${d.ruler.name}${d.marriedToPlayer ? ", your own spouse" : ""} — independence still a narrow, carefully walked line between France and England.`;
+    }
+
+    if (game.location === "Milan") {
+        if (DYNASTIES.Milan.active) {
+            const d = DYNASTIES.Milan;
+            desc = `You are at the Sforza court in Milan, now under ${d.ruler.gender === "F" ? "Duchess" : "Duke"} ${d.ruler.name}${d.marriedToPlayer ? ", your own spouse" : ""} — a duchy still trying to make a hereditary dynasty out of what was won by the sword.`;
+        } else if (game.worldFlags.ludovicoIsDuke) {
+            desc = `You are at the Sforza court in Milan under Duke Ludovico — Il Moro — who ruled in every way that mattered for years as his nephew's regent before finally claiming the title outright.`;
+        } else if (game.worldFlags.gianGaleazzoIsDuke) {
+            desc = `You are at the Sforza court in Milan, nominally ruled by the boy Duke Gian Galeazzo — though everyone at court understands that his uncle Ludovico is the one actually governing.`;
+        } else if (game.worldFlags.galeazzoMariaIsDuke) {
+            desc = `You are at Duke Galeazzo Maria Sforza's court in Milan — magnificent, ceremonious, and, more than a few whisper quietly, ruled by a man crueler than his famous father ever was.`;
+        }
+    }
+
+    if (game.location === "Venice") {
+        desc = `You are among the patrician families of the Most Serene Republic, currently governed by Doge ${DYNASTIES.Venice.ruler.name} — elected for life by the Great Council, and answerable to it in nearly everything that matters. No crown, no dynasty, just the enduring machinery of Venetian trade and naval power.`;
+    }
+
+    if (game.location === "Naples") {
+        if (DYNASTIES.Naples.active) {
+            const d = DYNASTIES.Naples;
+            desc = `You are at the Neapolitan court, now under ${d.ruler.gender === "F" ? "Queen" : "King"} ${d.ruler.name}${d.marriedToPlayer ? ", your own spouse" : ""} — the whole southern half of Italy still governed from here, whatever the north makes of it.`;
+        }
+    }
+
+    if (game.location === "Rome" && DYNASTIES.Rome.ruler.name !== "Pius II") {
+        const d = DYNASTIES.Rome;
+        desc = `You are within the Roman Curia, now under Pope ${d.ruler.name} — the machinery of Christendom's spiritual and temporal authority continuing under a new occupant of Saint Peter's chair.`;
+    }
+
+    if (game.location === "Florence" && DYNASTIES.Florence.ruler.name !== "Cosimo de' Medici") {
+        const d = DYNASTIES.Florence;
+        desc = `You are within the counting-houses of the Medici Bank in Florence, its affairs now guided by ${d.ruler.name}${d.marriedToPlayer ? ", your own spouse" : ""} — still no crown, no army, and yet half of Christendom's rulers owe this family something.`;
     }
 
     // Generic override, checked last so it wins regardless of which of the above
@@ -1656,6 +1868,71 @@ const WORLD_TIMELINE = [
               if (recapLines) recapLines.push(`Your own contributions to the long campaign are remembered — the Pope's favor toward your house grows markedly.`);
           }
       } },
+
+    { id: "francesco_sforza_dies", year: 1466, month: 3, personalTo: "Francesco Sforza",
+      text: `News from Milan: Duke Francesco Sforza, the mercenary captain who fought his way to a coronet, has died. His son Galeazzo Maria succeeds him as Duke of Milan.`,
+      apply: (g) => {
+          g.worldFlags.francescoSforzaDead = true;
+          g.worldFlags.galeazzoMariaIsDuke = true;
+      } },
+
+    { id: "galeazzo_maria_assassinated", year: 1476, month: 12, personalTo: "Galeazzo Maria Sforza",
+      text: `News from Milan: Duke Galeazzo Maria Sforza has been stabbed to death by conspirators in the Church of Santo Stefano, on the feast of Saint Stephen. His young son Gian Galeazzo, only seven, inherits the title — though his uncle Ludovico moves at once to make himself regent in every way that matters.`,
+      apply: (g) => {
+          g.worldFlags.galeazzoMariaDead = true;
+          g.worldFlags.galeazzoMariaIsDuke = false;
+
+          // Adaptation: if you were actually married to Galeazzo Maria and have an
+          // heir, that child — not the history-book Gian Galeazzo — inherits Milan
+          // outright, and the rest of the scripted Sforza succession (Gian
+          // Galeazzo's death, Ludovico's usurpation and capture) never applies to
+          // your own alternate line.
+          if (g.married && g.spouseRelKey === "Milan" && g.heir) {
+              g.worldFlags.milanAlternateLine = true;
+              const heirAge = Math.max(0, g.year - (g.heir.birthYear || g.year));
+              DYNASTIES.Milan.ruler = { name: g.heir.name, gender: g.heir.gender, age: heirAge, fromPlayer: true };
+              DYNASTIES.Milan.heir = null;
+              DYNASTIES.Milan.active = true;
+              g.heir.rulingAbroad = "Milan";
+          } else {
+              g.worldFlags.gianGaleazzoIsDuke = true;
+          }
+      } },
+
+    { id: "gian_galeazzo_dies", year: 1494, month: 10,
+      eligible: (g) => !g.worldFlags.milanAlternateLine,
+      text: `News from Milan: the young Duke Gian Galeazzo Sforza has died suddenly at Pavia — poisoned, nearly everyone at every court in Italy quietly believes, on his own uncle's order. Ludovico Sforza, regent in all but name for years, claims the ducal title outright at last.`,
+      apply: (g) => {
+          g.worldFlags.gianGaleazzoDead = true;
+          g.worldFlags.gianGaleazzoIsDuke = false;
+          g.worldFlags.ludovicoIsDuke = true;
+          DYNASTIES.Milan.ruler = { name: "Ludovico Sforza", gender: "M", age: 42 };
+      } },
+
+    { id: "ludovico_captured", year: 1500, month: 4, personalTo: "Ludovico Sforza",
+      eligible: (g) => !g.worldFlags.milanAlternateLine,
+      text: `News from Milan: Duke Ludovico Sforza has been captured by French forces at Novara, betrayed, it's said, by his own Swiss mercenaries. King Louis XII's armies occupy Milan directly — the Sforza duchy, for now, is no duchy at all.`,
+      apply: (g) => {
+          g.worldFlags.ludovicoCaptured = true;
+          DYNASTIES.Milan.active = false;
+          DYNASTIES.Milan.absorbedBy = "France";
+      } },
+
+    { id: "ferrante_dies", year: 1494, month: 1, personalTo: "Ferdinand I of Naples",
+      text: `News from Naples: King Ferdinand I — Ferrante, as all Italy knew him — has died, just as a French army mustering beyond the Alps prepares to press its own ancient claim to his throne. His son Alfonso succeeds him as King of Naples, inheriting a crown that may not sit easily on his head for long.`,
+      apply: (g) => {
+          g.worldFlags.ferranteDead = true;
+          DYNASTIES.Naples.ruler = { name: "Alfonso, Duke of Calabria", gender: "M", age: 46 };
+          DYNASTIES.Naples.heir = null;
+          DYNASTIES.Naples.active = true;
+
+          // Same adaptation as Milan and Burgundy: your own heir, if you married
+          // into this house, is who the wider world now recognizes.
+          if (g.married && g.spouseRelKey === "Naples" && g.heir) {
+              const heirAge = Math.max(0, g.year - (g.heir.birthYear || g.year));
+              DYNASTIES.Naples.heir = { name: g.heir.name, gender: g.heir.gender, age: heirAge, married: false, fromPlayer: true };
+          }
+      } },
 ];
 
 function checkWorldTimeline(recapLines) {
@@ -1745,6 +2022,42 @@ const DYNASTIES = {
         active: true, activatesOn: null,
         ruler: { name: "Francis II", gender: "M", age: 28 }, heir: null, marriedToPlayer: false },
 
+    // Milan's whole 1461-1500 succession is scripted beat by beat via WORLD_TIMELINE
+    // (Francesco -> Galeazzo Maria -> Gian Galeazzo -> Ludovico -> French conquest),
+    // so this entry never activates into the procedural simulation on its own —
+    // it exists purely so livingLabel/countryProfile/Dynasties-tab/marriage-market
+    // have a live record to read from, and so the final scripted beat can mark it
+    // absorbed exactly like any procedurally-absorbed realm.
+    Milan: { relKey: "Milan", houseKey: "milan", titleM: "Duke", titleF: "Duchess", realmNoun: "Milan",
+        active: false, activatesOn: null,
+        ruler: { name: "Francesco Sforza", gender: "M", age: 60 }, heir: { name: "Galeazzo Maria Sforza", gender: "M", age: 17, married: false }, marriedToPlayer: false },
+
+    Naples: { relKey: "Naples", houseKey: "naples", titleM: "King", titleF: "Queen", realmNoun: "Naples",
+        active: false, activatesOn: "ferranteDead",
+        ruler: { name: "Ferdinand I of Naples", gender: "M", age: 37 }, heir: { name: "Alfonso, Duke of Calabria", gender: "M", age: 13, married: false }, marriedToPlayer: false },
+
+    // Venice has no royal bloodline to inherit at all — the Doge is elected for life
+    // by the Great Council, not born to the office. The elective flag tells
+    // simulateDynasties to skip the heir/succession machinery entirely and just
+    // elect a new named Doge whenever the sitting one dies.
+    Venice: { relKey: "Venice", houseKey: "venice", titleM: "Doge", titleF: "Doge", realmNoun: "Venice",
+        active: true, activatesOn: null, elective: true, electorBody: "Great Council",
+        ruler: { name: "Andrea Contarini", gender: "M", age: 64 }, heir: null, marriedToPlayer: false },
+
+    // Florence has no formal crown at all in this era — the Medici run the city
+    // through wealth, patronage, and influence rather than any title, so "ruler"
+    // here just tracks whichever Medici currently holds that informal primacy.
+    Florence: { relKey: "Florence", houseKey: "medici", titleM: "Lord", titleF: "Lady", realmNoun: "Florence",
+        active: true, activatesOn: null,
+        ruler: { name: "Cosimo de' Medici", gender: "M", age: 72 }, heir: { name: "Piero de' Medici", gender: "M", age: 45, married: true }, marriedToPlayer: false },
+
+    // The Papacy is elective, like Venice's Doge, and its officeholder is always
+    // male — a new Pope is chosen by the College of Cardinals in conclave, not
+    // born to the position.
+    Rome: { relKey: "Rome", houseKey: "curia", titleM: "Pope", titleF: "Pope", realmNoun: "Rome",
+        active: true, activatesOn: null, elective: true, electorBody: "College of Cardinals",
+        ruler: { name: "Pius II", gender: "M", age: 56 }, heir: null, marriedToPlayer: false },
+
 };
 
 function domainNoun(title) {
@@ -1765,6 +2078,8 @@ const RIVAL_CLAIMANTS = {
     Portugal: "Castile",
     Scotland: "England",
     Austria: "Hungary",
+    Milan: "France",
+    Naples: "Aragon",
 };
 
 // Builds a proper game-side descendant record (matching the shape of an entry in
@@ -1859,6 +2174,29 @@ function simulateDynasties(recapLines) {
 
         d.marriedToPlayer = false;
 
+        // An elective office (Venice's Doge) never passes by blood — no heir to
+        // grow up, marry, or inherit. It just gets re-elected by the ruling body
+        // whenever the sitting officeholder dies.
+        if (d.elective) {
+
+            d.ruler.age++;
+
+            if (Math.random() < mortalityChance(d.ruler.age, null)) {
+
+                const oldName = d.ruler.name;
+                const pool = NOBLE_NAME_POOLS[d.houseKey] || NOBLE_NAME_POOLS.england;
+                const newName = generatePeriodName(d.houseKey, "M", pool.surnames);
+                d.ruler = { name: newName, gender: "M", age: 45 + Math.floor(Math.random() * 20) };
+
+                const elector = d.electorBody || "ruling council";
+                recapLines.push(`News from ${d.realmNoun}: ${d.titleM} ${oldName} has died. The ${elector} convenes and elects ${newName} as the new ${d.titleM} of ${d.realmNoun} — the office passes by vote here, never by blood.`);
+
+            }
+
+            return;
+
+        }
+
         d.ruler.age++;
         if (d.heir) d.heir.age++;
 
@@ -1883,7 +2221,9 @@ function simulateDynasties(recapLines) {
                     game.heir.rulingAbroad = country;
                 }
 
-            } else if (RIVAL_CLAIMANTS[country] && Math.random() < 0.4) {
+            } else if (RIVAL_CLAIMANTS[country] && Math.random() < (
+                game.worldFlags.italianWarsBegun && (country === "Milan" || country === "Naples") ? 0.65 : 0.4
+            )) {
 
                 const absorber = RIVAL_CLAIMANTS[country];
                 d.active = false;
@@ -1944,7 +2284,7 @@ function simulateDynasties(recapLines) {
 
 }
 
-const DYNASTY_COUNTRY_FOR_KEY = { Charles: "Burgundy", France: "France", Portugal: "Portugal", Scotland: "Scotland", Austria: "Austria", Aragon: "Aragon", Brittany: "Brittany" };
+const DYNASTY_COUNTRY_FOR_KEY = { Charles: "Burgundy", France: "France", Portugal: "Portugal", Scotland: "Scotland", Austria: "Austria", Aragon: "Aragon", Brittany: "Brittany", Milan: "Milan", Naples: "Naples" };
 
 function livingLabel(key, defaultLabel) {
 
@@ -2014,6 +2354,40 @@ function livingLabel(key, defaultLabel) {
         return `${d.ruler.gender === "F" ? "Duchess" : "Duke"} ${d.ruler.name} of Brittany${d.marriedToPlayer ? " (your own spouse)" : ""}`;
     }
 
+    if (key === "Milan") {
+        if (DYNASTIES.Milan.active) {
+            const d = DYNASTIES.Milan;
+            return `${d.ruler.name}, ${d.ruler.gender === "F" ? d.titleF : d.titleM} of Milan${d.marriedToPlayer ? " (your own spouse)" : ""}`;
+        }
+        if (game.worldFlags.ludovicoIsDuke) return "Ludovico Sforza, Duke of Milan";
+        if (game.worldFlags.gianGaleazzoIsDuke) return "Gian Galeazzo Sforza, Duke of Milan";
+        if (game.worldFlags.galeazzoMariaIsDuke) return "Galeazzo Maria Sforza, Duke of Milan";
+        return defaultLabel;
+    }
+
+    if (key === "Naples") {
+        if (DYNASTIES.Naples.active) {
+            const d = DYNASTIES.Naples;
+            return `${d.ruler.gender === "F" ? "Queen" : "King"} ${d.ruler.name} of Naples${d.marriedToPlayer ? " (your own spouse)" : ""}`;
+        }
+        return defaultLabel;
+    }
+
+    if (key === "Venice") {
+        const d = DYNASTIES.Venice;
+        return `Doge ${d.ruler.name} of Venice`;
+    }
+
+    if (key === "Rome") {
+        const d = DYNASTIES.Rome;
+        return `Pope ${d.ruler.name}`;
+    }
+
+    if (key === "Florence") {
+        const d = DYNASTIES.Florence;
+        return `${d.ruler.name}, effective ruler of Florence${d.marriedToPlayer ? " (your own spouse)" : ""}`;
+    }
+
     return defaultLabel;
 }
 
@@ -2063,8 +2437,11 @@ const REALM_DESCRIPTIONS = {
     "Kingdom of Portugal": "A restless, seafaring kingdom more interested in the African coast than in continental wars.",
     "Archduchy of Austria": "The Habsburg seat of the Imperial crown — a house that wins more by marriage than by war.",
     "The Holy Roman Empire": "A fragmented patchwork of princely states held together by an elected Emperor and the electors who make him.",
-    "The Roman Church": "Rome's central government — piety, politics, and the machinery of Christendom's spiritual authority.",
+    "The Roman Church": "Rome's central government — piety, politics, and the machinery of Christendom's spiritual authority, ruled directly by the Pope as both spiritual leader and temporal prince over a wide band of central Italy.",
     "The Medici Bank": "Florence's great banking dynasty, whose gold quietly shapes the fortunes of kings.",
+    "Duchy of Milan": "A fierce military powerhouse controlled by the Sforza family, who seized power right as England's own wars were brewing.",
+    "Republic of Venice": "An economic superpower with a massive naval fleet, dominant trading routes, and a stable merchant-controlled government — its Doge elected for life, never born to the office.",
+    "Kingdom of Naples": "The whole southern half of the Italian peninsula, ruled by a cadet branch of the House of Aragon over a more traditionally feudal court than the mercantile north.",
 };
 
 function showRealms() {
@@ -2171,6 +2548,8 @@ const HOUSE_NAME_POOL_KEY = {
     aviz: "portugal",
     habsburg: "austria",
     curia: "italy",
+    sforza: "milan",
+    trastamara_naples: "naples",
 };
 
 function generateStartingCharacterName(houseKey, gender) {
@@ -2963,6 +3342,13 @@ function renderCourt(content) {
       in your favor.
 ========================================================= */
 
+// A short summary of which match tiers a given country's marriage market
+// actually offers, for the country-picker screen.
+function marketTierSummary(market) {
+    if (!market.royal) return "Noble and merchant matches — no royal house to marry into here.";
+    return "Royal, noble, and merchant matches available.";
+}
+
 function renderMarriage(content) {
 
     if (game.married) {
@@ -3045,7 +3431,7 @@ function renderMarriage(content) {
         btn.innerHTML = `
             <strong>${c.country}</strong>
             <br>
-            <span class="muted">${c.tierLabel}</span>
+            <span class="muted">${marketTierSummary(c)}</span>
         `;
 
         btn.addEventListener("click", () => {
@@ -3168,7 +3554,7 @@ function renderChildren(content) {
             btn.innerHTML = `
                 <strong>${c.country}</strong>
                 <br>
-                <span class="muted">${c.tierLabel}</span>
+                <span class="muted">${marketTierSummary(c)}</span>
             `;
 
             btn.addEventListener("click", () => {
@@ -3324,7 +3710,8 @@ function renderTierChoice(content, market, subjectName) {
     }
 
     const nobleBtn = document.createElement("button");
-    nobleBtn.innerHTML = `<strong>🛡️ Noble Match</strong><br><span class="muted">${market.noble.houses ? "A great house, aligned with a faction of its own." : "A landed family of real local standing."}</span>`;
+    const nobleLabel = market.noble.tierLabel || "Noble Match";
+    nobleBtn.innerHTML = `<strong>🛡️ ${nobleLabel}</strong><br><span class="muted">${market.noble.houses ? "A great house, aligned with a faction of its own." : "A landed family of real local standing."}</span>`;
     nobleBtn.addEventListener("click", () => { game.pendingTier = "noble"; render(); });
     grid.appendChild(nobleBtn);
 
@@ -4044,8 +4431,8 @@ function renderPortraitSVG(appearance, gender, opts = {}) {
 // Maps a role/title string to the crown tier a portrait should wear.
 function crownTierForRole(role) {
     if (!role) return null;
-    if (/King|Queen|Emperor|Empress/.test(role)) return "royal";
-    if (/Duke|Duchess|Archduke|Archduchess|Earl|Countess|Prince|Princess/.test(role)) return "noble";
+    if (/King|Queen|Emperor|Empress|Pope/.test(role)) return "royal";
+    if (/Duke|Duchess|Archduke|Archduchess|Earl|Countess|Prince|Princess|Doge/.test(role)) return "noble";
     return null;
 }
 
@@ -6170,6 +6557,44 @@ function tryHistoricalEvent() {
                 }},
                 { label: "Take little notice — Iberian politics rarely touch you directly", effect: () => {
                     return { msg: "You note the news and move on. Whether it touches you directly is a question the years ahead will answer." };
+                }},
+            ]
+        };
+
+        showChoiceEvent(ev);
+        return true;
+
+    }
+
+    // A fourth "boundaries changing" shift, gated on a real prerequisite rather
+    // than a bare date: the delicate balance the Peace of Lodi struck between
+    // Milan, Venice, Florence, the Papacy, and Naples held for decades — right
+    // through the exact years of the Wars of the Roses — but it depended on
+    // Naples' old king holding his throne. His death (worldFlags.ferranteDead,
+    // itself the real 1494 date) is what actually breaks it: with Ferrante gone,
+    // France presses its own Angevin claim to Naples, and all of Italy is
+    // dragged into decades of war it never saw coming.
+    if (game.worldFlags.ferranteDead && !game.worldFlags.italianWarsBegun) {
+
+        game.worldFlags.italianWarsBegun = true;
+
+        const ev = {
+            title: "⚔️ The Balance of Italy Breaks",
+            text: `For decades, five powers — Milan, Venice, Florence, the Papacy, and Naples — held the peninsula in an uneasy but genuine equilibrium, first struck at Lodi in 1454 and somehow still holding through all the years England spent tearing itself apart over its own crown. It has not survived Ferrante of Naples. With his throne suddenly in question, a French army under King Charles VIII has crossed the Alps to press his own ancient claim to it — and every Italian power now has to decide, in a hurry, whose side it is actually on. Milan's own Sforza regent is said to have invited the French in himself, hoping to use them against his rivals; he may come to regret it.`,
+            choices: [
+                { label: "See opportunity in the chaos — extend credit to whoever needs it most", effect: () => {
+                    if (game.wealth < 15) return { fail: true, msg: "You haven't the spare capital to play banker to a war right now." };
+                    game.wealth -= 15;
+                    game.influence += 12;
+                    return { msg: "You quietly open your purse to more than one side at once. Nobody fighting this war can afford to make an enemy of their own creditor." };
+                }},
+                { label: "Watch with real concern from a safe distance", effect: () => {
+                    game.piety += 4;
+                    return { msg: "You say a genuine prayer for whoever's lands the armies cross next. It costs you nothing, and helps them not at all." };
+                }},
+                { label: "Declare this Italy's quarrel, not yours", effect: () => {
+                    game.prestige = Math.max(0, game.prestige - 3);
+                    return { msg: "You make a point of staying out of it entirely. Some at court call it prudence; the Italian envoys who remember it later call it something less flattering." };
                 }},
             ]
         };
