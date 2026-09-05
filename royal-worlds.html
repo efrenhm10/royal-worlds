@@ -522,6 +522,7 @@ queen — a niece, a cousin, or a minor lord shapes this world too.
 <button data-tab="heir">👶 Children</button>
 <button data-tab="diplomacy">🤝 Diplomacy</button>
 <button data-tab="estates">🌾 Estates</button>
+<button data-tab="realm" id="realmTabBtn" hidden>👑 Realm</button>
 <button data-tab="powers">⚡ Powers</button>
 <button data-tab="dynasties">🌳 Dynasties</button>
 <button data-tab="chronicle">📜 Chronicle</button>
@@ -1157,8 +1158,8 @@ const MARRIAGE_MARKET = {
     royal: {
       tierLabel: "Royal match",
       prospects: {
-        F: [{ id: "valois_prince", name: "A prince of the House of Valois", relKey: "France", demandGold: 65, demandLand: 2, consortTitle: null }],
-        M: [{ id: "bona_savoy", name: "Bona of Savoy, kin to the French crown", relKey: "France", demandGold: 60, demandLand: 2, consortTitle: null }]
+        F: [{ id: "valois_prince", name: "A prince of the House of Valois", relKey: "FranceConsort", demandGold: 65, demandLand: 2, consortTitle: null }],
+        M: [{ id: "bona_savoy", name: "Bona of Savoy, kin to the French crown", relKey: "FranceConsort", demandGold: 60, demandLand: 2, consortTitle: null }]
       }
     },
     noble: { tierLabel: "Noble match", relKey: "FrenchNobles", demandGold: 35, demandLand: 1 },
@@ -1171,8 +1172,8 @@ const MARRIAGE_MARKET = {
     royal: {
       tierLabel: "Royal match",
       prospects: {
-        F: [{ id: "stewart_prince", name: "A prince of the House of Stewart", relKey: "Scotland", demandGold: 45, demandLand: 1, consortTitle: null }],
-        M: [{ id: "stewart_princess", name: "A princess of the House of Stewart", relKey: "Scotland", demandGold: 45, demandLand: 1, consortTitle: null }]
+        F: [{ id: "stewart_prince", name: "A prince of the House of Stewart", relKey: "ScotlandConsort", demandGold: 45, demandLand: 1, consortTitle: null }],
+        M: [{ id: "stewart_princess", name: "A princess of the House of Stewart", relKey: "ScotlandConsort", demandGold: 45, demandLand: 1, consortTitle: null }]
       }
     },
     noble: { tierLabel: "Noble match", relKey: "Scotland", demandGold: 30, demandLand: 1 },
@@ -1216,7 +1217,7 @@ const MARRIAGE_MARKET = {
       tierLabel: "Royal match",
       prospects: {
         F: [{ id: "ferdinand_aragon", name: "Ferdinand, heir to Aragon", relKey: "Aragon", demandGold: 60, demandLand: 2, consortTitle: "Queen of Aragon" }],
-        M: [{ id: "aragon_infanta", name: "An Infanta of Aragon", relKey: "Aragon", demandGold: 60, demandLand: 2, consortTitle: null }]
+        M: [{ id: "aragon_infanta", name: "An Infanta of Aragon", relKey: "AragonConsort", demandGold: 60, demandLand: 2, consortTitle: null }]
       }
     },
     noble: { tierLabel: "Noble match", relKey: "AragoneseNobles", demandGold: 35, demandLand: 1 },
@@ -1232,8 +1233,8 @@ const MARRIAGE_MARKET = {
       // marriage easy: their asking price is deliberately lower than a crown this size
       // would normally command, because the match itself is the whole strategy.
       prospects: {
-        F: [{ id: "habsburg_archduke", name: "A Habsburg Archduke", relKey: "Austria", demandGold: 40, demandLand: 1, consortTitle: null }],
-        M: [{ id: "habsburg_archduchess", name: "A Habsburg Archduchess", relKey: "Austria", demandGold: 40, demandLand: 1, consortTitle: null }]
+        F: [{ id: "habsburg_archduke", name: "A Habsburg Archduke", relKey: "AustriaConsort", demandGold: 40, demandLand: 1, consortTitle: null }],
+        M: [{ id: "habsburg_archduchess", name: "A Habsburg Archduchess", relKey: "AustriaConsort", demandGold: 40, demandLand: 1, consortTitle: null }]
       }
     },
     noble: { tierLabel: "Noble match", relKey: "AustrianNobles", demandGold: 35, demandLand: 1 },
@@ -1247,7 +1248,7 @@ const MARRIAGE_MARKET = {
       tierLabel: "Royal match",
       prospects: {
         F: [{ id: "galeazzo_maria", name: "Galeazzo Maria Sforza, heir to Milan", relKey: "Milan", demandGold: 55, demandLand: 2, consortTitle: "Duchess of Milan" }],
-        M: [{ id: "ippolita_sforza", name: "Ippolita Sforza, Francesco's daughter", relKey: "Milan", demandGold: 55, demandLand: 2, consortTitle: null }]
+        M: [{ id: "ippolita_sforza", name: "Ippolita Sforza, Francesco's daughter", relKey: "MilanConsort", demandGold: 55, demandLand: 2, consortTitle: null }]
       }
     },
     noble: { tierLabel: "Noble match", relKey: "MilaneseNobles", demandGold: 32, demandLand: 1 },
@@ -1271,7 +1272,7 @@ const MARRIAGE_MARKET = {
       tierLabel: "Royal match",
       prospects: {
         F: [{ id: "alfonso_calabria", name: "Alfonso, Duke of Calabria, heir to Naples", relKey: "Naples", demandGold: 55, demandLand: 2, consortTitle: "Queen of Naples" }],
-        M: [{ id: "naples_infanta", name: "An Infanta of Naples", relKey: "Naples", demandGold: 55, demandLand: 2, consortTitle: null }]
+        M: [{ id: "naples_infanta", name: "An Infanta of Naples", relKey: "NaplesConsort", demandGold: 55, demandLand: 2, consortTitle: null }]
       }
     },
     noble: { tierLabel: "Noble match", relKey: "NeapolitanNobles", demandGold: 32, demandLand: 1 },
@@ -2584,6 +2585,43 @@ function isGenericPlaceholderName(name) {
     return /^(A|An)\s/.test(name || "");
 }
 
+// Real, historically confident sibling groups among a HOUSES entry's own
+// selectable people (by index into that house's `people` array) — only added
+// where the actual family relationship is well documented, never guessed.
+// Each inner array is a set of indices who are all siblings of one another.
+const HOUSE_SIBLING_GROUPS = {
+    // Margaret, George (Clarence), and Richard (Gloucester) were all children of
+    // Richard, Duke of York, and Cecily Neville.
+    york: [[0, 1, 2]],
+    // Warwick "the Kingmaker" and George Neville, Archbishop of York, were
+    // brothers, sons of Richard Neville, 5th Earl of Salisbury. Isabel and Anne
+    // Neville were sisters, Warwick's own two daughters.
+    neville: [[0, 3], [1, 2]],
+    // Elizabeth and Anthony Woodville were siblings, children of Richard
+    // Woodville and Jacquetta of Luxembourg.
+    woodville: [[0, 1]],
+    // Galeazzo Maria and Ludovico Sforza were brothers, sons of Francesco Sforza.
+    sforza: [[1, 2]],
+};
+
+// The other people selectable within your own chosen house who are actually
+// your siblings, if the historical record is confident enough to say so.
+function siblingsForSelection(houseKey, personIndex) {
+    const groups = HOUSE_SIBLING_GROUPS[houseKey] || [];
+    const group = groups.find(g => g.includes(personIndex));
+    if (!group) return [];
+    const house = HOUSES[houseKey];
+    return group.filter(i => i !== personIndex).map(i => {
+        const person = house.people[i];
+        return {
+            name: person[0],
+            gender: person[3] || "F",
+            age: person[1],
+            role: resolvedRoleForPerson(houseKey, person),
+        };
+    });
+}
+
 // A few HOUSES keys don't line up 1:1 with NOBLE_NAME_POOLS' country-keyed
 // entries (e.g. the Valois court's house key is "valois", but its name pool is
 // filed under "france") — this maps those through to the right pool.
@@ -2664,6 +2702,22 @@ function startGame(index) {
         ? generateStartingCharacterName(selectedHouse, resolvedGender)
         : person[0];
 
+    const siblings = siblingsForSelection(selectedHouse, index);
+    const familyEntries = siblings.length
+        ? siblings.map(sib => ({
+            name: sib.name,
+            relation: `Sibling (${sib.role})`,
+            loyalty: 55,
+            isSibling: true,
+            gender: sib.gender,
+            age: sib.age
+        })).concat([{ name: "Marriage connection", relation: "In-law", loyalty: 35 }])
+        : [
+            { name: "Senior family member", relation: "Kin", loyalty: 55 },
+            { name: "Younger relative", relation: "Kin", loyalty: 50 },
+            { name: "Marriage connection", relation: "In-law", loyalty: 35 }
+        ];
+
     game = {
 
         house: selectedHouse,
@@ -2696,6 +2750,7 @@ function startGame(index) {
         pendingLoyaltyEvents: [],
         firedWorldEvents: [],
         diplomacyCountry: null,
+        heirManuallySet: false,
 
         wealth: house.startStats.wealth,
 
@@ -2728,6 +2783,13 @@ function startGame(index) {
         // every campaign actually fought, not on a hardcoded year.
         gunpowderTech: 0,
 
+        // Only meaningful once rulingStatus becomes "sovereign" (the Realm tab is
+        // hidden until then) — but initialized here so every house starts with a
+        // sane baseline the moment a crown actually lands on them.
+        realmTroops: Math.max(8, house.startStats.land * 3),
+        tradeProsperity: 50,
+        infrastructureLevel: 50,
+
         relationships: {
 
             Edward: 30,
@@ -2744,27 +2806,7 @@ function startGame(index) {
 
         },
 
-        family: [
-
-            {
-                name: "Senior family member",
-                relation: "Kin",
-                loyalty: 55
-            },
-
-            {
-                name: "Younger relative",
-                relation: "Kin",
-                loyalty: 50
-            },
-
-            {
-                name: "Marriage connection",
-                relation: "In-law",
-                loyalty: 35
-            }
-
-        ],
+        family: familyEntries,
 
         flags: {},
 
@@ -2821,11 +2863,17 @@ function updateTabHighlight() {
     document.querySelectorAll("[data-tab]").forEach(btn => {
         btn.classList.toggle("active", btn.dataset.tab === currentTab);
     });
+    document.getElementById("realmTabBtn").hidden = !(game && game.rulingStatus === "sovereign");
 }
 
 function render() {
 
     if (!game) return;
+
+    // The Realm tab only makes sense for an actual reigning sovereign — if you
+    // step down from that (widowed, deposed, succeeded away) while it's open,
+    // fall back to Overview rather than render a tab that no longer applies.
+    if (currentTab === "realm" && game.rulingStatus !== "sovereign") currentTab = "overview";
 
     updateTabHighlight();
 
@@ -2883,6 +2931,9 @@ function render() {
 
     if (currentTab === "estates")
         renderEstates(content);
+
+    if (currentTab === "realm")
+        renderRealm(content);
 
     if (currentTab === "powers")
         renderPowers(content);
@@ -3527,13 +3578,33 @@ function chooseSchooling(childIndex, optionId) {
 }
 
 
+// Male-preference primogeniture, the historical default nearly every one of
+// these realms actually used: the eldest living son inherits ahead of any
+// daughter, and only with no living son at all does the eldest daughter
+// inherit. A child already ruling a foreign realm in their own right
+// (rulingAbroad) is left out of the running here — they already have a crown
+// of their own, and the continuity system already knows how to handle them.
+function primogenitureHeir(children) {
+    const eligible = children.filter(c => !c.rulingAbroad);
+    if (!eligible.length) return null;
+    const sons = eligible.filter(c => c.gender === "M").sort((a, b) => a.birthYear - b.birthYear);
+    if (sons.length) return sons[0];
+    const daughters = eligible.filter(c => c.gender === "F").sort((a, b) => a.birthYear - b.birthYear);
+    return daughters.length ? daughters[0] : null;
+}
+
+// The player can still deliberately name a different heir than strict
+// primogeniture would pick — once they do, that choice sticks (a later birth
+// won't silently displace it) until the day that named heir is no longer
+// available, at which point the game goes back to defaulting by primogeniture.
 function designateHeir(childIndex) {
 
     const child = game.children[childIndex];
     if (!child) return;
 
     game.heir = child;
-    game.chronicle.unshift(`${game.year}: ${child.name} is named heir.`);
+    game.heirManuallySet = true;
+    game.chronicle.unshift(`${game.year}: ${child.name} is named heir, ahead of where birth order alone would place them.`);
 
     render();
 
@@ -3661,6 +3732,7 @@ function renderChildren(content) {
             <div class="stat">Age <strong>${age}</strong></div>
             <div class="stat">Schooling <strong>${child.schooling || "None yet"}</strong></div>
             <div class="stat">Marital status <strong>${child.married ? "Wed to " + child.spouseName + " (" + child.spouseCountry + ")" : "Unmarried"}</strong></div>
+            ${child.married && child.location ? `<div class="stat">Residing in <strong>${child.location}</strong></div>` : ""}
             <div class="grid" id="schoolGrid${i}"></div>
             ${!isHeir ? `<button data-designate="${i}" class="secondary">Name as Heir</button>` : ""}
             ${!child.married && age >= 12 ? `<button data-marry="${i}">Arrange a Marriage</button>` : ""}
@@ -4147,7 +4219,21 @@ function resolveNegotiationRound() {
             child.spouseName = neg.name;
             child.spouseCountry = neg.countryId;
 
-            game.chronicle.unshift(`${game.year}: You secure a marriage for ${child.name} to ${neg.name}, of ${neg.countryId}.`);
+            // Where the marriage actually settles the newlyweds follows the era's own
+            // convention, not a coin flip: a daughter joins her husband's household,
+            // wherever that is. A son normally stays put and brings a bride home —
+            // UNLESS he is marrying a recognized heir/heiress to a real throne
+            // (consortTitle set), in which case the match itself is why he moves, to
+            // take up that title in person.
+            const marryingIntoRealTitle = !!neg.consortTitle;
+            const relocates = child.gender === "F" || marryingIntoRealTitle;
+            child.location = relocates ? neg.countryId : game.homeCountry;
+
+            const relocationNote = relocates
+                ? ` ${child.name} relocates to ${neg.countryId} to join ${neg.name}'s household${marryingIntoRealTitle ? `, taking up the title of ${neg.consortTitle} there` : ""}.`
+                : ` ${neg.name} comes to join ${child.name}'s household here, rather than the other way around.`;
+
+            game.chronicle.unshift(`${game.year}: You secure a marriage for ${child.name} to ${neg.name}, of ${neg.countryId}.${relocationNote}`);
 
             game.negotiation = null;
             game.pendingSubject = null;
@@ -4610,7 +4696,18 @@ function resolveBirth(withPhysician) {
         game.children.push(child);
         game.family.push({ name: childName, relation: "Your child", loyalty: 70 });
         let heirNote = "";
-        if (!game.heir) { game.heir = child; heirNote = " This child becomes your heir."; }
+        // Primogeniture applies automatically unless you've deliberately named a
+        // different heir yourself — a newborn son displaces a sister currently
+        // holding the position by default, but never one you named on purpose.
+        if (!game.heirManuallySet) {
+            const oldHeirName = game.heir ? game.heir.name : null;
+            game.heir = primogenitureHeir(game.children);
+            if (game.heir === child) {
+                heirNote = oldHeirName && oldHeirName !== child.name
+                    ? ` By the custom of male-preference succession, the newborn ${child.name} now stands ahead of ${oldHeirName} in line to inherit.`
+                    : " This child becomes your heir.";
+            }
+        }
         return heirNote;
     }
 
@@ -4792,7 +4889,10 @@ function succeedToHeir(reason) {
     const heir = game.heir;
     const oldName = game.person;
     const oldRole = game.role;
-    const oldLocation = game.location;
+    // The heir may have been married off and relocated to a spouse's country long
+    // before this — that is where they actually live now, not wherever the parent
+    // who just died happened to be.
+    const oldLocation = heir.location || game.location;
     const oldRulingRealm = game.rulingRealm;
     const oldRulingStatus = game.rulingStatus;
     const heirAge = Math.max(0, game.year - (heir.birthYear || game.year));
@@ -4802,6 +4902,7 @@ function succeedToHeir(reason) {
     game.gender = heir.gender;
     game.appearance = heir.appearance || generateAppearance(game.house, null);
     game.trait = heir.trait || generateTrait(game.house, null);
+    game.location = oldLocation;
 
     // a real title (Duke, Duchess, King, Queen, Earl, Countess) carries forward, adapted
     // to the heir's own gender — it does not just reset to a bare "Lady"/"Lord"
@@ -4900,6 +5001,7 @@ function succeedToHeir(reason) {
     game.pregnancy = null;
     game.children = [];
     game.heir = null;
+    game.heirManuallySet = false;
 
     Object.keys(game.relationships).forEach(k => {
         game.relationships[k] = Math.max(0, game.relationships[k] - 10);
@@ -4951,6 +5053,48 @@ function succeedToHeir(reason) {
                 if (inheritable) game.role = heir.gender === "F" ? "Lady" : "Lord";
                 game.chronicle.unshift(`${game.year}: ${heir.name} is taken home to ${game.homeCountry}. Whatever was held at ${oldLocation} passes out of the family's hands.`);
             }
+            document.getElementById("event").innerHTML = "";
+            render();
+        });
+
+        return;
+
+    }
+
+    // An adult heir who now holds real sovereignty somewhere other than where they
+    // currently live faces a genuine choice — travel to the seat of that power in
+    // person, or govern it from afar for now. This applies wherever succession just
+    // handed someone a throne, not to any one country's own scripted chain.
+    if (game.rulingRealm && game.rulingRealm !== game.location) {
+
+        const newRealm = game.rulingRealm;
+        const priorLocation = oldLocation;
+
+        document.getElementById("event").innerHTML = `
+            <div class="card event">
+                <h2>🏰 A Throne, and a Journey</h2>
+                <p>${heir.name} now holds the title of ${game.role} — the seat of that power is ${newRealm}, but the household is still settled at ${priorLocation}.${schoolingNote}</p>
+                <p>Do you return to ${newRealm} in person to take up the throne there, or govern it from afar for now?</p>
+                <div class="grid">
+                    <button id="returnToCourt">Return to ${newRealm} and rule in person</button>
+                    <button id="ruleFromAfar">Remain at ${priorLocation}, and rule from afar</button>
+                </div>
+            </div>
+        `;
+
+        document.getElementById("returnToCourt").addEventListener("click", () => {
+            game.location = newRealm;
+            game.arrivedYear = game.year;
+            game.arrivedMonth = game.month;
+            game.chronicle.unshift(`${game.year}: ${heir.name} travels to ${newRealm} to take up the throne there in person.`);
+            document.getElementById("event").innerHTML = "";
+            render();
+        });
+
+        document.getElementById("ruleFromAfar").addEventListener("click", () => {
+            game.prestige = Math.max(0, game.prestige - 8);
+            game.estateHealth = Math.max(0, game.estateHealth - 10);
+            game.chronicle.unshift(`${game.year}: ${heir.name} chooses to rule ${newRealm} from afar, still settled at ${priorLocation} — a choice that realm's own nobles will not love indefinitely.`);
             document.getElementById("event").innerHTML = "";
             render();
         });
@@ -5342,6 +5486,126 @@ function renderEstates(content) {
 
     document.getElementById("hostTournament").addEventListener("click", hostTournament);
     document.getElementById("indulgeVices").addEventListener("click", indulgeVices);
+
+}
+
+
+/* =========================================================
+   REALM — appears only once you actually hold a crown in your
+   own right (rulingStatus === "sovereign"), for whatever realm
+   that is, home or foreign. Estates above is your own personal
+   holdings; this is the wider kingdom itself — troops, trade,
+   foreign relations, and public works, generalized across every
+   realm through the same shared fields rather than bespoke
+   per-country systems.
+========================================================= */
+
+function levyRealmTroops() {
+    if (game.wealth < 25) { showEvent("Treasury Too Weak", "There is not enough in the treasury to muster more men right now."); return; }
+    game.wealth -= 25;
+    game.realmTroops += 10;
+    game.chronicle.unshift(`${game.year}: You levy more men for the crown's standing forces — ${game.realmTroops} now under arms.`);
+    render();
+}
+
+function disbandRealmTroops() {
+    if (game.realmTroops <= 0) return;
+    game.realmTroops = Math.max(0, game.realmTroops - 10);
+    game.popularLoyalty = Math.min(100, game.popularLoyalty + 3);
+    game.chronicle.unshift(`${game.year}: You stand down part of the crown's forces, easing the burden on both the treasury and the people who felt it.`);
+    render();
+}
+
+function investRealmTrade() {
+    if (game.wealth < 30) { showEvent("Treasury Too Weak", "There is not enough in the treasury to fund new trade ventures right now."); return; }
+    game.wealth -= 30;
+    game.tradeProsperity = Math.min(100, game.tradeProsperity + 10);
+    game.chronicle.unshift(`${game.year}: You invest in merchant charters and trade routes, strengthening the realm's commerce.`);
+    render();
+}
+
+function investRealmInfrastructure() {
+    if (game.wealth < 30) { showEvent("Treasury Too Weak", "There is not enough in the treasury for public works right now."); return; }
+    game.wealth -= 30;
+    game.infrastructureLevel = Math.min(100, game.infrastructureLevel + 10);
+    game.chronicle.unshift(`${game.year}: You fund roads, bridges, and civic works across the realm.`);
+    render();
+}
+
+function sendRealmEnvoy(relKey) {
+    if (game.wealth < 15) { showEvent("Treasury Too Weak", "There is not enough in the treasury to send an envoy right now."); return; }
+    game.wealth -= 15;
+    game.relationships[relKey] = Math.min(100, (game.relationships[relKey] || 20) + 8);
+    game.chronicle.unshift(`${game.year}: You send an envoy from the crown to strengthen relations with ${relKey}.`);
+    render();
+}
+
+function renderRealm(content) {
+
+    const troopUpkeep = Math.round(game.realmTroops * 0.4);
+    const tradeIncome = Math.round(game.tradeProsperity * 0.3);
+
+    content.innerHTML = `
+
+        <div class="card">
+            <h2>👑 Ruling ${game.rulingRealm}</h2>
+            <p class="muted">
+            A crown is not just a title — it is troops to pay, trade to protect,
+            neighbors to manage, and roads and ports that do not maintain themselves.
+            </p>
+        </div>
+
+        <div class="card">
+            <h3>⚔️ Troops</h3>
+            <div class="stat">Men under arms <strong>${game.realmTroops}</strong></div>
+            <p class="muted">Upkeep costs the treasury roughly ${troopUpkeep} gold a year.</p>
+            <div class="grid">
+                <button id="realmLevyTroops">Levy More Troops (−25 gold)</button>
+                <button id="realmDisbandTroops" class="secondary">Stand Down Troops</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>⚓ Trade</h3>
+            <div class="stat">Trade prosperity <strong>${game.tradeProsperity}/100</strong></div>
+            <div class="meter"><span style="width:${game.tradeProsperity}%"></span></div>
+            <p class="muted">Brings in roughly ${tradeIncome} gold a year at its current strength.</p>
+            <div class="grid">
+                <button id="realmInvestTrade">Invest in Trade Routes (−30 gold)</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>🤝 Diplomatic Relations</h3>
+            <p class="muted">The crown's own standing with its neighbors — separate from any single marriage or match.</p>
+            <div class="grid" id="realmRelationsGrid"></div>
+        </div>
+
+        <div class="card">
+            <h3>🏗️ Infrastructure</h3>
+            <div class="stat">Roads, ports & public works <strong>${game.infrastructureLevel}/100</strong></div>
+            <div class="meter"><span style="width:${game.infrastructureLevel}%"></span></div>
+            <p class="muted">Well-kept infrastructure keeps the realm's own people content, beyond what any one estate can do alone.</p>
+            <div class="grid">
+                <button id="realmInvestInfra">Fund Public Works (−30 gold)</button>
+            </div>
+        </div>
+
+    `;
+
+    document.getElementById("realmLevyTroops").addEventListener("click", levyRealmTroops);
+    document.getElementById("realmDisbandTroops").addEventListener("click", disbandRealmTroops);
+    document.getElementById("realmInvestTrade").addEventListener("click", investRealmTrade);
+    document.getElementById("realmInvestInfra").addEventListener("click", investRealmInfrastructure);
+
+    const relationsGrid = content.querySelector("#realmRelationsGrid");
+    Object.keys(game.relationships).forEach(relKey => {
+        const value = game.relationships[relKey];
+        const btn = document.createElement("button");
+        btn.innerHTML = `<strong>Send an Envoy to ${relKey} (−15 gold)</strong><br><span class="muted">Current standing: ${value}/100</span>`;
+        btn.addEventListener("click", () => sendRealmEnvoy(relKey));
+        relationsGrid.appendChild(btn);
+    });
 
 }
 
@@ -6334,10 +6598,20 @@ function advanceTime(months) {
                 const childAge = game.year - child.birthYear;
                 if (Math.random() < childMortalityChance(childAge)) {
                     const wasHeir = game.heir === child;
-                    recapLines.push(`Word comes that ${child.name}${childAge < 1 ? ", still an infant," : ""} has died${childAge < 5 ? " of a childhood fever" : ""} — a grief no household in this age is truly spared.${wasHeir ? " With no heir now named, the succession is suddenly an open question again." : ""}`);
                     game.children.splice(ci, 1);
                     game.family = game.family.filter(f => f.name !== child.name);
-                    if (wasHeir) game.heir = game.children.length ? game.children[0] : null;
+                    let successionNote = "";
+                    if (wasHeir) {
+                        // The heir's own line dying without ever taking the crown
+                        // reopens the succession by primogeniture, same as any other
+                        // vacancy — not a permanent dead end while siblings remain.
+                        game.heirManuallySet = false;
+                        game.heir = primogenitureHeir(game.children);
+                        successionNote = game.heir
+                            ? ` With ${child.name} gone, ${game.heir.name} now stands next in line.`
+                            : " With no heir now named, the succession is suddenly an open question again.";
+                    }
+                    recapLines.push(`Word comes that ${child.name}${childAge < 1 ? ", still an infant," : ""} has died${childAge < 5 ? " of a childhood fever" : ""} — a grief no household in this age is truly spared.${successionNote}`);
                 }
             }
 
@@ -6376,6 +6650,17 @@ function advanceTime(months) {
                 const lost = Math.min(game.wealth, 5 + Math.floor(Math.random() * 10));
                 game.wealth -= lost;
                 recapLines.push(`Crumbling walls and neglected roads invite exactly the kind of trouble you'd expect — highway banditry costs your household ${lost} gold this year.`);
+            }
+
+            // Holding an actual crown carries its own yearly costs and returns,
+            // on top of anything your own personal estates already yield.
+            if (game.rulingStatus === "sovereign") {
+                const troopUpkeep = Math.round(game.realmTroops * 0.4);
+                const tradeIncome = Math.round(game.tradeProsperity * 0.3);
+                game.wealth = Math.max(0, game.wealth - troopUpkeep + tradeIncome);
+                if (game.infrastructureLevel > 50) game.popularLoyalty = Math.min(100, game.popularLoyalty + 1);
+                else if (game.infrastructureLevel < 30) game.popularLoyalty = Math.max(0, game.popularLoyalty - 1);
+                recapLines.push(`Ruling ${game.rulingRealm} costs the crown ${troopUpkeep} gold to keep ${game.realmTroops} men under arms, offset by ${tradeIncome} gold from trade.`);
             }
 
         }
