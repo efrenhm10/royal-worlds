@@ -1215,7 +1215,7 @@ const MARRIAGE_MARKET = {
     royal: {
       tierLabel: "Royal match",
       prospects: {
-        F: [{ id: "ferdinand_aragon", name: "Ferdinand, heir to Aragon", relKey: "Aragon", demandGold: 60, demandLand: 2, consortTitle: null }],
+        F: [{ id: "ferdinand_aragon", name: "Ferdinand, heir to Aragon", relKey: "Aragon", demandGold: 60, demandLand: 2, consortTitle: "Queen of Aragon" }],
         M: [{ id: "aragon_infanta", name: "An Infanta of Aragon", relKey: "Aragon", demandGold: 60, demandLand: 2, consortTitle: null }]
       }
     },
@@ -1246,7 +1246,7 @@ const MARRIAGE_MARKET = {
     royal: {
       tierLabel: "Royal match",
       prospects: {
-        F: [{ id: "galeazzo_maria", name: "Galeazzo Maria Sforza, heir to Milan", relKey: "Milan", demandGold: 55, demandLand: 2, consortTitle: null }],
+        F: [{ id: "galeazzo_maria", name: "Galeazzo Maria Sforza, heir to Milan", relKey: "Milan", demandGold: 55, demandLand: 2, consortTitle: "Duchess of Milan" }],
         M: [{ id: "ippolita_sforza", name: "Ippolita Sforza, Francesco's daughter", relKey: "Milan", demandGold: 55, demandLand: 2, consortTitle: null }]
       }
     },
@@ -1270,7 +1270,7 @@ const MARRIAGE_MARKET = {
     royal: {
       tierLabel: "Royal match",
       prospects: {
-        F: [{ id: "alfonso_calabria", name: "Alfonso, Duke of Calabria, heir to Naples", relKey: "Naples", demandGold: 55, demandLand: 2, consortTitle: null }],
+        F: [{ id: "alfonso_calabria", name: "Alfonso, Duke of Calabria, heir to Naples", relKey: "Naples", demandGold: 55, demandLand: 2, consortTitle: "Queen of Naples" }],
         M: [{ id: "naples_infanta", name: "An Infanta of Naples", relKey: "Naples", demandGold: 55, demandLand: 2, consortTitle: null }]
       }
     },
@@ -1353,23 +1353,46 @@ function generatePeriodName(countryKey, gender, surnamePool) {
 
 // Swap a title's gendered word so an heir who inherits it reads correctly regardless of
 // their own gender — "Duchess of Burgundy" becomes "Duke of Burgundy" for a son, etc.
-const GENDER_TITLE_PAIRS = [["Duke","Duchess"], ["King","Queen"], ["Lord","Lady"], ["Earl","Countess"], ["Count","Countess"], ["Dowager Duke","Dowager Duchess"]];
+// Requires the matched word to actually END there (the whole string, or immediately
+// followed by a space) — a plain indexOf/regex substring match would also fire on
+// something like "King's Daughter", turning it into the nonsensical "Queen's Daughter".
+const GENDER_TITLE_PAIRS = [["Duke","Duchess"], ["King","Queen"], ["Lord","Lady"], ["Earl","Countess"], ["Count","Countess"], ["Archduke","Archduchess"], ["Dowager Duke","Dowager Duchess"]];
 function adaptTitleGender(title, gender) {
     if (!title) return title;
     for (const [m, f] of GENDER_TITLE_PAIRS) {
-        if (gender === "F" && title.indexOf(m) === 0) return f + title.slice(m.length);
-        if (gender === "M" && title.indexOf(f) === 0) return m + title.slice(f.length);
+        if (gender === "F" && (title === m || title.startsWith(m + " "))) return f + title.slice(m.length);
+        if (gender === "M" && (title === f || title.startsWith(f + " "))) return m + title.slice(f.length);
     }
     return title;
+}
+
+// Titles that actually carry a real, inheritable claim — checked as the role's very
+// first word (after stripping a "Dowager "/"Deposed " prefix), never as a substring
+// match anywhere in the string. A substring match would wrongly treat phrases like
+// "King's Daughter" or "Queen's Future / Widow" as if they were an actual crown,
+// just because the word "King"/"Queen" happens to appear in them.
+const INHERITABLE_TITLE_WORDS = ["Duke", "Duchess", "King", "Queen", "Earl", "Countess", "Archduke", "Archduchess"];
+function inheritableTitleWord(role) {
+    const cleaned = (role || "").replace(/^(Dowager|Deposed)\s+/, "");
+    const firstWord = cleaned.split(/\s+/)[0];
+    return INHERITABLE_TITLE_WORDS.includes(firstWord) ? firstWord : null;
+}
+
+// If a title names a specific realm ("Duke of Milan") rather than a bare style
+// ("Duke", "Earl Rivers"), returns that realm's name — so succession logic can tell
+// a foreign consort title apart from a plain home-grown one.
+function titleRealmFromRole(role) {
+    const cleaned = (role || "").replace(/^(Dowager|Deposed)\s+/, "");
+    const m = cleaned.match(/^(?:Duke|Duchess|King|Queen|Earl|Countess|Archduke|Archduchess)\s+of\s+(.+)$/);
+    return m ? m[1] : null;
 }
 
 // What an heir's title becomes on inheriting — strips a "Dowager " prefix first, since
 // dowager status belongs to the widow who held it, not the new heir taking the position
 // itself (an heir of a "Dowager Duchess" becomes "Duke"/"Duchess", never "Dowager Duke").
 function resolveHeirTitle(oldRole, heirGender) {
-    const stripped = (oldRole || "").replace(/^Dowager\s+/, "");
-    const isInheritable = /Duke|Duchess|King|Queen|Earl|Countess/.test(stripped);
-    if (!isInheritable) return heirGender === "F" ? "Lady" : "Lord";
+    const stripped = (oldRole || "").replace(/^(Dowager|Deposed)\s+/, "");
+    if (!inheritableTitleWord(oldRole)) return heirGender === "F" ? "Lady" : "Lord";
     return adaptTitleGender(stripped, heirGender);
 }
 
@@ -1877,8 +1900,10 @@ const WORLD_TIMELINE = [
       } },
 
     { id: "galeazzo_maria_assassinated", year: 1476, month: 12, personalTo: "Galeazzo Maria Sforza",
-      text: `News from Milan: Duke Galeazzo Maria Sforza has been stabbed to death by conspirators in the Church of Santo Stefano, on the feast of Saint Stephen. His young son Gian Galeazzo, only seven, inherits the title — though his uncle Ludovico moves at once to make himself regent in every way that matters.`,
-      apply: (g) => {
+      text: (g) => g.worldFlags.milanAlternateLine
+          ? `News from Milan: Duke Galeazzo Maria Sforza has been stabbed to death by conspirators in the Church of Santo Stefano, on the feast of Saint Stephen. Your own child by him, ${DYNASTIES.Milan.ruler.name}, inherits the duchy outright — the Sforza succession runs through your own family now, not through the history books.`
+          : `News from Milan: Duke Galeazzo Maria Sforza has been stabbed to death by conspirators in the Church of Santo Stefano, on the feast of Saint Stephen. His young son Gian Galeazzo, only seven, inherits the title — though his uncle Ludovico moves at once to make himself regent in every way that matters.`,
+      apply: (g, recapLines) => {
           g.worldFlags.galeazzoMariaDead = true;
           g.worldFlags.galeazzoMariaIsDuke = false;
 
@@ -1886,7 +1911,8 @@ const WORLD_TIMELINE = [
           // heir, that child — not the history-book Gian Galeazzo — inherits Milan
           // outright, and the rest of the scripted Sforza succession (Gian
           // Galeazzo's death, Ludovico's usurpation and capture) never applies to
-          // your own alternate line.
+          // your own alternate line. Captured here, before widowhood below clears
+          // g.married/g.spouseRelKey's relevance to this marriage.
           if (g.married && g.spouseRelKey === "Milan" && g.heir) {
               g.worldFlags.milanAlternateLine = true;
               const heirAge = Math.max(0, g.year - (g.heir.birthYear || g.year));
@@ -1896,6 +1922,22 @@ const WORLD_TIMELINE = [
               g.heir.rulingAbroad = "Milan";
           } else {
               g.worldFlags.gianGaleazzoIsDuke = true;
+          }
+
+          // Losing your own spouse here is a real widowhood, exactly like Charles
+          // the Bold's death at Nancy — without this, game.married/spouseRelKey
+          // stay stuck pointing at a dead man forever, and the dynasty simulation
+          // keeps treating whoever rules Milan next as "your own spouse."
+          if (g.married && g.spouseRelKey === "Milan") {
+              const oldSpouse = g.spouseName;
+              g.married = false;
+              g.spouseName = null;
+              g.spouseCountry = null;
+              g.spouseAge = null;
+              g.spouseRelKey = null;
+              g.prestige = Math.max(0, g.prestige - 10);
+              g.pendingWidowhood = oldSpouse;
+              if (recapLines) recapLines.push(`You are widowed — ${oldSpouse} has been assassinated at Milan.`);
           }
       } },
 
@@ -1953,7 +1995,11 @@ function checkWorldTimeline(recapLines) {
             if (ev.eligible && !ev.eligible(game)) return; // not applicable yet — will recheck later
             game.firedWorldEvents.push(ev.id);
             ev.apply(game, recapLines);
-            recapLines.push(ev.text);
+            // text can be a plain string, or a function evaluated after apply()
+            // runs — so an event whose actual outcome depends on what apply() just
+            // decided (e.g. history-book succession vs. your own adapted bloodline)
+            // narrates the outcome that actually happened, not a fixed script.
+            recapLines.push(typeof ev.text === "function" ? ev.text(game) : ev.text);
             if (ev.loyaltyIfPresent && game.location === ev.loyaltyIfPresent.country) {
                 game.pendingLoyaltyEvents.push(ev.loyaltyIfPresent);
             }
@@ -4759,7 +4805,10 @@ function succeedToHeir(reason) {
 
     // a real title (Duke, Duchess, King, Queen, Earl, Countess) carries forward, adapted
     // to the heir's own gender — it does not just reset to a bare "Lady"/"Lord"
-    const inheritable = /Duke|Duchess|King|Queen|Earl|Countess/.test((oldRole || "").replace(/^Dowager\s+/, ""));
+    const inheritable = !!inheritableTitleWord(oldRole);
+    // If the old title actually named a specific foreign realm ("Duke of Milan"),
+    // that's the realm in question — not necessarily your own home country.
+    const oldTitleRealm = titleRealmFromRole(oldRole);
     game.role = resolveHeirTitle(oldRole, heir.gender);
 
     // Sovereignty passes by blood, not by marriage: your own claim (sovereign, or a
@@ -4771,7 +4820,33 @@ function succeedToHeir(reason) {
         DYNASTIES[oldRulingRealm].heir && DYNASTIES[oldRulingRealm].heir.fromPlayer &&
         DYNASTIES[oldRulingRealm].heir.name === heir.name;
 
-    if (inheritable && oldRulingRealm && (oldRulingStatus === "sovereign" || oldRulingStatus === "dowager" || dynastyRecognizesHeir)) {
+    // The heir you're succeeding to may already be an established ruler abroad in
+    // their own right (e.g. inherited a foreign duchy through the dynasty
+    // adaptation system while still your own designated heir at home). That's the
+    // same physical person taking over your own family too — not two separate
+    // people the game just happens to track twice — so their existing foreign
+    // crown takes priority over whatever your own old title would otherwise pass
+    // down, and their proper foreign title (Duke, Doge, whatever it actually is)
+    // replaces the generic title-inheritance guess above.
+    const rulingAbroadRealm = heir.rulingAbroad && DYNASTIES[heir.rulingAbroad] && !DYNASTIES[heir.rulingAbroad].absorbedBy
+        ? heir.rulingAbroad
+        : null;
+
+    if (rulingAbroadRealm) {
+
+        const d = DYNASTIES[rulingAbroadRealm];
+        game.rulingRealm = rulingAbroadRealm;
+        game.rulingStatus = "sovereign";
+        game.role = `${heir.gender === "F" ? d.titleF : d.titleM} of ${d.realmNoun}`;
+        game.location = rulingAbroadRealm;
+        game.arrivedYear = game.year;
+        game.arrivedMonth = game.month;
+        d.ruler = { name: heir.name, gender: heir.gender, age: heirAge, fromPlayer: true };
+        d.heir = null;
+        d.active = true;
+        d.marriedToPlayer = false;
+
+    } else if (inheritable && oldRulingRealm && (oldRulingStatus === "sovereign" || oldRulingStatus === "dowager" || dynastyRecognizesHeir)) {
         game.rulingRealm = oldRulingRealm;
         game.rulingStatus = "sovereign";
         if (DYNASTIES[oldRulingRealm]) {
@@ -4780,12 +4855,20 @@ function succeedToHeir(reason) {
             DYNASTIES[oldRulingRealm].active = true;
             DYNASTIES[oldRulingRealm].marriedToPlayer = false;
         }
-    } else if (inheritable) {
+    } else if (inheritable && !oldTitleRealm) {
+        // A bare home-style title (Duke, Earl, Countess...) with no specific
+        // foreign realm named — safe to assume it tracks your own home country.
         game.rulingRealm = game.homeCountry;
         game.rulingStatus = "sovereign";
     } else {
+        // Either no real title at all, or a foreign consort title (e.g. "Duchess
+        // of Milan" from a marriage) that never actually became a recognized
+        // blood claim — nothing carries over. Falling back to your own home
+        // country here would be worse than nothing: it would hand you a realm
+        // your title never actually named.
         game.rulingRealm = null;
         game.rulingStatus = null;
+        if (oldTitleRealm) game.role = heir.gender === "F" ? "Lady" : "Lord";
     }
 
     game.wealth = Math.max(10, Math.round(game.wealth * 0.6));
@@ -6312,10 +6395,14 @@ function advanceTime(months) {
         }
     }
 
-    // A spouse not tied to a scripted historical death (Charles the Bold's fall at Nancy
-    // being tracked separately) still ages and can die naturally — widowhood shouldn't
-    // only ever come from a scripted event.
-    if (game.married && game.spouseAge != null && game.spouseRelKey !== "Charles" && !game.pendingWidowhood) {
+    // A spouse not tied to a scripted historical death (Charles the Bold's fall at
+    // Nancy, Galeazzo Maria Sforza's assassination — each already has its own
+    // WORLD_TIMELINE entry with its own widowhood handling) still ages and can die
+    // naturally — widowhood shouldn't only ever come from a scripted event. Without
+    // this exclusion list, a scripted figure's spouse could die twice: once here at
+    // a random year, and again when their real historical death date arrives.
+    const SCRIPTED_SPOUSAL_DEATH_RELKEYS = ["Charles", "Milan"];
+    if (game.married && game.spouseAge != null && !SCRIPTED_SPOUSAL_DEATH_RELKEYS.includes(game.spouseRelKey) && !game.pendingWidowhood) {
 
         for (let y = 0; y < yearsPassed; y++) {
 
