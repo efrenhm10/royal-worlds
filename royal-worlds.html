@@ -8337,6 +8337,40 @@ const RANDOM_EVENTS = [
         ]
     })},
 
+    // ===== A SIBLING ASKS FOR HELP — only surfaces where a real sibling is
+    // actually tracked in game.family (see HOUSE_SIBLING_GROUPS) =====
+
+    { eligible: (g) => g.family.some(f => f.isSibling), build: () => {
+
+        const siblings = game.family.filter(f => f.isSibling);
+        const sibling = siblings[Math.floor(Math.random() * siblings.length)];
+
+        return {
+            title: `✉️ A Letter From ${sibling.name}`,
+            text: `${sibling.name} writes asking for your help — troops to call on, or coin to see them through a difficult season. Whatever else divides great houses, this is still family asking.`,
+            choices: [
+                { label: "Send troops (−1 land)", effect: () => {
+                    if (game.land < 1) return { fail: true, msg: "You have no free levies left to send." };
+                    game.land -= 1;
+                    sibling.loyalty = Math.min(100, sibling.loyalty + 15);
+                    game.prestige += 5;
+                    return { msg: `${sibling.name} is grateful for kin they can actually count on.` };
+                }},
+                { label: "Send gold (−20 gold)", effect: () => {
+                    if (game.wealth < 20) return { fail: true, msg: "You cannot spare that much right now." };
+                    game.wealth -= 20;
+                    sibling.loyalty = Math.min(100, sibling.loyalty + 10);
+                    return { msg: `${sibling.name} accepts the gold gratefully.` };
+                }},
+                { label: "Decline — you have your own concerns", effect: () => {
+                    sibling.loyalty = Math.max(0, sibling.loyalty - 15);
+                    return { msg: `${sibling.name} does not take the refusal well.` };
+                }},
+            ]
+        };
+
+    }},
+
 ];
 
 function pickRandomEvent() {
