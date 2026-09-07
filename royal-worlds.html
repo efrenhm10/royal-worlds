@@ -1754,7 +1754,9 @@ const WORLD_TIMELINE = [
       apply: (g) => { g.worldFlags.henryVIDead = true; } },
 
     { id: "charles_dies", year: 1477, month: 1, personalTo: "Charles the Bold",
-      text: `News from Burgundy: Charles the Bold has fallen at the Battle of Nancy. His daughter Mary inherits the duchy.`,
+      text: (g) => g.worldFlags.burgundyAlternateLine
+          ? `News from Burgundy: Charles the Bold has fallen at the Battle of Nancy. Your own child by him, ${DYNASTIES.Burgundy.ruler.name}, inherits the duchy outright — the Burgundian succession runs through your own family now, not through the history books.`
+          : `News from Burgundy: Charles the Bold has fallen at the Battle of Nancy. His daughter Mary inherits the duchy.`,
       apply: (g, recapLines) => {
           g.worldFlags.charlesDead = true;
           DYNASTIES.Burgundy.active = true;
@@ -1762,17 +1764,18 @@ const WORLD_TIMELINE = [
           g.worldFlags.maryIsDuchess = true;
 
           // Adaptation: if you were actually married to Charles and have an heir, that
-          // child — not the history-book Mary of Burgundy — is who the wider world now
-          // recognizes as Burgundy's heir. Captured here, before widowhood clears
-          // g.married/g.heir's relevance to this marriage.
+          // child — not the history-book Mary of Burgundy — inherits Burgundy
+          // outright (exactly like Milan's own equivalent case), not merely as an
+          // "heir" waiting under nobody. Captured here, before widowhood clears
+          // g.married/g.heir's relevance to this marriage, and flagged so the
+          // announcement text above actually reflects it instead of blindly
+          // narrating the unmodified historical outcome.
           if (g.married && g.spouseRelKey === "Charles" && g.heir) {
-              DYNASTIES.Burgundy.heir = {
-                  name: g.heir.name,
-                  gender: g.heir.gender,
-                  age: Math.max(0, g.year - (g.heir.birthYear || g.year)),
-                  married: false,
-                  fromPlayer: true
-              };
+              g.worldFlags.burgundyAlternateLine = true;
+              const heirAge = Math.max(0, g.year - (g.heir.birthYear || g.year));
+              DYNASTIES.Burgundy.ruler = { name: g.heir.name, gender: g.heir.gender, age: heirAge, fromPlayer: true };
+              DYNASTIES.Burgundy.heir = null;
+              g.heir.rulingAbroad = "Burgundy";
           }
 
           if (g.married && g.spouseName && g.spouseName.indexOf("Charles the Bold") !== -1) {
