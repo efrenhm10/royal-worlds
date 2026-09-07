@@ -1400,6 +1400,24 @@ function resolveHeirTitle(oldRole, heirGender) {
     return adaptTitleGender(stripped, heirGender);
 }
 
+// The Habsburgs held the Imperial title almost continuously through this
+// whole era — Frederick III already holds it when the game opens, and
+// Maximilian after him. Rather than rework every title-parsing helper above
+// to understand a multi-word title like "Holy Roman Emperor" (none of them
+// currently expect anything but a single leading word), this is a display-
+// only layer: whoever actually holds Austria — the player themselves, ruling
+// or consort, or an NPC referenced elsewhere — is shown wearing the Imperial
+// title on top of their real one, without changing game.role or
+// DYNASTIES.Austria.titleM/F, which stay exactly what the succession
+// machinery already expects.
+function displayRole() {
+    if (game.rulingRealm === "Austria" && (game.rulingStatus === "sovereign" || game.rulingStatus === "consort")) {
+        const imperial = game.gender === "F" ? "Holy Roman Empress" : "Holy Roman Emperor";
+        return `${imperial} (${game.role})`;
+    }
+    return game.role;
+}
+
 // A courtesy title for a child, reflecting the parent's actual current standing AND
 // the child's own place in the succession — the recognized heir reads as genuinely
 // grander than a younger sibling, not just the same style with a suffix tacked on.
@@ -1657,7 +1675,8 @@ function countryProfile() {
 
     if (game.location === "Austria" && DYNASTIES.Austria.ruler.name !== "Frederick III") {
         const d = DYNASTIES.Austria;
-        desc = `You are at the Austrian archducal court, now under ${d.ruler.gender === "F" ? "Archduchess" : "Archduke"} ${d.ruler.name}${d.marriedToPlayer ? ", your own spouse" : ""} — the Habsburg custodianship of the Imperial crown continuing into a new generation.`;
+        const imperial = d.ruler.gender === "F" ? "Holy Roman Empress" : "Holy Roman Emperor";
+        desc = `You are at the Austrian archducal court, now under ${imperial} ${d.ruler.name}${d.marriedToPlayer ? ", your own spouse" : ""} — the Habsburg custodianship of the Imperial crown continuing into a new generation.`;
     }
 
     if (game.location === "Aragon" && DYNASTIES.Aragon.unitedWithCastile) {
@@ -2446,7 +2465,9 @@ function livingLabel(key, defaultLabel) {
 
     if (key === "Austria") {
         const d = DYNASTIES.Austria;
-        return `${d.ruler.gender === "F" ? "Archduchess" : "Archduke"} ${d.ruler.name} of Austria${d.marriedToPlayer ? " (your own spouse)" : ""}`;
+        const imperial = d.ruler.gender === "F" ? "Holy Roman Empress" : "Holy Roman Emperor";
+        const archducal = d.ruler.gender === "F" ? "Archduchess" : "Archduke";
+        return `${imperial} ${d.ruler.name}, ${archducal} of Austria${d.marriedToPlayer ? " (your own spouse)" : ""}`;
     }
 
     if (key === "Aragon") {
@@ -2978,7 +2999,7 @@ function render() {
             </span>
 
             <span class="pill">
-                ${game.role}
+                ${displayRole()}
             </span>
 
             ${game.married ? `<span class="pill">💍 Wed to ${game.spouseName}</span>` : ""}
@@ -3147,7 +3168,7 @@ function renderCharacter(content) {
 
             <div class="stat">
                 Role
-                <strong>${game.role}</strong>
+                <strong>${displayRole()}</strong>
             </div>
 
             <div class="stat">
