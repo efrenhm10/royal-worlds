@@ -1145,7 +1145,7 @@ const MARRIAGE_MARKET = {
       tierLabel: "Royal match",
       prospects: {
         F: [{ id: "charles_bold", name: "Charles the Bold, heir to Burgundy", relKey: "Charles", demandGold: 55, demandLand: 2, consortTitle: "Duchess of Burgundy" }],
-        M: [{ id: "anne_burgundy", name: "Anne of Burgundy", relKey: "AnneBurgundy", demandGold: 50, demandLand: 2, consortTitle: null }]
+        M: [{ id: "anne_burgundy", name: "Marguerite of Burgundy, a cousin of the ducal house", relKey: "AnneBurgundy", demandGold: 50, demandLand: 2, consortTitle: null }]
       }
     },
     noble: { tierLabel: "Noble match", relKey: "BurgundianNobles", demandGold: 35, demandLand: 1 },
@@ -1158,7 +1158,7 @@ const MARRIAGE_MARKET = {
     royal: {
       tierLabel: "Royal match",
       prospects: {
-        F: [{ id: "valois_prince", name: "A prince of the House of Valois", relKey: "FranceConsort", demandGold: 65, demandLand: 2, consortTitle: null }],
+        F: [{ id: "valois_prince", name: "Charles, Duke of Berry, the King's own brother", relKey: "FranceConsort", demandGold: 65, demandLand: 2, consortTitle: null }],
         M: [{ id: "bona_savoy", name: "Bona of Savoy, kin to the French crown", relKey: "FranceConsort", demandGold: 60, demandLand: 2, consortTitle: null }]
       }
     },
@@ -1172,8 +1172,8 @@ const MARRIAGE_MARKET = {
     royal: {
       tierLabel: "Royal match",
       prospects: {
-        F: [{ id: "stewart_prince", name: "A prince of the House of Stewart", relKey: "ScotlandConsort", demandGold: 45, demandLand: 1, consortTitle: null }],
-        M: [{ id: "stewart_princess", name: "A princess of the House of Stewart", relKey: "ScotlandConsort", demandGold: 45, demandLand: 1, consortTitle: null }]
+        F: [{ id: "stewart_prince", name: "Alexander Stewart, Duke of Albany, the King's brother", relKey: "ScotlandConsort", demandGold: 45, demandLand: 1, consortTitle: null }],
+        M: [{ id: "stewart_princess", name: "Mary Stewart, the King's sister", relKey: "ScotlandConsort", demandGold: 45, demandLand: 1, consortTitle: null }]
       }
     },
     noble: { tierLabel: "Noble match", relKey: "Scotland", demandGold: 30, demandLand: 1 },
@@ -1186,8 +1186,8 @@ const MARRIAGE_MARKET = {
     royal: {
       tierLabel: "Royal match",
       prospects: {
-        F: [{ id: "infante", name: "An Infante of Castile", relKey: "Castile", demandGold: 70, demandLand: 2, consortTitle: null }],
-        M: [{ id: "infanta", name: "An Infanta of Castile", relKey: "Castile", demandGold: 70, demandLand: 2, consortTitle: null }]
+        F: [{ id: "infante", name: "Alfonso, Prince of Asturias, the King's half-brother", relKey: "CastileConsort", demandGold: 70, demandLand: 2, consortTitle: null }],
+        M: [{ id: "infanta", name: "Beatriz of Castile, a cousin of the Trastámara line", relKey: "CastileConsort", demandGold: 70, demandLand: 2, consortTitle: null }]
       }
     },
     noble: { tierLabel: "Noble match", relKey: "CastilianNobles", demandGold: 40, demandLand: 1 },
@@ -1217,7 +1217,7 @@ const MARRIAGE_MARKET = {
       tierLabel: "Royal match",
       prospects: {
         F: [{ id: "ferdinand_aragon", name: "Ferdinand, heir to Aragon", relKey: "Aragon", demandGold: 60, demandLand: 2, consortTitle: "Queen of Aragon" }],
-        M: [{ id: "aragon_infanta", name: "An Infanta of Aragon", relKey: "AragonConsort", demandGold: 60, demandLand: 2, consortTitle: null }]
+        M: [{ id: "aragon_infanta", name: "Elionor of Aragon, a cousin of the royal house", relKey: "AragonConsort", demandGold: 60, demandLand: 2, consortTitle: null }]
       }
     },
     noble: { tierLabel: "Noble match", relKey: "AragoneseNobles", demandGold: 35, demandLand: 1 },
@@ -1233,8 +1233,11 @@ const MARRIAGE_MARKET = {
       // marriage easy: their asking price is deliberately lower than a crown this size
       // would normally command, because the match itself is the whole strategy.
       prospects: {
-        F: [{ id: "habsburg_archduke", name: "A Habsburg Archduke", relKey: "AustriaConsort", demandGold: 40, demandLand: 1, consortTitle: null }],
-        M: [{ id: "habsburg_archduchess", name: "A Habsburg Archduchess", relKey: "AustriaConsort", demandGold: 40, demandLand: 1, consortTitle: null }]
+        F: [
+          { id: "maximilian_habsburg", name: "Maximilian of Habsburg, heir to Austria", relKey: "Austria", demandGold: 50, demandLand: 1, consortTitle: "Archduchess of Austria" },
+          { id: "habsburg_archduke", name: "Sigismund of Habsburg, a cousin of the Archducal house", relKey: "AustriaConsort", demandGold: 40, demandLand: 1, consortTitle: null },
+        ],
+        M: [{ id: "habsburg_archduchess", name: "Eleonore of Habsburg, a cousin of the Archducal house", relKey: "AustriaConsort", demandGold: 40, demandLand: 1, consortTitle: null }]
       }
     },
     noble: { tierLabel: "Noble match", relKey: "AustrianNobles", demandGold: 35, demandLand: 1 },
@@ -1272,7 +1275,7 @@ const MARRIAGE_MARKET = {
       tierLabel: "Royal match",
       prospects: {
         F: [{ id: "alfonso_calabria", name: "Alfonso, Duke of Calabria, heir to Naples", relKey: "Naples", demandGold: 55, demandLand: 2, consortTitle: "Queen of Naples" }],
-        M: [{ id: "naples_infanta", name: "An Infanta of Naples", relKey: "NaplesConsort", demandGold: 55, demandLand: 2, consortTitle: null }]
+        M: [{ id: "naples_infanta", name: "Eleonora of Naples, Ferrante's cousin", relKey: "NaplesConsort", demandGold: 55, demandLand: 2, consortTitle: null }]
       }
     },
     noble: { tierLabel: "Noble match", relKey: "NeapolitanNobles", demandGold: 32, demandLand: 1 },
@@ -2185,6 +2188,15 @@ function syncForeignDescendantDeath(deadName, country, newRulerRecord, recapLine
 
 }
 
+// A handful of heirs have a real, specific marriage scripted elsewhere in the
+// game (Ferdinand of Aragon to Isabella of Castile, Maximilian of Austria to
+// Mary of Burgundy) — both genuinely important history, not filler. The
+// generic random heir-matchmaking below must leave them alone until their own
+// scripted event actually fires (which itself sets married = true), or the
+// procedural roll could easily marry one of them off to an unrelated dynasty
+// years before their real historical moment ever gets a chance to happen.
+const SCRIPTED_HEIR_DESTINIES = { Aragon: "Ferdinand of Aragon", Austria: "Maximilian" };
+
 function simulateDynasties(recapLines) {
 
     Object.entries(DYNASTIES).forEach(([country, d]) => {
@@ -2246,6 +2258,21 @@ function simulateDynasties(recapLines) {
 
         d.ruler.age++;
         if (d.heir) d.heir.age++;
+
+        // A non-player heir faces their own real mortality too — a child heir
+        // especially so — instead of sitting immortal-in-waiting until the ruler
+        // happens to die. (An heir who IS the player's own child already faces
+        // this through the main game's own child-mortality loop; rolling it again
+        // here would double-count the very same life.)
+        if (d.heir && !d.heir.fromPlayer) {
+            const heirAge = d.heir.age;
+            const heirMortality = heirAge < 15 ? childMortalityChance(heirAge) : mortalityChance(heirAge, null);
+            if (Math.random() < heirMortality) {
+                const deadHeirName = d.heir.name;
+                d.heir = null;
+                recapLines.push(`News from ${d.realmNoun}: ${deadHeirName}, heir to the ${domainNoun(d.ruler.gender === "F" ? d.titleF : d.titleM)}${heirAge < 5 ? ", still a small child" : ""}, has died — the succession there is an open question again, at least for now.`);
+            }
+        }
 
         if (Math.random() < mortalityChance(d.ruler.age, null)) {
 
@@ -2313,10 +2340,10 @@ function simulateDynasties(recapLines) {
 
         }
 
-        if (d.heir && d.heir.age >= 14 && !d.heir.married && Math.random() < 0.06) {
+        if (d.heir && d.heir.age >= 14 && !d.heir.married && SCRIPTED_HEIR_DESTINIES[country] !== d.heir.name && Math.random() < 0.06) {
 
             const partners = Object.entries(DYNASTIES)
-                .filter(([c2, d2]) => c2 !== country && d2.active && d2.heir && !d2.heir.married && d2.heir.gender !== d.heir.gender);
+                .filter(([c2, d2]) => c2 !== country && d2.active && d2.heir && !d2.heir.married && d2.heir.gender !== d.heir.gender && SCRIPTED_HEIR_DESTINIES[c2] !== d2.heir.name);
 
             if (partners.length) {
                 const [partnerCountry, partnerDynasty] = partners[Math.floor(Math.random() * partners.length)];
@@ -2610,11 +2637,11 @@ function siblingsForSelection(houseKey, personIndex) {
     const groups = HOUSE_SIBLING_GROUPS[houseKey] || [];
     const group = groups.find(g => g.includes(personIndex));
     if (!group) return [];
-    const house = HOUSES[houseKey];
     return group.filter(i => i !== personIndex).map(i => {
-        const person = house.people[i];
+        const name = ensureRealName(houseKey, i);
+        const person = HOUSES[houseKey].people[i];
         return {
-            name: person[0],
+            name,
             gender: person[3] || "F",
             age: person[1],
             role: resolvedRoleForPerson(houseKey, person),
@@ -2646,6 +2673,29 @@ function generateStartingCharacterName(houseKey, gender) {
     return generatePeriodName(poolKey, gender, pool.surnames);
 }
 
+// Resolves (and permanently caches, in place on HOUSES itself) a real name for
+// a generic placeholder slot — so the name shown on the character-selection
+// screen, before anyone has picked anything, is the exact same name the game
+// actually uses once selected. Without this, the selection screen would show
+// the raw placeholder ("A Yorkist noble") and only reveal a real name after
+// the fact, and a second look at the same slot could even generate a
+// different name than the one already chosen.
+function ensureRealName(houseKey, index) {
+    const house = HOUSES[houseKey];
+    const person = house.people[index];
+    if (isGenericPlaceholderName(person[0])) {
+        // Resolve the concrete role from the placeholder's own wording (e.g.
+        // Habsburg's "archduke" vs "archduchess" vs "courtier") BEFORE replacing
+        // that wording with a real name, and cache the resolved role back onto
+        // the slot too — so every later lookup, however it's ordered, sees a
+        // real name paired with the correct role instead of "Plausible" text
+        // that no longer matches anything once the placeholder wording is gone.
+        person[2] = resolvedRoleForPerson(houseKey, person);
+        person[0] = generateStartingCharacterName(houseKey, person[3] || "F");
+    }
+    return person[0];
+}
+
 function chooseHouse(key) {
 
     selectedHouse = key;
@@ -2665,12 +2715,14 @@ function chooseHouse(key) {
     house.people.forEach((person, index) => {
 
         const button = document.createElement("button");
+        const displayName = ensureRealName(key, index);
+        const role = resolvedRoleForPerson(key, person);
 
         button.innerHTML = `
-            <strong>${person[0]}</strong>
+            <strong>${displayName}</strong>
             <br>
             <span class="muted">
-                ${resolvedRoleForPerson(key, person)} · Age ${person[1]}
+                ${role} · Age ${person[1]}
             </span>
         `;
 
@@ -2698,9 +2750,7 @@ function startGame(index) {
     const person = house.people[index];
 
     const resolvedGender = person[3] || "F";
-    const resolvedName = isGenericPlaceholderName(person[0])
-        ? generateStartingCharacterName(selectedHouse, resolvedGender)
-        : person[0];
+    const resolvedName = ensureRealName(selectedHouse, index);
 
     const siblings = siblingsForSelection(selectedHouse, index);
     const familyEntries = siblings.length
@@ -2832,6 +2882,7 @@ function startGame(index) {
         pendingHouse: null,
         pendingSubject: null,
         pendingChildIndex: null,
+        pendingGeneratedMatch: null,
         manageChildIndex: null,
 
         pregnancy: null,
@@ -3931,6 +3982,7 @@ function renderRoyalProspects(content, market, subjectGender, subjectName) {
     const prospects = (market.royal.prospects[subjectGender] || market.royal.prospects.F)
         .filter(p => !(p.id === "charles_bold" && game.worldFlags.charlesDead))
         .filter(p => !(p.id === "richard_gloucester" && (game.worldFlags.richardIsKing || game.worldFlags.richardDead)))
+        .filter(p => !(p.id === "maximilian_habsburg" && (!DYNASTIES.Austria.heir || DYNASTIES.Austria.heir.name !== "Maximilian" || DYNASTIES.Austria.heir.married)))
         .map(p => {
             if (p.id === "charles_bold" && game.worldFlags.charlesIsDuke) {
                 return Object.assign({}, p, { name: "Charles the Bold, Duke of Burgundy" });
@@ -4001,36 +4053,60 @@ function renderCustomMatchEntry(content, market, subjectGender, subjectName) {
         surnamePool = (NOBLE_NAME_POOLS[market.countryKey] || {}).surnames || MERCHANT_SURNAMES.england;
     }
 
-    const suggested = generatePeriodName(market.countryKey, subjectGender, surnamePool);
+    // No chronicler recorded this person's name, so one is generated for them —
+    // never the player's own to type in. It's cached against this exact
+    // country/tier/house context so re-rendering this same screen (switching
+    // tabs and coming back, etc.) doesn't hand you a different person than the
+    // one you were just looking at; picking a genuinely different tier or
+    // house naturally invalidates the cache and generates someone new.
+    const matchKey = `${market.country}|${game.pendingTier}|${game.pendingHouse || ""}`;
+    if (!game.pendingGeneratedMatch || game.pendingGeneratedMatch.key !== matchKey) {
+        game.pendingGeneratedMatch = { key: matchKey, name: generatePeriodName(market.countryKey, subjectGender, surnamePool) };
+    }
+    const matchName = game.pendingGeneratedMatch.name;
+    const matchGender = subjectGender === "F" ? "M" : "F";
+
+    const matchPortrait = renderPortraitSVG(appearanceFor(matchName, matchGender), matchGender, {
+        size: 48,
+        seed: matchName,
+        crown: null,
+        ringColor: "var(--azure)",
+    });
 
     content.innerHTML = `
         <div class="card">
             <h2>${game.pendingTier === "merchant" ? "🪙 A Merchant Match" : "🛡️ " + (tierData.label || "A Noble Match")}</h2>
-            <p class="muted">On behalf of <strong>${subjectName}</strong>. No chronicler recorded this person's name — name them yourself, or let one be suggested.</p>
-            <label class="muted" style="display:block;margin-top:8px;">Name this match:</label>
-            <input id="customMatchName" type="text" placeholder="${suggested}" style="width:100%;padding:9px;margin:6px 0;border-radius:8px;border:1px solid #c9b98a;font-family:Georgia,serif;">
+            <p class="muted">On behalf of <strong>${subjectName}</strong>. Here is who your family can realistically approach.</p>
+            <div style="display:flex;align-items:center;gap:12px;margin-top:10px;">
+                ${matchPortrait}
+                <span>
+                    <strong>${matchName}</strong>
+                    <br>
+                    <span class="muted">Expected to seek roughly ${tierData.demandGold} gold and ${tierData.demandLand} land in terms</span>
+                </span>
+            </div>
         </div>
         <div class="grid">
-            <button id="confirmCustomMatch">📨 Confirm &amp; Begin Negotiation</button>
+            <button id="confirmCustomMatch">📨 Begin Negotiation</button>
             <button class="secondary" id="backFromCustom">← Back</button>
         </div>
     `;
 
     document.getElementById("confirmCustomMatch").addEventListener("click", () => {
-        const typed = document.getElementById("customMatchName").value.trim();
-        const finalName = typed || suggested;
         const prospect = {
             id: "custom_" + Date.now(),
-            name: finalName,
+            name: matchName,
             relKey: tierData.relKey,
             demandGold: tierData.demandGold,
             demandLand: tierData.demandLand,
             consortTitle: null
         };
+        game.pendingGeneratedMatch = null;
         startNegotiation({ country: market.country, tier: game.pendingTier }, prospect);
     });
 
     document.getElementById("backFromCustom").addEventListener("click", () => {
+        game.pendingGeneratedMatch = null;
         if (game.pendingTier === "noble" && market.noble.houses) game.pendingHouse = null;
         else game.pendingTier = null;
         render();
@@ -6900,23 +6976,30 @@ function tryHistoricalEvent() {
     }
 
     // A concrete "boundaries changing" event — not absorption this time, but a
-    // dynastic marriage that quietly redraws the map anyway. This fires once both
-    // real prerequisite conditions are actually true — Isabella already reigning in
-    // Castile, and Ferdinand grown enough to wed — never a hardcoded date, and never
-    // if the player has already claimed Ferdinand for themselves at the marriage market.
-    if (game.worldFlags.isabellaIsQueen && !game.worldFlags.spainUnited &&
+    // dynastic marriage that quietly redraws the map anyway. This fires once
+    // Ferdinand is actually grown enough to wed (age-gated, never a hardcoded
+    // date) and never if the player has already claimed him for themselves at
+    // the marriage market. It does NOT wait on Isabella already reigning in
+    // Castile — historically the marriage (1469) came five years BEFORE Henry
+    // IV's death and Isabella's own accession (1474), not after. Gating it on
+    // isabellaIsQueen would fire this five years late at best, and at worst
+    // never at all, since the generic heir-matchmaking roll elsewhere in
+    // simulateDynasties has years in the meantime to marry Ferdinand off to
+    // someone else entirely before the real event ever gets its turn.
+    if (!game.worldFlags.spainUnited &&
         !DYNASTIES.Aragon.absorbedBy &&
         !(game.married && game.spouseRelKey === "Aragon") &&
         DYNASTIES.Aragon.heir && DYNASTIES.Aragon.heir.name === "Ferdinand of Aragon" &&
-        DYNASTIES.Aragon.heir.age >= 14 && !DYNASTIES.Aragon.heir.married) {
+        DYNASTIES.Aragon.heir.age >= 17 && !DYNASTIES.Aragon.heir.married) {
 
         game.worldFlags.spainUnited = true;
         DYNASTIES.Aragon.heir.married = true;
         DYNASTIES.Aragon.unitedWithCastile = true;
 
+        const isabellaTitle = game.worldFlags.isabellaIsQueen ? "Isabella, Queen of Castile" : "Isabella, heir presumptive to Castile";
         const ev = {
             title: "👑 A Marriage That Redraws the Map",
-            text: `Word reaches you of a wedding conducted at Valladolid almost in secret, before the Pope's own dispensation had even arrived: Ferdinand, heir to Aragon, has married Isabella, Queen of Castile. Neither crown has formally merged into the other — Aragon keeps its own laws, its own Cortes, its own coinage — but every court in Christendom understands at once what has actually happened. Two of Iberia's three Christian kingdoms now answer, in practice, to the same husband and wife. Only Portugal stands apart.`,
+            text: `Word reaches you of a wedding conducted at Valladolid almost in secret, before the Pope's own dispensation had even arrived: Ferdinand, heir to Aragon, has married ${isabellaTitle}. Neither crown has formally merged into the other — Aragon keeps its own laws, its own Cortes, its own coinage — but every court in Christendom already senses what this quietly sets up. Two of Iberia's three Christian kingdoms may yet answer to the same husband and wife. Only Portugal stands apart.`,
             choices: [
                 { label: "Send warm congratulations to both crowns", effect: () => {
                     game.relationships.Aragon = Math.min(100, (game.relationships.Aragon || 20) + 10);
@@ -6929,6 +7012,48 @@ function tryHistoricalEvent() {
                 }},
                 { label: "Take little notice — Iberian politics rarely touch you directly", effect: () => {
                     return { msg: "You note the news and move on. Whether it touches you directly is a question the years ahead will answer." };
+                }},
+            ]
+        };
+
+        showChoiceEvent(ev);
+        return true;
+
+    }
+
+    // The era's OTHER great dynastic marriage, just as real and just as
+    // consequential as Ferdinand and Isabella's: Maximilian of Habsburg marrying
+    // Mary of Burgundy once Charles the Bold is dead and Mary is free to marry.
+    // This is what actually brings the rich Burgundian Netherlands into the
+    // Habsburg orbit for the next four centuries — skipping it would leave
+    // Austria's own arc feeling thin next to Aragon's. Guarded the same way:
+    // age-gated rather than date-gated, and never if either side has already
+    // been claimed by the player at the marriage market.
+    if (!game.worldFlags.maximilianMarriesMary &&
+        DYNASTIES.Burgundy.active && !DYNASTIES.Burgundy.absorbedBy && DYNASTIES.Burgundy.ruler.name === "Mary of Burgundy" &&
+        !(game.married && game.spouseRelKey === "Charles") &&
+        DYNASTIES.Austria.heir && DYNASTIES.Austria.heir.name === "Maximilian" &&
+        DYNASTIES.Austria.heir.age >= 18 && !DYNASTIES.Austria.heir.married &&
+        !(game.married && game.spouseRelKey === "Austria")) {
+
+        game.worldFlags.maximilianMarriesMary = true;
+        DYNASTIES.Austria.heir.married = true;
+
+        const ev = {
+            title: "👑 The Burgundian Match",
+            text: `Word arrives from the Low Countries: Maximilian of Habsburg has married Duchess Mary of Burgundy at Ghent, securing for his father's house the rich Burgundian Netherlands that King Louis XI so badly wanted for France instead. Mary keeps her own inheritance in her own right, but the House of Habsburg's fortunes — and its reach — have just grown immeasurably, at France's direct expense.`,
+            choices: [
+                { label: "Send warm congratulations to the new couple", effect: () => {
+                    game.relationships.Austria = Math.min(100, (game.relationships.Austria || 20) + 10);
+                    game.relationships.Charles = Math.min(100, (game.relationships.Charles || 20) + 5);
+                    return { msg: "A marriage this consequential is worth being remembered as an early well-wisher of." };
+                }},
+                { label: "Quietly worry what this means for France", effect: () => {
+                    game.influence += 5;
+                    return { msg: "You are far from the only one at court wondering how Louis XI will take this news." };
+                }},
+                { label: "Take little notice — Burgundian politics rarely touch you directly", effect: () => {
+                    return { msg: "You note the news and move on." };
                 }},
             ]
         };
