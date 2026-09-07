@@ -3997,6 +3997,94 @@ function getEligibleRoyalProspects(market, subjectGender) {
         });
 }
 
+// Picks a real royal-tier match when one is actually available (favored, for
+// the prestige of it), otherwise a generated noble-tier one — so literally
+// every country in MARRIAGE_MARKET can plausibly be the one writing in,
+// exactly like the player's own outgoing noble/merchant matches already work.
+function pickIncomingProspect(market, targetGender) {
+
+    const royalOptions = getEligibleRoyalProspects(market, targetGender);
+    if (royalOptions.length && Math.random() < 0.6) {
+        return { tier: "royal", prospect: royalOptions[Math.floor(Math.random() * royalOptions.length)] };
+    }
+
+    const prospectGender = targetGender === "F" ? "M" : "F";
+    const tierData = market.noble.houses
+        ? Object.values(market.noble.houses)[Math.floor(Math.random() * Object.keys(market.noble.houses).length)]
+        : market.noble;
+    const surnamePool = market.countryKey === "england"
+        ? (tierData === market.noble.houses.lancastrian ? NOBLE_NAME_POOLS.england.lancastrianSurnames : NOBLE_NAME_POOLS.england.yorkistSurnames)
+        : (NOBLE_NAME_POOLS[market.countryKey] || {}).surnames || MERCHANT_SURNAMES.england;
+    const name = generatePeriodName(market.countryKey, prospectGender, surnamePool);
+
+    return { tier: "noble", prospect: { name, relKey: tierData.relKey, demandGold: tierData.demandGold, demandLand: tierData.demandLand, consortTitle: null } };
+
+}
+
+// A foreign court doesn't just wait for you to come courting — it can just
+// as easily be the one writing first, for anyone in the household actually
+// available to marry: the player themselves, or any of their own children
+// old enough. This spans literally every country in MARRIAGE_MARKET, not a
+// hardcoded handful, so any realm in the game can plausibly be the sender.
+function eligibleMarriageOfferTargets(g) {
+    const targets = [];
+    if (!g.married) targets.push({ subject: "self", name: g.person, gender: g.gender });
+    g.children.forEach((c, i) => {
+        if (!c.married && Math.max(0, g.year - c.birthYear) >= 12) {
+            targets.push({ subject: "child", childIndex: i, name: c.name, gender: c.gender });
+        }
+    });
+    return targets;
+}
+
+function buildIncomingMarriageOffer() {
+
+    const targets = eligibleMarriageOfferTargets(game);
+    const target = targets[Math.floor(Math.random() * targets.length)];
+
+    const countryKeys = Object.keys(MARRIAGE_MARKET);
+    const countryKey = countryKeys[Math.floor(Math.random() * countryKeys.length)];
+    const market = MARRIAGE_MARKET[countryKey];
+
+    const { tier, prospect } = pickIncomingProspect(market, target.gender);
+
+    const onBehalfOf = target.subject === "child" ? `your child ${target.name}` : "you";
+
+    return {
+        title: `✉️ A Marriage Offer From ${market.country}`,
+        text: `A letter arrives from ${market.country}: ${prospect.name}'s family proposes a match with ${onBehalfOf}${prospect.consortTitle ? `, which would bring the title of ${prospect.consortTitle}` : ""}. They ask for roughly ${prospect.demandGold} gold and ${prospect.demandLand} land in return, but the approach itself is theirs, not yours.`,
+        choices: [
+            { label: "Accept the proposal", effect: () => {
+                if (game.wealth < prospect.demandGold || game.land < prospect.demandLand) {
+                    return { fail: true, msg: "You cannot meet even the modest terms they're asking, and the offer lapses." };
+                }
+                game.wealth -= prospect.demandGold;
+                game.land -= prospect.demandLand;
+                game.prestige += (tier === "royal") ? 15 : 8;
+                if (target.subject === "child") {
+                    const { childName, relocationNote } = finalizeMarriage({
+                        subject: "child", childIndex: target.childIndex, name: prospect.name,
+                        countryId: market.country, relKey: prospect.relKey, consortTitle: prospect.consortTitle
+                    });
+                    game.chronicle.unshift(`${game.year}: ${market.country} proposes a marriage for ${childName} to ${prospect.name}, and you accept.${relocationNote}`);
+                    return { msg: `You accept the match on ${childName}'s behalf. Terms are agreed and the marriage is sealed before witnesses.` };
+                }
+                const { relocated } = finalizeMarriage({
+                    subject: "self", name: prospect.name, countryId: market.country,
+                    relKey: prospect.relKey, consortTitle: prospect.consortTitle
+                });
+                game.chronicle.unshift(`${game.year}: ${market.country} proposes a marriage to you, and you accept${prospect.consortTitle ? `, becoming ${prospect.consortTitle}` : ""}.${relocated ? ` Your household moves to ${market.country}.` : ""}`);
+                return { msg: `You accept the match. Terms are agreed and the marriage is sealed before witnesses.${prospect.consortTitle ? ` You are now ${prospect.consortTitle}.` : ""}` };
+            }},
+            { label: "Decline politely", effect: () => {
+                game.relationships[prospect.relKey] = Math.max(0, (game.relationships[prospect.relKey] || 20) - 5);
+                return { msg: `You decline, as courteously as the situation allows. It costs a little goodwill, but commits you to nothing.` };
+            }},
+        ]
+    };
+
+}
+
 function renderRoyalProspects(content, market, subjectGender, subjectName) {
 
     const prospects = getEligibleRoyalProspects(market, subjectGender);
@@ -8436,6 +8524,13 @@ const RANDOM_EVENTS = [
         };
 
     }},
+
+    // ===== AN INCOMING MARRIAGE OFFER — a foreign court proposes a match on
+    // its own initiative, for anyone in the household actually available to
+    // marry, spanning every country in MARRIAGE_MARKET rather than a
+    // hardcoded few =====
+
+    { eligible: (g) => eligibleMarriageOfferTargets(g).length > 0, build: () => buildIncomingMarriageOffer() },
 
 ];
 
