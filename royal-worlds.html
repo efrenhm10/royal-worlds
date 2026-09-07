@@ -2236,6 +2236,14 @@ function simulateDynasties(recapLines) {
 
         d.marriedToPlayer = false;
 
+        // A child of yours (not the player themselves) may have married into this
+        // dynasty's real bloodline too — if so, any child later born to that union
+        // is your own grandchild, even though the ruler and heir here are never
+        // literally "you". Recomputed every tick so it stays correct as marriages
+        // happen, children die, or the married-in child themselves is widowed.
+        const marriedChild = game.children.find(c => c.married && c.spouseRelKey === d.relKey);
+        d.marriedToPlayerChild = marriedChild ? marriedChild.name : null;
+
         // An elective office (Venice's Doge) never passes by blood — no heir to
         // grow up, marry, or inherit. It just gets re-elected by the ruling body
         // whenever the sitting officeholder dies.
@@ -2337,9 +2345,9 @@ function simulateDynasties(recapLines) {
             const childGender = Math.random() < 0.5 ? "M" : "F";
             const pool = NOBLE_NAME_POOLS[d.houseKey] || NOBLE_NAME_POOLS.england;
             const childName = generatePeriodName(d.houseKey, childGender, pool.surnames || MERCHANT_SURNAMES.england);
-            d.heir = { name: childName, gender: childGender, age: 0, married: false, fromPlayer: !!d.ruler.fromPlayer };
+            d.heir = { name: childName, gender: childGender, age: 0, married: false, fromPlayer: !!d.ruler.fromPlayer || !!d.marriedToPlayerChild };
 
-            recapLines.push(`News from ${d.realmNoun}: word arrives of the birth of ${childName}, recognized as heir to the ${domainNoun(d.ruler.gender === "F" ? d.titleF : d.titleM)}.`);
+            recapLines.push(`News from ${d.realmNoun}: word arrives of the birth of ${childName}, recognized as heir to the ${domainNoun(d.ruler.gender === "F" ? d.titleF : d.titleM)}${d.marriedToPlayerChild ? ` — your own grandchild, through ${d.marriedToPlayerChild}` : ""}.`);
 
         }
 
@@ -4376,6 +4384,11 @@ function finalizeMarriage({ subject, childIndex, name, countryId, relKey, consor
         child.married = true;
         child.spouseName = name;
         child.spouseCountry = countryId;
+        // A real relKey (as opposed to a generic "Consort" one) marks this as a
+        // marriage into an actual tracked dynasty's own bloodline — simulateDynasties
+        // uses it to recognize this child's own future children as your
+        // grandchildren, the same way your own marriage already works.
+        child.spouseRelKey = relKey;
 
         // Where the marriage actually settles the newlyweds follows the era's own
         // convention, not a coin flip: a daughter joins her husband's household,
@@ -4401,9 +4414,16 @@ function finalizeMarriage({ subject, childIndex, name, countryId, relKey, consor
     game.spouseAge = Math.max(14, game.age + Math.round((Math.random() * 16) - 8));
     game.spouseRelKey = relKey;
 
-    const relocated = countryId !== game.location;
+    // A reigning sovereign doesn't abandon their own throne to go marry someone
+    // else's — the same "the ruler stays, the spouse joins them" rule already
+    // governing your own children's marriages applies here too. Their crown,
+    // role, and location all stay exactly as they were; only the marriage itself
+    // (and any dynastic consequences that later unfold on their own, like an
+    // eventual heir) is new.
+    const alreadySovereign = game.rulingStatus === "sovereign";
+    const relocated = !alreadySovereign && countryId !== game.location;
 
-    if (consortTitle) {
+    if (consortTitle && !alreadySovereign) {
         game.role = consortTitle;
         game.rulingRealm = countryId;
         game.rulingStatus = "consort";
