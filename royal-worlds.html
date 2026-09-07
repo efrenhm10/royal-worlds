@@ -3980,9 +3980,12 @@ function attemptLancastrianLoyaltyProof(onSuccess) {
 }
 
 
-function renderRoyalProspects(content, market, subjectGender, subjectName) {
-
-    const prospects = (market.royal.prospects[subjectGender] || market.royal.prospects.F)
+// Shared between the player-initiated marriage screen and incoming foreign
+// offers, so both always see exactly the same real, currently-available
+// prospects — a dead or already-married figure can't show up in either.
+function getEligibleRoyalProspects(market, subjectGender) {
+    if (!market.royal) return [];
+    return (market.royal.prospects[subjectGender] || market.royal.prospects.F)
         .filter(p => !(p.id === "charles_bold" && game.worldFlags.charlesDead))
         .filter(p => !(p.id === "richard_gloucester" && (game.worldFlags.richardIsKing || game.worldFlags.richardDead)))
         .filter(p => !(p.id === "maximilian_habsburg" && (!DYNASTIES.Austria.heir || DYNASTIES.Austria.heir.name !== "Maximilian" || DYNASTIES.Austria.heir.married)))
@@ -3992,6 +3995,11 @@ function renderRoyalProspects(content, market, subjectGender, subjectName) {
             }
             return p;
         });
+}
+
+function renderRoyalProspects(content, market, subjectGender, subjectName) {
+
+    const prospects = getEligibleRoyalProspects(market, subjectGender);
 
     content.innerHTML = `
         <div class="card">
@@ -4264,6 +4272,65 @@ function negotiationAction(action) {
 }
 
 
+// The actual mechanics of a marriage taking effect — who relocates where,
+// what title (if any) is taken up, and updating either the player's own
+// record or the named child's. Shared by player-initiated negotiations
+// (resolveNegotiationRound) and foreign courts' own incoming proposals
+// (acceptIncomingMarriageOffer), so both go through exactly the same tested
+// path rather than two versions that could quietly drift apart. Returns a
+// small descriptor the caller uses to build its own chronicle/event text,
+// since a negotiated match and an offered one are framed differently.
+function finalizeMarriage({ subject, childIndex, name, countryId, relKey, consortTitle }) {
+
+    if (subject === "child") {
+
+        const child = game.children[childIndex];
+        child.married = true;
+        child.spouseName = name;
+        child.spouseCountry = countryId;
+
+        // Where the marriage actually settles the newlyweds follows the era's own
+        // convention, not a coin flip: a daughter joins her husband's household,
+        // wherever that is. A son normally stays put and brings a bride home —
+        // UNLESS he is marrying a recognized heir/heiress to a real throne
+        // (consortTitle set), in which case the match itself is why he moves, to
+        // take up that title in person.
+        const marryingIntoRealTitle = !!consortTitle;
+        const relocates = child.gender === "F" || marryingIntoRealTitle;
+        child.location = relocates ? countryId : game.homeCountry;
+
+        const relocationNote = relocates
+            ? ` ${child.name} relocates to ${countryId} to join ${name}'s household${marryingIntoRealTitle ? `, taking up the title of ${consortTitle} there` : ""}.`
+            : ` ${name} comes to join ${child.name}'s household here, rather than the other way around.`;
+
+        return { childName: child.name, relocationNote };
+
+    }
+
+    game.married = true;
+    game.spouseName = name;
+    game.spouseCountry = countryId;
+    game.spouseAge = Math.max(14, game.age + Math.round((Math.random() * 16) - 8));
+    game.spouseRelKey = relKey;
+
+    const relocated = countryId !== game.location;
+
+    if (consortTitle) {
+        game.role = consortTitle;
+        game.rulingRealm = countryId;
+        game.rulingStatus = "consort";
+    }
+
+    if (relocated) {
+        game.location = countryId;
+        game.arrivedYear = game.year;
+        game.arrivedMonth = game.month;
+    }
+
+    return { relocated };
+
+}
+
 function resolveNegotiationRound() {
 
     const neg = game.negotiation;
@@ -4293,26 +4360,12 @@ function resolveNegotiationRound() {
 
         if (neg.subject === "child") {
 
-            const child = game.children[neg.childIndex];
-            child.married = true;
-            child.spouseName = neg.name;
-            child.spouseCountry = neg.countryId;
+            const { childName, relocationNote } = finalizeMarriage({
+                subject: "child", childIndex: neg.childIndex, name: neg.name,
+                countryId: neg.countryId, relKey: neg.relKey, consortTitle: neg.consortTitle
+            });
 
-            // Where the marriage actually settles the newlyweds follows the era's own
-            // convention, not a coin flip: a daughter joins her husband's household,
-            // wherever that is. A son normally stays put and brings a bride home —
-            // UNLESS he is marrying a recognized heir/heiress to a real throne
-            // (consortTitle set), in which case the match itself is why he moves, to
-            // take up that title in person.
-            const marryingIntoRealTitle = !!neg.consortTitle;
-            const relocates = child.gender === "F" || marryingIntoRealTitle;
-            child.location = relocates ? neg.countryId : game.homeCountry;
-
-            const relocationNote = relocates
-                ? ` ${child.name} relocates to ${neg.countryId} to join ${neg.name}'s household${marryingIntoRealTitle ? `, taking up the title of ${neg.consortTitle} there` : ""}.`
-                : ` ${neg.name} comes to join ${child.name}'s household here, rather than the other way around.`;
-
-            game.chronicle.unshift(`${game.year}: You secure a marriage for ${child.name} to ${neg.name}, of ${neg.countryId}.${relocationNote}`);
+            game.chronicle.unshift(`${game.year}: You secure a marriage for ${childName} to ${neg.name}, of ${neg.countryId}.${relocationNote}`);
 
             game.negotiation = null;
             game.pendingSubject = null;
@@ -4323,29 +4376,17 @@ function resolveNegotiationRound() {
 
             showEvent(
                 "A Marriage Is Sealed",
-                `Terms are agreed on ${child.name}'s behalf, and the marriage is sealed before witnesses.`
+                `Terms are agreed on ${childName}'s behalf, and the marriage is sealed before witnesses.`
             );
 
         } else {
 
-            game.married = true;
-            game.spouseName = neg.name;
-            game.spouseCountry = neg.countryId;
-            game.spouseAge = Math.max(14, game.age + Math.round((Math.random() * 16) - 8));
-            game.spouseRelKey = neg.relKey;
-
-            const relocated = neg.countryId !== game.location;
-
-            if (neg.consortTitle) {
-                game.role = neg.consortTitle;
-                game.rulingRealm = neg.countryId;
-                game.rulingStatus = "consort";
-            }
+            const { relocated } = finalizeMarriage({
+                subject: "self", name: neg.name, countryId: neg.countryId,
+                relKey: neg.relKey, consortTitle: neg.consortTitle
+            });
 
             if (relocated) {
-                game.location = neg.countryId;
-                game.arrivedYear = game.year;
-                game.arrivedMonth = game.month;
                 game.chronicle.unshift(`${game.year}: You marry ${neg.name}${neg.consortTitle ? `, becoming ${neg.consortTitle}` : ""} and relocate your household to ${neg.countryId}. Everything here — the language, the customs, the faces — will take time to learn.`);
             } else {
                 game.chronicle.unshift(`${game.year}: You marry ${neg.name}${neg.consortTitle ? `, becoming ${neg.consortTitle}` : ""}.`);
@@ -5077,6 +5118,17 @@ function succeedToHeir(reason) {
     game.pendingHouse = null;
     game.manageChildIndex = null;
 
+    // The heir's own siblings — the dead parent's other children — don't just
+    // vanish from the story now that one of them has taken over. They become
+    // real, visible siblings of the new head of the family, wherever they
+    // actually ended up (a foreign court, if they were married off, or ruling
+    // a realm of their own), and can be asked for help the same way any other
+    // tracked sibling can. Their existing family loyalty carries over rather
+    // than resetting, since it reflects everything already invested in them.
+    const survivingSiblings = game.children
+        .filter(c => c.name !== heir.name)
+        .map(c => ({ child: c, oldLoyalty: (game.family.find(f => f.name === c.name) || {}).loyalty }));
+
     game.pregnancy = null;
     game.children = [];
     game.heir = null;
@@ -5086,7 +5138,21 @@ function succeedToHeir(reason) {
         game.relationships[k] = Math.max(0, game.relationships[k] - 10);
     });
 
-    game.family = game.family.filter(f => f.name !== heir.name);
+    game.family = game.family.filter(f => f.name !== heir.name && !survivingSiblings.some(s => s.child.name === f.name));
+
+    survivingSiblings.forEach(({ child: c, oldLoyalty }) => {
+        const age = Math.max(0, game.year - c.birthYear);
+        const roleNote = c.rulingAbroad ? `ruling ${c.rulingAbroad}` : c.married ? `married into ${c.spouseCountry || "a foreign court"}` : "unmarried";
+        game.family.push({
+            name: c.name,
+            relation: `Sibling (${roleNote})`,
+            loyalty: oldLoyalty != null ? oldLoyalty : 55,
+            isSibling: true,
+            gender: c.gender,
+            age,
+            location: c.location || c.rulingAbroad || (c.married ? c.spouseCountry : game.homeCountry) || null
+        });
+    });
 
     game.chronicle.unshift(`${game.year}: With ${oldName}'s death, ${heir.name} becomes head of the family — the chronicle continues.`);
 
