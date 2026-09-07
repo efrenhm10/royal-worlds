@@ -4009,10 +4009,14 @@ function getEligibleRoyalProspects(market, subjectGender) {
 // the prestige of it), otherwise a generated noble-tier one — so literally
 // every country in MARRIAGE_MARKET can plausibly be the one writing in,
 // exactly like the player's own outgoing noble/merchant matches already work.
-function pickIncomingProspect(market, targetGender) {
+// A foreign court angling for a real royal match wants your actual heir, or
+// you yourself — a younger, non-heir child draws that kind of interest far
+// less often, and mostly attracts noble or merchant offers instead.
+function pickIncomingProspect(market, targetGender, isHeirLike) {
 
     const royalOptions = getEligibleRoyalProspects(market, targetGender);
-    if (royalOptions.length && Math.random() < 0.6) {
+    const royalChance = isHeirLike ? 0.6 : 0.15;
+    if (royalOptions.length && Math.random() < royalChance) {
         return { tier: "royal", prospect: royalOptions[Math.floor(Math.random() * royalOptions.length)] };
     }
 
@@ -4034,29 +4038,45 @@ function pickIncomingProspect(market, targetGender) {
 // available to marry: the player themselves, or any of their own children
 // old enough. This spans literally every country in MARRIAGE_MARKET, not a
 // hardcoded handful, so any realm in the game can plausibly be the sender.
+// The player and the designated heir carry far more diplomatic weight than a
+// younger, non-heir child — reflected here as a higher pick weight, not just
+// in which tier of prospect shows up once picked.
 function eligibleMarriageOfferTargets(g) {
     const targets = [];
-    if (!g.married) targets.push({ subject: "self", name: g.person, gender: g.gender });
+    if (!g.married) targets.push({ subject: "self", name: g.person, gender: g.gender, isHeirLike: true, weight: 3 });
     g.children.forEach((c, i) => {
         if (!c.married && Math.max(0, g.year - c.birthYear) >= 12) {
-            targets.push({ subject: "child", childIndex: i, name: c.name, gender: c.gender });
+            const isHeirLike = g.heir === c;
+            targets.push({ subject: "child", childIndex: i, name: c.name, gender: c.gender, isHeirLike, weight: isHeirLike ? 3 : 1 });
         }
     });
     return targets;
 }
 
+function pickWeighted(items) {
+    const total = items.reduce((sum, it) => sum + (it.weight || 1), 0);
+    let roll = Math.random() * total;
+    for (const it of items) {
+        roll -= (it.weight || 1);
+        if (roll <= 0) return it;
+    }
+    return items[items.length - 1];
+}
+
 function buildIncomingMarriageOffer() {
 
     const targets = eligibleMarriageOfferTargets(game);
-    const target = targets[Math.floor(Math.random() * targets.length)];
+    const target = pickWeighted(targets);
 
     const countryKeys = Object.keys(MARRIAGE_MARKET);
     const countryKey = countryKeys[Math.floor(Math.random() * countryKeys.length)];
     const market = MARRIAGE_MARKET[countryKey];
 
-    const { tier, prospect } = pickIncomingProspect(market, target.gender);
+    const { tier, prospect } = pickIncomingProspect(market, target.gender, target.isHeirLike);
 
-    const onBehalfOf = target.subject === "child" ? `your child ${target.name}` : "you";
+    const onBehalfOf = target.subject === "child"
+        ? `your ${target.isHeirLike ? "heir, " : ""}${target.name}`
+        : "you";
 
     return {
         title: `✉️ A Marriage Offer From ${market.country}`,
