@@ -3997,6 +3997,13 @@ function getEligibleRoyalProspects(market, subjectGender) {
         .filter(p => !(p.id === "charles_bold" && game.worldFlags.charlesDead))
         .filter(p => !(p.id === "richard_gloucester" && (game.worldFlags.richardIsKing || game.worldFlags.richardDead)))
         .filter(p => !(p.id === "maximilian_habsburg" && (!DYNASTIES.Austria.heir || DYNASTIES.Austria.heir.name !== "Maximilian" || DYNASTIES.Austria.heir.married)))
+        // A named, real prospect (Margaret of York and the like) who has
+        // already actually been married off — to the player, to one of their
+        // children, or accepted via an incoming offer — stops being offered
+        // to anyone else. Without this, a real figure could keep showing up
+        // as "available" indefinitely, long after the game itself has moved
+        // well past them.
+        .filter(p => !(game.worldFlags.marriedRoyalProspects || []).includes(p.id))
         .map(p => {
             if (p.id === "charles_bold" && game.worldFlags.charlesIsDuke) {
                 return Object.assign({}, p, { name: "Charles the Bold, Duke of Burgundy" });
@@ -4092,14 +4099,16 @@ function buildIncomingMarriageOffer() {
                 if (target.subject === "child") {
                     const { childName, relocationNote } = finalizeMarriage({
                         subject: "child", childIndex: target.childIndex, name: prospect.name,
-                        countryId: market.country, relKey: prospect.relKey, consortTitle: prospect.consortTitle
+                        countryId: market.country, relKey: prospect.relKey, consortTitle: prospect.consortTitle,
+                        prospectId: tier === "royal" ? prospect.id : null
                     });
                     game.chronicle.unshift(`${game.year}: ${market.country} proposes a marriage for ${childName} to ${prospect.name}, and you accept.${relocationNote}`);
                     return { msg: `You accept the match on ${childName}'s behalf. Terms are agreed and the marriage is sealed before witnesses.` };
                 }
                 const { relocated } = finalizeMarriage({
                     subject: "self", name: prospect.name, countryId: market.country,
-                    relKey: prospect.relKey, consortTitle: prospect.consortTitle
+                    relKey: prospect.relKey, consortTitle: prospect.consortTitle,
+                    prospectId: tier === "royal" ? prospect.id : null
                 });
                 game.chronicle.unshift(`${game.year}: ${market.country} proposes a marriage to you, and you accept${prospect.consortTitle ? `, becoming ${prospect.consortTitle}` : ""}.${relocated ? ` Your household moves to ${market.country}.` : ""}`);
                 return { msg: `You accept the match. Terms are agreed and the marriage is sealed before witnesses.${prospect.consortTitle ? ` You are now ${prospect.consortTitle}.` : ""}` };
@@ -4258,6 +4267,7 @@ function startNegotiation(market, prospect) {
         demandGold: prospect.demandGold,
         demandLand: prospect.demandLand,
         consortTitle: prospect.consortTitle || null,
+        prospectId: prospect.id || null,
         offer: { gold: 0, land: 0, title: false, political: false },
         rounds: 0
     };
@@ -4396,7 +4406,12 @@ function negotiationAction(action) {
 // path rather than two versions that could quietly drift apart. Returns a
 // small descriptor the caller uses to build its own chronicle/event text,
 // since a negotiated match and an offered one are framed differently.
-function finalizeMarriage({ subject, childIndex, name, countryId, relKey, consortTitle }) {
+function finalizeMarriage({ subject, childIndex, name, countryId, relKey, consortTitle, prospectId }) {
+
+    if (prospectId) {
+        if (!game.worldFlags.marriedRoyalProspects) game.worldFlags.marriedRoyalProspects = [];
+        game.worldFlags.marriedRoyalProspects.push(prospectId);
+    }
 
     if (subject === "child") {
 
@@ -4490,7 +4505,8 @@ function resolveNegotiationRound() {
 
             const { childName, relocationNote } = finalizeMarriage({
                 subject: "child", childIndex: neg.childIndex, name: neg.name,
-                countryId: neg.countryId, relKey: neg.relKey, consortTitle: neg.consortTitle
+                countryId: neg.countryId, relKey: neg.relKey, consortTitle: neg.consortTitle,
+                prospectId: neg.tier === "royal" ? neg.prospectId : null
             });
 
             game.chronicle.unshift(`${game.year}: You secure a marriage for ${childName} to ${neg.name}, of ${neg.countryId}.${relocationNote}`);
@@ -4511,7 +4527,8 @@ function resolveNegotiationRound() {
 
             const { relocated } = finalizeMarriage({
                 subject: "self", name: neg.name, countryId: neg.countryId,
-                relKey: neg.relKey, consortTitle: neg.consortTitle
+                relKey: neg.relKey, consortTitle: neg.consortTitle,
+                prospectId: neg.tier === "royal" ? neg.prospectId : null
             });
 
             if (relocated) {
