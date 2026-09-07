@@ -5882,6 +5882,88 @@ function renderRealm(content) {
 
 }
 
+// Ruling a realm isn't a one-time setup — neglect it and it pushes back. The
+// weaker your popular loyalty, infrastructure, and standing army actually
+// are, the likelier something forces the question: a rebellion (driven by
+// unhappy subjects) or a probing border raid (driven by a weak-looking
+// defense), neither of which announced itself while you were investing
+// steadily. Returns true if an event fired, so the caller doesn't also roll
+// the generic random-event pool the same turn.
+function tryRealmThreatEvent() {
+
+    if (game.rulingStatus !== "sovereign") return false;
+
+    const weakness = (100 - game.popularLoyalty) + (100 - game.infrastructureLevel) + Math.max(0, 40 - game.realmTroops) * 1.5;
+    const chance = Math.min(0.35, 0.03 + weakness / 600);
+
+    if (Math.random() >= chance) return false;
+
+    const isRebellion = Math.random() < (100 - game.popularLoyalty) / 100;
+
+    if (isRebellion) {
+
+        showChoiceEvent({
+            title: "⚔️ Rebellion Stirs",
+            text: `Discontent in ${game.rulingRealm} has boiled over — armed bands of your own subjects, worn down by hard years and harder taxes, have risen in open revolt in the countryside.`,
+            choices: [
+                { label: "Crush it with troops", effect: () => {
+                    const cost = Math.min(game.realmTroops, 15);
+                    if (cost < 10) return { fail: true, msg: "You haven't enough men under arms to put this down decisively, and the moment passes you by." };
+                    game.realmTroops -= cost;
+                    game.popularLoyalty = Math.max(0, game.popularLoyalty - 5);
+                    game.prestige += 8;
+                    return { msg: `Your forces put the rebellion down hard, at a cost of ${cost} men. The message is unmistakable, even if the goodwill it costs you isn't.` };
+                }},
+                { label: "Grant concessions to calm things (−20 gold)", effect: () => {
+                    if (game.wealth < 20) return { fail: true, msg: "You haven't the treasury to buy this peace." };
+                    game.wealth -= 20;
+                    game.popularLoyalty = Math.min(100, game.popularLoyalty + 15);
+                    return { msg: "You ease their grievances rather than answer them with steel. The realm quiets, for now." };
+                }},
+                { label: "Do nothing and hope it burns out", effect: () => {
+                    if (Math.random() < 0.5) {
+                        game.popularLoyalty = Math.max(0, game.popularLoyalty - 10);
+                        game.wealth = Math.max(0, game.wealth - 15);
+                        return { msg: "It does not burn out on its own — it spreads, and costs you dearly before it's done." };
+                    }
+                    return { msg: "By chance more than judgment, the unrest loses steam before it becomes a real crisis." };
+                }},
+            ]
+        });
+
+    } else {
+
+        showChoiceEvent({
+            title: "🛡️ A Border Is Tested",
+            text: `A neighboring power, sensing weakness in ${game.rulingRealm}, has begun probing your borders — raids, for now, to see how you actually respond.`,
+            choices: [
+                { label: "Answer in force", effect: () => {
+                    const cost = Math.min(game.realmTroops, 10);
+                    if (cost < 8) return { fail: true, msg: "You haven't enough men to answer this properly, and the raiders press further." };
+                    game.realmTroops -= cost;
+                    game.prestige += 10;
+                    return { msg: `You meet the raiders head-on, at a cost of ${cost} men. They withdraw, for now, and every neighbor takes note of how you responded.` };
+                }},
+                { label: "Pay them off (−30 gold)", effect: () => {
+                    if (game.wealth < 30) return { fail: true, msg: "You cannot afford to buy this peace." };
+                    game.wealth -= 30;
+                    game.prestige = Math.max(0, game.prestige - 5);
+                    return { msg: "You quietly buy their withdrawal. It works, though it's the kind of solution that invites a repeat visit." };
+                }},
+                { label: "Ignore it — you have bigger concerns", effect: () => {
+                    game.tradeProsperity = Math.max(0, game.tradeProsperity - 10);
+                    game.popularLoyalty = Math.max(0, game.popularLoyalty - 5);
+                    return { msg: "The raids continue unanswered, and your own border villages pay the price in burned barns and disrupted trade." };
+                }},
+            ]
+        });
+
+    }
+
+    return true;
+
+}
+
 
 /* =========================================================
    POWERS — the Medici Bank's backroom loan system (open to
@@ -7095,6 +7177,11 @@ function advanceTime(months) {
 
         // A scripted historical turning point takes priority when it's due.
         if (tryHistoricalEvent()) return;
+
+        // Ruling a realm carries its own real risk — a rebellion or a tested
+        // border — that grows the more a crown, its people, and its defenses
+        // have actually been neglected, not just a one-time setup cost.
+        if (tryRealmThreatEvent()) return;
 
         // Otherwise, roughly every other turn (more likely the more time passed),
         // something happens that actually asks something of you.
