@@ -6848,6 +6848,20 @@ function advanceTime(months) {
                 }
             }
 
+            // Tracked siblings age and can die too — without this, a sibling would
+            // linger in the Family tab forever, still writing to ask for help long
+            // after they'd realistically be gone.
+            for (let fi = game.family.length - 1; fi >= 0; fi--) {
+                const member = game.family[fi];
+                if (!member.isSibling || member.age == null) continue;
+                member.age++;
+                const siblingMortality = member.age < 15 ? childMortalityChance(member.age) : mortalityChance(member.age, null);
+                if (Math.random() < siblingMortality) {
+                    recapLines.push(`Word comes that ${member.name} has died${member.location && member.location !== game.homeCountry ? `, at ${member.location}` : ""} — one more loss this era rarely spares anyone.`);
+                    game.family.splice(fi, 1);
+                }
+            }
+
             yearsPassed++;
 
             // Tax rate trades income against how your tenants feel about you; the
