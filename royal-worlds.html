@@ -2254,12 +2254,32 @@ function simulateDynasties(recapLines) {
             if (Math.random() < mortalityChance(d.ruler.age, null)) {
 
                 const oldName = d.ruler.name;
-                const pool = NOBLE_NAME_POOLS[d.houseKey] || NOBLE_NAME_POOLS.england;
-                const newName = generatePeriodName(d.houseKey, "M", pool.surnames);
-                d.ruler = { name: newName, gender: "M", age: 45 + Math.floor(Math.random() * 20) };
+
+                // In Rome specifically, a child you raised to Cardinal has a real
+                // (never guaranteed) chance of being the one the conclave actually
+                // elects — reflecting how genuinely unpredictable a real conclave
+                // was, not a reward you simply cash in for reaching the rank.
+                const cardinalChild = country === "Rome" ? game.children.find(c => c.churchRank === "Cardinal") : null;
+                const electedFromPlayer = cardinalChild && Math.random() < 0.2;
+
+                let newName, newAge;
+                if (electedFromPlayer) {
+                    newName = cardinalChild.name;
+                    newAge = Math.max(0, game.year - cardinalChild.birthYear);
+                } else {
+                    const pool = NOBLE_NAME_POOLS[d.houseKey] || NOBLE_NAME_POOLS.england;
+                    newName = generatePeriodName(d.houseKey, "M", pool.surnames);
+                    newAge = 45 + Math.floor(Math.random() * 20);
+                }
+                d.ruler = { name: newName, gender: "M", age: newAge, fromPlayer: !!electedFromPlayer };
 
                 const elector = d.electorBody || "ruling council";
-                recapLines.push(`News from ${d.realmNoun}: ${d.titleM} ${oldName} has died. The ${elector} convenes and elects ${newName} as the new ${d.titleM} of ${d.realmNoun} — the office passes by vote here, never by blood.`);
+                recapLines.push(`News from ${d.realmNoun}: ${d.titleM} ${oldName} has died. The ${elector} convenes and elects ${newName} as the new ${d.titleM} of ${d.realmNoun}${electedFromPlayer ? " — your own child, raised through the Church's own ranks, now wears the tiara" : ""} — the office passes by vote here, never by blood.`);
+
+                if (electedFromPlayer) {
+                    cardinalChild.churchRank = "Pope";
+                    cardinalChild.rulingAbroad = "Rome";
+                }
 
             }
 
@@ -3793,11 +3813,13 @@ function renderChildren(content) {
             ${child.cohortNote ? `<p class="muted">Born ${child.cohortNote}.</p>` : ""}
             <div class="stat">Age <strong>${age}</strong></div>
             <div class="stat">Schooling <strong>${child.schooling || "None yet"}</strong></div>
-            <div class="stat">Marital status <strong>${child.married ? "Wed to " + child.spouseName + " (" + child.spouseCountry + ")" : "Unmarried"}</strong></div>
+            <div class="stat">Marital status <strong>${child.married ? "Wed to " + child.spouseName + " (" + child.spouseCountry + ")" : child.churchTrack ? "In the Church's service" : "Unmarried"}</strong></div>
             ${child.married && child.location ? `<div class="stat">Residing in <strong>${child.location}</strong></div>` : ""}
+            ${child.churchTrack ? `<div class="stat">Church career <strong>${child.churchRank}</strong></div>` : ""}
             <div class="grid" id="schoolGrid${i}"></div>
             ${!isHeir ? `<button data-designate="${i}" class="secondary">Name as Heir</button>` : ""}
-            ${!child.married && age >= 12 ? `<button data-marry="${i}">Arrange a Marriage</button>` : ""}
+            ${!child.married && !child.churchTrack && age >= 12 ? `<button data-marry="${i}">Arrange a Marriage</button>` : ""}
+            ${!child.married && !child.churchTrack && age >= 12 ? `<button data-church="${i}" class="secondary">Send into Church Service</button>` : ""}
         `;
 
         list.appendChild(card);
@@ -3834,6 +3856,46 @@ function renderChildren(content) {
         });
     });
 
+    list.querySelectorAll("[data-church]").forEach(btn => {
+        btn.addEventListener("click", () => sendChildToChurch(parseInt(btn.dataset.church)));
+    });
+
+}
+
+// A career in the Church is a real alternative to marriage, not just flavor:
+// it starts a real, if slow and unpredictable, climb — Priest, then
+// (sometimes) Bishop, then (rarer still) Cardinal — with a real chance,
+// once a Cardinal, of eventually being the one a conclave actually elects
+// Pope. It forecloses marriage the same way marriage forecloses this.
+function sendChildToChurch(index) {
+
+    const child = game.children[index];
+    if (!child || child.married || child.churchTrack) return;
+
+    child.churchTrack = true;
+    child.churchRank = "Priest";
+    child.churchYears = 0;
+
+    game.chronicle.unshift(`${game.year}: ${child.name} enters the Church's service, beginning a life bound by vows rather than any marriage bed.`);
+
+    render();
+
+}
+
+// One year's chance of advancement for a child in Church service — Priest to
+// Bishop after real years served, then Bishop to Cardinal rarer still.
+// Cardinal is as far as this climbs on its own; becoming Pope is a separate,
+// real conclave roll (see simulateDynasties' elective branch for Rome).
+function advanceChurchCareer(child, recapLines) {
+    if (!child.churchTrack || child.churchRank === "Cardinal") return;
+    child.churchYears = (child.churchYears || 0) + 1;
+    if (child.churchRank === "Priest" && child.churchYears >= 3 && Math.random() < 0.10) {
+        child.churchRank = "Bishop";
+        recapLines.push(`Word comes that ${child.name} has been consecrated a Bishop — a real step up the Church's own ladder.`);
+    } else if (child.churchRank === "Bishop" && child.churchYears >= 8 && Math.random() < 0.06) {
+        child.churchRank = "Cardinal";
+        recapLines.push(`Word comes that ${child.name} has been raised to Cardinal — a real voice now in any conclave that follows.`);
+    }
 }
 
 
@@ -6986,6 +7048,13 @@ function advanceTime(months) {
                     recapLines.push(`Word comes that ${child.name}${childAge < 1 ? ", still an infant," : ""} has died${childAge < 5 ? " of a childhood fever" : ""} — a grief no household in this age is truly spared.${successionNote}`);
                 }
             }
+
+            // A child sent into Church service climbs slowly and unpredictably —
+            // Priest, then sometimes Bishop after real years served, then rarer
+            // still, Cardinal. A Cardinal is as far as this climb goes on its
+            // own; becoming Pope depends on an actual conclave, handled where
+            // Rome's own elective succession is resolved.
+            game.children.forEach(child => advanceChurchCareer(child, recapLines));
 
             // Tracked siblings age and can die too — without this, a sibling would
             // linger in the Family tab forever, still writing to ask for help long
