@@ -4273,15 +4273,73 @@ function attemptLancastrianLoyaltyProof(onSuccess) {
 }
 
 
+// A handful of named prospects are tied directly to a specific DYNASTIES
+// entry's own tracked heir, the same way Maximilian already was — once that
+// dynasty's heir has moved on (married elsewhere, already succeeded, or the
+// figure's own scripted fate has happened), the fixed prospect needs to stop
+// being offered too, exactly like Maximilian's own existing check. Without
+// this, "Ferdinand, heir to Aragon" or "Galeazzo Maria Sforza, heir to Milan"
+// would keep showing up as available long after they were realistically
+// still eligible — the same stale-prospect problem Margaret of York had,
+// just for a figure whose fate is scripted/simulated rather than aged out.
+function heirTiedProspectStillValid(prospectId) {
+    if (prospectId === "ferdinand_aragon") {
+        const h = DYNASTIES.Aragon.heir;
+        return !!(h && h.name === "Ferdinand of Aragon" && !h.married);
+    }
+    if (prospectId === "galeazzo_maria") {
+        return !game.worldFlags.galeazzoMariaDead;
+    }
+    if (prospectId === "alfonso_calabria") {
+        const h = DYNASTIES.Naples.heir;
+        return !!(h && h.name === "Alfonso, Duke of Calabria" && !h.married);
+    }
+    return true;
+}
+
+// The four prospects above are each a specific, real historical figure — but
+// a dynasty's own life doesn't end once that one generation marries, dies, or
+// succeeds. Once none of a country's fixed named prospects is still valid,
+// this synthesizes a live prospect for whoever that dynasty's own simulation
+// currently recognizes as its unmarried heir instead — a newly-born heir
+// after a generational turnover included — so the Marriage tab keeps
+// reflecting that dynasty's actual, ongoing life instead of falling
+// permanently silent once its original cast of named figures runs out.
+const HEIR_TIED_PROSPECT_HEIR_NAME = { ferdinand_aragon: "Ferdinand of Aragon", maximilian_habsburg: "Maximilian", galeazzo_maria: "Galeazzo Maria Sforza", alfonso_calabria: "Alfonso, Duke of Calabria" };
+function livingDynastyHeirProspect(marketCountryName, fixedProspectsStillCoveringIt) {
+
+    const d = DYNASTIES[marketCountryName];
+    if (!d || d.elective || !d.active || d.absorbedBy) return null;
+
+    const heir = d.heir;
+    if (!heir || heir.married || heir.fromPlayer || heir.rulingAbroad) return null;
+    if (Math.max(0, heir.age) < 12) return null;
+    if (fixedProspectsStillCoveringIt.includes(heir.name)) return null;
+
+    const subjectGender = heir.gender === "M" ? "F" : "M";
+
+    return {
+        id: `dynasty_heir_${marketCountryName}`,
+        name: `${heir.name}, heir to ${d.realmNoun}`,
+        relKey: d.relKey,
+        demandGold: 55,
+        demandLand: 2,
+        consortTitle: `${subjectGender === "F" ? d.titleF : d.titleM} of ${d.realmNoun}`,
+        forGender: subjectGender,
+    };
+
+}
+
 // Shared between the player-initiated marriage screen and incoming foreign
 // offers, so both always see exactly the same real, currently-available
 // prospects — a dead or already-married figure can't show up in either.
 function getEligibleRoyalProspects(market, subjectGender) {
     if (!market.royal) return [];
-    return (market.royal.prospects[subjectGender] || market.royal.prospects.F)
+
+    const staticList = (market.royal.prospects[subjectGender] || market.royal.prospects.F)
         .filter(p => !(p.id === "charles_bold" && game.worldFlags.charlesDead))
         .filter(p => !(p.id === "richard_gloucester" && (game.worldFlags.richardIsKing || game.worldFlags.richardDead)))
-        .filter(p => !(p.id === "maximilian_habsburg" && (!DYNASTIES.Austria.heir || DYNASTIES.Austria.heir.name !== "Maximilian" || DYNASTIES.Austria.heir.married)))
+        .filter(p => !(p.id in HEIR_TIED_PROSPECT_HEIR_NAME) || heirTiedProspectStillValid(p.id))
         // A named, real prospect (Margaret of York and the like) who has
         // already actually been married off — to the player, to one of their
         // children, or accepted via an incoming offer — stops being offered
@@ -4301,6 +4359,20 @@ function getEligibleRoyalProspects(market, subjectGender) {
             }
             return p;
         });
+
+    // A heir-tied prospect still listed above already covers that dynasty's
+    // current heir, whatever their name — no need (and no room) for a second,
+    // dynamically-generated entry representing the exact same person.
+    const namesAlreadyCovered = Object.entries(HEIR_TIED_PROSPECT_HEIR_NAME)
+        .filter(([id]) => staticList.some(p => p.id === id))
+        .map(([, heirName]) => heirName);
+
+    const dynamicHeir = livingDynastyHeirProspect(market.country, namesAlreadyCovered);
+    if (dynamicHeir && dynamicHeir.forGender === subjectGender) {
+        return [...staticList, dynamicHeir];
+    }
+
+    return staticList;
 }
 
 // Every named royal-tier prospect carries a real birthYear except the handful
