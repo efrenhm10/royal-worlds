@@ -4426,13 +4426,13 @@ function buildIncomingMarriageOffer() {
                     game.chronicle.unshift(`${game.year}: ${market.country} proposes a marriage for ${childName} to ${prospect.name}, and you accept.${relocationNote}`);
                     return { msg: `You accept the match on ${childName}'s behalf. Terms are agreed and the marriage is sealed before witnesses.` };
                 }
-                const { relocated } = finalizeMarriage({
+                const { relocated, titleGrantedNow, titleDeferred } = finalizeMarriage({
                     subject: "self", name: prospect.name, countryId: market.country,
                     relKey: prospect.relKey, consortTitle: prospect.consortTitle,
                     prospectId: tier === "royal" ? prospect.id : null
                 });
-                game.chronicle.unshift(`${game.year}: ${market.country} proposes a marriage to you, and you accept${prospect.consortTitle ? `, becoming ${prospect.consortTitle}` : ""}.${relocated ? ` Your household moves to ${market.country}.` : ""}`);
-                return { msg: `You accept the match. Terms are agreed and the marriage is sealed before witnesses.${prospect.consortTitle ? ` You are now ${prospect.consortTitle}.` : ""}` };
+                game.chronicle.unshift(`${game.year}: ${market.country} proposes a marriage to you, and you accept${titleGrantedNow ? `, becoming ${prospect.consortTitle}` : ""}.${relocated ? ` Your household moves to ${market.country}.` : ""}`);
+                return { msg: `You accept the match. Terms are agreed and the marriage is sealed before witnesses.${titleGrantedNow ? ` You are now ${prospect.consortTitle}.` : ""}${titleDeferred ? ` ${prospect.name} is still only heir, not yet ruling — the title of ${prospect.consortTitle} will be yours in truth the moment that changes.` : ""}` };
             }},
             { label: "Decline politely", effect: () => {
                 game.relationships[prospect.relKey] = Math.max(0, (game.relationships[prospect.relKey] || 20) - 5);
@@ -4817,7 +4817,12 @@ function finalizeMarriage({ subject, childIndex, name, countryId, relKey, consor
         game.arrivedMonth = game.month;
     }
 
-    return { relocated };
+    // Callers narrate the marriage differently depending on whether the
+    // consort title actually applies right away or is still pending — without
+    // this, accepting a match with a not-yet-ruling heir would misleadingly
+    // announce "you are now Queen of Aragon" the same day, years before it's
+    // actually true.
+    return { relocated, titleGrantedNow: !!(consortTitle && !alreadySovereign && !marryingHeirNotYetRuling), titleDeferred: marryingHeirNotYetRuling && !!consortTitle };
 
 }
 
@@ -4872,16 +4877,18 @@ function resolveNegotiationRound() {
 
         } else {
 
-            const { relocated } = finalizeMarriage({
+            const { relocated, titleGrantedNow, titleDeferred } = finalizeMarriage({
                 subject: "self", name: neg.name, countryId: neg.countryId,
                 relKey: neg.relKey, consortTitle: neg.consortTitle,
                 prospectId: neg.tier === "royal" ? neg.prospectId : null
             });
 
+            const titleClause = titleGrantedNow ? `, becoming ${neg.consortTitle}` : "";
+
             if (relocated) {
-                game.chronicle.unshift(`${game.year}: You marry ${neg.name}${neg.consortTitle ? `, becoming ${neg.consortTitle}` : ""} and relocate your household to ${neg.countryId}. Everything here — the language, the customs, the faces — will take time to learn.`);
+                game.chronicle.unshift(`${game.year}: You marry ${neg.name}${titleClause} and relocate your household to ${neg.countryId}. Everything here — the language, the customs, the faces — will take time to learn.`);
             } else {
-                game.chronicle.unshift(`${game.year}: You marry ${neg.name}${neg.consortTitle ? `, becoming ${neg.consortTitle}` : ""}.`);
+                game.chronicle.unshift(`${game.year}: You marry ${neg.name}${titleClause}.`);
             }
 
             game.negotiation = null;
@@ -4891,7 +4898,7 @@ function resolveNegotiationRound() {
 
             showEvent(
                 "A Marriage Is Sealed",
-                `Terms are agreed and the marriage is sealed before witnesses.${neg.consortTitle ? ` You are now ${neg.consortTitle}.` : ""}${relocated ? ` Your household now moves to ${neg.countryId}.` : ""}`
+                `Terms are agreed and the marriage is sealed before witnesses.${titleGrantedNow ? ` You are now ${neg.consortTitle}.` : ""}${titleDeferred ? ` ${neg.name} is still only heir, not yet ruling — the title of ${neg.consortTitle} will be yours in truth the moment that changes.` : ""}${relocated ? ` Your household now moves to ${neg.countryId}.` : ""}`
             );
 
         }
