@@ -2171,6 +2171,31 @@ const CONSORT_RELKEY_COUNTRY = {
     NaplesConsort: "Naples",
 };
 
+// A collateral claim can come through either side of the family: the player's
+// OWN marriage to a sovereign's sibling (their children are the dead ruler's
+// real nephews or nieces, and are the ones pressed forward), or a CHILD of the
+// player's marriage to that same kind of collateral figure (that child is
+// already married into the house itself, and is the one pressed forward
+// directly, rather than yet another generation down — the same
+// one-generation-at-a-time abstraction the rest of the game's succession
+// already uses). Either is excluded from being the current domestic heir,
+// so a single person can't end up doing double duty as both.
+function findCollateralClaimant(country) {
+
+    if (game.married && CONSORT_RELKEY_COUNTRY[game.spouseRelKey] === country) {
+        const candidate = primogenitureHeir(game.children.filter(c => c !== game.heir));
+        if (candidate) return { claimant: candidate, viaSelf: true };
+    }
+
+    const marriedChild = game.children.find(c =>
+        c !== game.heir && c.married && !c.rulingAbroad && CONSORT_RELKEY_COUNTRY[c.spouseRelKey] === country
+    );
+    if (marriedChild) return { claimant: marriedChild, viaSelf: false };
+
+    return null;
+
+}
+
 // Builds a proper game-side descendant record (matching the shape of an entry in
 // game.children / game.heir) for a grandchild who was only ever tracked inside a
 // foreign dynasty's own simulated birth — so they can actually become your heir.
@@ -2260,9 +2285,16 @@ function simulateDynasties(recapLines) {
             return;
         }
 
-        // If you're actually married to this dynasty's ruler, the wider world defers
-        // to your own family — your own heir (if any) IS this dynasty's heir.
-        if (game.married && game.spouseRelKey === d.relKey) {
+        // If you're actually married to this dynasty's CURRENT ruler, the wider
+        // world defers to your own family — your own heir (if any) IS this
+        // dynasty's heir, and the generic ruler-mortality tracking below is
+        // skipped entirely in favor of the general game.spouseAge system, which
+        // already owns your spouse's fate. Checking the actual ruler's name (not
+        // just the relKey) matters: the relKey alone doesn't distinguish having
+        // married the reigning ruler from having married their heir, who hasn't
+        // inherited yet — conflating the two would freeze this ruler's mortality
+        // forever the moment you married their still-waiting heir.
+        if (game.married && game.spouseRelKey === d.relKey && game.spouseName === d.ruler.name) {
             d.marriedToPlayer = true;
             d.heir = game.heir
                 ? { name: game.heir.name, gender: game.heir.gender, age: Math.max(0, game.year - (game.heir.birthYear || game.year)), married: !!game.heir.married, fromPlayer: true }
@@ -2271,6 +2303,15 @@ function simulateDynasties(recapLines) {
         }
 
         d.marriedToPlayer = false;
+
+        // You may instead be married to this dynasty's HEIR, who simply hasn't
+        // inherited yet (Ferdinand of Aragon, Maximilian of Austria, if the
+        // player married them directly rather than a child doing so). The
+        // current ruler still ages and can still die naturally below — this
+        // isn't "married to the ruler" yet — but your spouse's own fate is
+        // still owned by the general spousal-mortality system, not rolled a
+        // second, independent time here as an ordinary heir would be.
+        const heirIsPlayerSpouse = !!(game.married && game.spouseRelKey === d.relKey && d.heir && d.heir.name === game.spouseName);
 
         // A child of yours (not the player themselves) may have married into this
         // dynasty's real bloodline too — if so, any child later born to that union
@@ -2329,9 +2370,11 @@ function simulateDynasties(recapLines) {
         // A non-player heir faces their own real mortality too — a child heir
         // especially so — instead of sitting immortal-in-waiting until the ruler
         // happens to die. (An heir who IS the player's own child already faces
-        // this through the main game's own child-mortality loop; rolling it again
-        // here would double-count the very same life.)
-        if (d.heir && !d.heir.fromPlayer) {
+        // this through the main game's own child-mortality loop, and an heir
+        // who IS the player's own spouse already faces it through the general
+        // spousal-mortality check — rolling either again here would double-count
+        // the very same life.)
+        if (d.heir && !d.heir.fromPlayer && !heirIsPlayerSpouse) {
             const heirAge = d.heir.age;
             const heirMortality = heirAge < 15 ? childMortalityChance(heirAge) : mortalityChance(heirAge, null);
             if (Math.random() < heirMortality) {
@@ -2362,19 +2405,35 @@ function simulateDynasties(recapLines) {
                     game.heir.rulingAbroad = country;
                 }
 
-            } else if (game.married && CONSORT_RELKEY_COUNTRY[game.spouseRelKey] === country
-                && primogenitureHeir(game.children.filter(c => c !== game.heir))) {
+                // If the newly-succeeded ruler is actually the player's own spouse —
+                // married while still only the heir, so the consort title was
+                // deliberately deferred at the time (see finalizeMarriage) — it
+                // finally applies now that the succession has actually happened.
+                if (game.pendingConsortElevation && game.pendingConsortElevation.countryId === country) {
+                    game.role = game.pendingConsortElevation.consortTitle;
+                    game.rulingRealm = country;
+                    game.rulingStatus = "consort";
+                    game.pendingConsortElevation = null;
+                    recapLines.push(`With ${d.ruler.name}'s own succession, your marriage into this house finally comes into its own — you are recognized as ${game.role}.`);
+                }
 
-                // Your own marriage into this house's collateral (sibling or cousin)
-                // line means your children are the dead ruler's real nephews or
-                // nieces — a genuine claim, looked to here before any rival power
-                // gets the chance to just annex the place.
-                const claimant = primogenitureHeir(game.children.filter(c => c !== game.heir));
+            } else if (findCollateralClaimant(country)) {
+
+                // A genuine collateral claim — through your own marriage into this
+                // house's sibling/cousin line, or a child of yours already married
+                // into it — is looked to here before any rival power gets the
+                // chance to just annex the place.
+                const { claimant, viaSelf } = findCollateralClaimant(country);
                 claimant.rulingAbroad = country;
+                claimant.location = country;
                 d.ruler = { name: claimant.name, gender: claimant.gender, age: Math.max(0, game.year - claimant.birthYear), fromPlayer: true };
                 d.heir = null;
 
-                recapLines.push(`News from ${d.realmNoun}: ${oldRulerName} has died without a direct heir. Through your own marriage into this house, your child ${claimant.name} — nephew or niece to the old ruler — presses a real claim and is recognized as the new ${claimant.gender === "F" ? d.titleF : d.titleM} of ${d.realmNoun}.`);
+                const claimNote = viaSelf
+                    ? `Through your own marriage into this house, your child ${claimant.name} — nephew or niece to the old ruler —`
+                    : `Your own child ${claimant.name}, already married into this house,`;
+
+                recapLines.push(`News from ${d.realmNoun}: ${oldRulerName} has died without a direct heir. ${claimNote} presses a real claim and is recognized as the new ${claimant.gender === "F" ? d.titleF : d.titleM} of ${d.realmNoun}.`);
 
             } else if (RIVAL_CLAIMANTS[country] && Math.random() < (
                 game.worldFlags.italianWarsBegun && (country === "Milan" || country === "Naples") ? 0.65 : 0.4
@@ -4653,10 +4712,23 @@ function finalizeMarriage({ subject, childIndex, name, countryId, relKey, consor
     const alreadySovereign = game.rulingStatus === "sovereign";
     const relocated = !alreadySovereign && countryId !== game.location;
 
-    if (consortTitle && !alreadySovereign) {
+    // Marrying a real dynasty's own HEIR — not its sitting ruler — is a real,
+    // fairly common case (Ferdinand of Aragon and Maximilian of Austria are
+    // both still just heirs when they first become marriageable). The consort
+    // title only genuinely applies once that heir actually inherits — granting
+    // it immediately would make you "Queen of Aragon" while John II still
+    // reigns. simulateDynasties applies it for real the moment the succession
+    // actually happens (see game.pendingConsortElevation there).
+    const targetDynasty = DYNASTIES[countryId];
+    const marryingHeirNotYetRuling = !!(targetDynasty && targetDynasty.heir && targetDynasty.heir.name === name && targetDynasty.ruler.name !== name);
+
+    if (consortTitle && !alreadySovereign && !marryingHeirNotYetRuling) {
         game.role = consortTitle;
         game.rulingRealm = countryId;
         game.rulingStatus = "consort";
+        game.pendingConsortElevation = null;
+    } else if (consortTitle && marryingHeirNotYetRuling) {
+        game.pendingConsortElevation = { countryId, consortTitle };
     }
 
     if (relocated) {
@@ -5201,6 +5273,7 @@ function resolveBirth(withPhysician) {
             game.spouseCountry = null;
             game.spouseAge = null;
             game.spouseRelKey = null;
+            game.pendingConsortElevation = null;
 
         }
 
@@ -5445,11 +5518,21 @@ function succeedToHeir(reason) {
     else if (heir.schooling === "Scholarly Education") { game.wealth += 15; schoolingNote = " Their grasp of accounts and law puts the family's affairs in better order almost immediately."; }
 
     // a marriage arranged for them before they inherited carries forward intact
+    // — including which real dynasty (if any) it actually connects to. Losing
+    // that link here would silently break the very grandchild-elevation and
+    // collateral-claim systems it exists for the moment the married-in heir
+    // themselves becomes the player character.
     game.married = !!heir.married;
     game.spouseName = heir.spouseName || null;
     game.spouseCountry = heir.spouseCountry || null;
     game.spouseAge = game.married ? Math.max(14, heirAge + Math.round((Math.random() * 16) - 8)) : null;
-    game.spouseRelKey = null;
+    game.spouseRelKey = heir.spouseRelKey || null;
+    // Any deferred consort elevation belonged to the parent's own marriage, not
+    // this heir's — it does not carry forward (a real elevation from the heir's
+    // own marriage into a not-yet-ruling heir elsewhere is a narrow enough case
+    // that it simply resolves the normal way if and when that succession
+    // actually happens, rather than being reconstructed here from scratch).
+    game.pendingConsortElevation = null;
     game.negotiation = null;
     game.pendingCountry = null;
     game.pendingSubject = null;
@@ -7290,11 +7373,21 @@ function advanceTime(months) {
 
                 recapLines.push(`${deceased}'s health fails, and you are widowed.`);
 
+                // If your late spouse was also still a foreign dynasty's own named
+                // heir (married before they actually inherited), clear that record
+                // too, in the same moment — without this, that dynasty's own
+                // simulation would carry on believing they're still alive and
+                // waiting to take the throne.
+                Object.values(DYNASTIES).forEach(dd => {
+                    if (dd.heir && dd.heir.name === deceased) dd.heir = null;
+                });
+
                 game.married = false;
                 game.spouseName = null;
                 game.spouseCountry = null;
                 game.spouseAge = null;
                 game.spouseRelKey = null;
+                game.pendingConsortElevation = null;
                 game.pendingWidowhood = deceased;
 
                 break;
