@@ -1125,7 +1125,7 @@ const MARRIAGE_MARKET = {
       tierLabel: "Royal match",
       prospects: {
         F: [{ id: "richard_gloucester", name: "Richard, Duke of Gloucester", relKey: "Edward", demandGold: 60, demandLand: 2, consortTitle: null }],
-        M: [{ id: "margaret_york", name: "Margaret of York, the King's sister", relKey: "Edward", demandGold: 60, demandLand: 2, consortTitle: null }]
+        M: [{ id: "margaret_york", name: "Margaret of York, the King's sister", relKey: "Edward", demandGold: 60, demandLand: 2, consortTitle: null, birthYear: 1446 }]
       }
     },
     noble: {
@@ -1145,7 +1145,7 @@ const MARRIAGE_MARKET = {
       tierLabel: "Royal match",
       prospects: {
         F: [{ id: "charles_bold", name: "Charles the Bold, heir to Burgundy", relKey: "Charles", demandGold: 55, demandLand: 2, consortTitle: "Duchess of Burgundy" }],
-        M: [{ id: "anne_burgundy", name: "Marguerite of Burgundy, a cousin of the ducal house", relKey: "AnneBurgundy", demandGold: 50, demandLand: 2, consortTitle: null }]
+        M: [{ id: "anne_burgundy", name: "Marguerite of Burgundy, a cousin of the ducal house", relKey: "AnneBurgundy", demandGold: 50, demandLand: 2, consortTitle: null, birthYear: 1445 }]
       }
     },
     noble: { tierLabel: "Noble match", relKey: "BurgundianNobles", demandGold: 35, demandLand: 1 },
@@ -1158,8 +1158,8 @@ const MARRIAGE_MARKET = {
     royal: {
       tierLabel: "Royal match",
       prospects: {
-        F: [{ id: "valois_prince", name: "Charles, Duke of Berry, the King's own brother", relKey: "FranceConsort", demandGold: 65, demandLand: 2, consortTitle: null }],
-        M: [{ id: "bona_savoy", name: "Bona of Savoy, kin to the French crown", relKey: "FranceConsort", demandGold: 60, demandLand: 2, consortTitle: null }]
+        F: [{ id: "valois_prince", name: "Charles, Duke of Berry, the King's own brother", relKey: "FranceConsort", demandGold: 65, demandLand: 2, consortTitle: null, birthYear: 1446 }],
+        M: [{ id: "bona_savoy", name: "Bona of Savoy, kin to the French crown", relKey: "FranceConsort", demandGold: 60, demandLand: 2, consortTitle: null, birthYear: 1449 }]
       }
     },
     noble: { tierLabel: "Noble match", relKey: "FrenchNobles", demandGold: 35, demandLand: 1 },
@@ -1172,8 +1172,8 @@ const MARRIAGE_MARKET = {
     royal: {
       tierLabel: "Royal match",
       prospects: {
-        F: [{ id: "stewart_prince", name: "Alexander Stewart, Duke of Albany, the King's brother", relKey: "ScotlandConsort", demandGold: 45, demandLand: 1, consortTitle: null }],
-        M: [{ id: "stewart_princess", name: "Mary Stewart, the King's sister", relKey: "ScotlandConsort", demandGold: 45, demandLand: 1, consortTitle: null }]
+        F: [{ id: "stewart_prince", name: "Alexander Stewart, Duke of Albany, the King's brother", relKey: "ScotlandConsort", demandGold: 45, demandLand: 1, consortTitle: null, birthYear: 1454 }],
+        M: [{ id: "stewart_princess", name: "Mary Stewart, the King's sister", relKey: "ScotlandConsort", demandGold: 45, demandLand: 1, consortTitle: null, birthYear: 1451 }]
       }
     },
     noble: { tierLabel: "Noble match", relKey: "Scotland", demandGold: 30, demandLand: 1 },
@@ -1186,8 +1186,8 @@ const MARRIAGE_MARKET = {
     royal: {
       tierLabel: "Royal match",
       prospects: {
-        F: [{ id: "infante", name: "Alfonso, Prince of Asturias, the King's half-brother", relKey: "CastileConsort", demandGold: 70, demandLand: 2, consortTitle: null }],
-        M: [{ id: "infanta", name: "Beatriz of Castile, a cousin of the Trastámara line", relKey: "CastileConsort", demandGold: 70, demandLand: 2, consortTitle: null }]
+        F: [{ id: "infante", name: "Alfonso, Prince of Asturias, the King's half-brother", relKey: "CastileConsort", demandGold: 70, demandLand: 2, consortTitle: null, birthYear: 1453 }],
+        M: [{ id: "infanta", name: "Beatriz of Castile, a cousin of the Trastámara line", relKey: "CastileConsort", demandGold: 70, demandLand: 2, consortTitle: null, birthYear: 1443 }]
       }
     },
     noble: { tierLabel: "Noble match", relKey: "CastilianNobles", demandGold: 40, demandLand: 1 },
@@ -1217,7 +1217,7 @@ const MARRIAGE_MARKET = {
       tierLabel: "Royal match",
       prospects: {
         F: [{ id: "ferdinand_aragon", name: "Ferdinand, heir to Aragon", relKey: "Aragon", demandGold: 60, demandLand: 2, consortTitle: "Queen of Aragon" }],
-        M: [{ id: "aragon_infanta", name: "Elionor of Aragon, a cousin of the royal house", relKey: "AragonConsort", demandGold: 60, demandLand: 2, consortTitle: null }]
+        M: [{ id: "aragon_infanta", name: "Elionor of Aragon, a cousin of the royal house", relKey: "AragonConsort", demandGold: 60, demandLand: 2, consortTitle: null, birthYear: 1440 }]
       }
     },
     noble: { tierLabel: "Noble match", relKey: "AragoneseNobles", demandGold: 35, demandLand: 1 },
@@ -1235,9 +1235,9 @@ const MARRIAGE_MARKET = {
       prospects: {
         F: [
           { id: "maximilian_habsburg", name: "Maximilian of Habsburg, heir to Austria", relKey: "Austria", demandGold: 50, demandLand: 1, consortTitle: "Archduchess of Austria" },
-          { id: "habsburg_archduke", name: "Sigismund of Habsburg, a cousin of the Archducal house", relKey: "AustriaConsort", demandGold: 40, demandLand: 1, consortTitle: null },
+          { id: "habsburg_archduke", name: "Sigismund of Habsburg, a cousin of the Archducal house", relKey: "AustriaConsort", demandGold: 40, demandLand: 1, consortTitle: null, birthYear: 1427 },
         ],
-        M: [{ id: "habsburg_archduchess", name: "Eleonore of Habsburg, a cousin of the Archducal house", relKey: "AustriaConsort", demandGold: 40, demandLand: 1, consortTitle: null }]
+        M: [{ id: "habsburg_archduchess", name: "Eleonore of Habsburg, a cousin of the Archducal house", relKey: "AustriaConsort", demandGold: 40, demandLand: 1, consortTitle: null, birthYear: 1443 }]
       }
     },
     noble: { tierLabel: "Noble match", relKey: "AustrianNobles", demandGold: 35, demandLand: 1 },
@@ -1251,7 +1251,7 @@ const MARRIAGE_MARKET = {
       tierLabel: "Royal match",
       prospects: {
         F: [{ id: "galeazzo_maria", name: "Galeazzo Maria Sforza, heir to Milan", relKey: "Milan", demandGold: 55, demandLand: 2, consortTitle: "Duchess of Milan" }],
-        M: [{ id: "ippolita_sforza", name: "Ippolita Sforza, Francesco's daughter", relKey: "MilanConsort", demandGold: 55, demandLand: 2, consortTitle: null }]
+        M: [{ id: "ippolita_sforza", name: "Ippolita Sforza, Francesco's daughter", relKey: "MilanConsort", demandGold: 55, demandLand: 2, consortTitle: null, birthYear: 1445 }]
       }
     },
     noble: { tierLabel: "Noble match", relKey: "MilaneseNobles", demandGold: 32, demandLand: 1 },
@@ -1275,7 +1275,7 @@ const MARRIAGE_MARKET = {
       tierLabel: "Royal match",
       prospects: {
         F: [{ id: "alfonso_calabria", name: "Alfonso, Duke of Calabria, heir to Naples", relKey: "Naples", demandGold: 55, demandLand: 2, consortTitle: "Queen of Naples" }],
-        M: [{ id: "naples_infanta", name: "Eleonora of Naples, Ferrante's cousin", relKey: "NaplesConsort", demandGold: 55, demandLand: 2, consortTitle: null }]
+        M: [{ id: "naples_infanta", name: "Eleonora of Naples, Ferrante's cousin", relKey: "NaplesConsort", demandGold: 55, demandLand: 2, consortTitle: null, birthYear: 1442 }]
       }
     },
     noble: { tierLabel: "Noble match", relKey: "NeapolitanNobles", demandGold: 32, demandLand: 1 },
@@ -2154,6 +2154,23 @@ const RIVAL_CLAIMANTS = {
     Naples: "Aragon",
 };
 
+// Marrying a sovereign's sibling or cousin (a "Consort"-tier prospect, distinct
+// from the country's own relKey used by its actual ruler/heir) doesn't make
+// your own children next in line ahead of that ruler's own — but if the whole
+// direct line then dies out with nobody left to inherit, your children ARE the
+// dead ruler's real nephews or nieces, and a genuine collateral claim like that
+// should be looked to before a rival power just annexes the place or the game
+// invents an unrelated name from nowhere. Maps each dynasty's own "Consort"
+// relKey back to the country it belongs to.
+const CONSORT_RELKEY_COUNTRY = {
+    ScotlandConsort: "Scotland",
+    FranceConsort: "France",
+    AragonConsort: "Aragon",
+    AustriaConsort: "Austria",
+    MilanConsort: "Milan",
+    NaplesConsort: "Naples",
+};
+
 // Builds a proper game-side descendant record (matching the shape of an entry in
 // game.children / game.heir) for a grandchild who was only ever tracked inside a
 // foreign dynasty's own simulated birth — so they can actually become your heir.
@@ -2344,6 +2361,20 @@ function simulateDynasties(recapLines) {
                 if (heirWasFromPlayer && game.heir && game.heir.name === d.ruler.name && !game.heir.rulingAbroad) {
                     game.heir.rulingAbroad = country;
                 }
+
+            } else if (game.married && CONSORT_RELKEY_COUNTRY[game.spouseRelKey] === country
+                && primogenitureHeir(game.children.filter(c => c !== game.heir))) {
+
+                // Your own marriage into this house's collateral (sibling or cousin)
+                // line means your children are the dead ruler's real nephews or
+                // nieces — a genuine claim, looked to here before any rival power
+                // gets the chance to just annex the place.
+                const claimant = primogenitureHeir(game.children.filter(c => c !== game.heir));
+                claimant.rulingAbroad = country;
+                d.ruler = { name: claimant.name, gender: claimant.gender, age: Math.max(0, game.year - claimant.birthYear), fromPlayer: true };
+                d.heir = null;
+
+                recapLines.push(`News from ${d.realmNoun}: ${oldRulerName} has died without a direct heir. Through your own marriage into this house, your child ${claimant.name} — nephew or niece to the old ruler — presses a real claim and is recognized as the new ${claimant.gender === "F" ? d.titleF : d.titleM} of ${d.realmNoun}.`);
 
             } else if (RIVAL_CLAIMANTS[country] && Math.random() < (
                 game.worldFlags.italianWarsBegun && (country === "Milan" || country === "Naples") ? 0.65 : 0.4
@@ -3287,6 +3318,40 @@ function helpFamilyMember(index, optionId) {
 
 }
 
+// The reverse of a sibling asking YOU for help — when your own treasury runs
+// thin, a living sibling is someone you can actually lean on. Success depends
+// on how loyal they currently are, not a guaranteed handout, and asking too
+// often (or asking a sibling who isn't fond of you) costs a little of that
+// loyalty either way — leaning on family isn't free, even when it works.
+function askSiblingForMoney(index) {
+
+    const member = game.family[index];
+    if (!member || !member.isSibling) return;
+
+    if (member.lastAskedForMoneyYear != null && game.year - member.lastAskedForMoneyYear < 3) {
+        showEvent("Too Soon to Ask Again", `You've already leaned on ${member.name} for coin recently — asking again so soon would strain things further.`);
+        return;
+    }
+
+    member.lastAskedForMoneyYear = game.year;
+    const success = Math.random() * 100 < member.loyalty;
+
+    if (success) {
+        const amount = 10 + Math.round(member.loyalty / 5);
+        game.wealth += amount;
+        member.loyalty = Math.max(0, member.loyalty - 8);
+        game.chronicle.unshift(`${game.year}: With your own coffers thin, you ask ${member.name} for help, and ${amount} gold arrives without much fuss.`);
+        showEvent("Family Helps Out", `${member.name} sends ${amount} gold to see you through a lean season — family looking after family, whatever else divides you.`);
+    } else {
+        member.loyalty = Math.max(0, member.loyalty - 4);
+        game.chronicle.unshift(`${game.year}: You ask ${member.name} for financial help, but they have troubles enough of their own and decline.`);
+        showEvent("Declined", `${member.name} apologizes but says they can't spare anything just now — and the asking itself made things a little awkward between you.`);
+    }
+
+    render();
+
+}
+
 function renderFamily(content) {
 
     content.innerHTML = `
@@ -3347,6 +3412,17 @@ function renderFamily(content) {
             grid.appendChild(btn);
 
         });
+
+        // The reverse direction: when your own treasury is genuinely thin, a
+        // living sibling is someone you can actually turn to, not just someone
+        // who occasionally turns to you.
+        const onCooldown = member.lastAskedForMoneyYear != null && game.year - member.lastAskedForMoneyYear < 3;
+        if (member.isSibling && game.wealth < 25 && !onCooldown) {
+            const askBtn = document.createElement("button");
+            askBtn.innerHTML = `<strong>🙏 Ask ${member.name} for Money</strong><br><span class="muted">Your own coffers are thin — lean on family instead. Not guaranteed, and it costs a little loyalty either way.</span>`;
+            askBtn.addEventListener("click", () => askSiblingForMoney(index));
+            grid.appendChild(askBtn);
+        }
 
     });
 
@@ -4087,12 +4163,48 @@ function getEligibleRoyalProspects(market, subjectGender) {
         // as "available" indefinitely, long after the game itself has moved
         // well past them.
         .filter(p => !(game.worldFlags.marriedRoyalProspects || []).includes(p.id))
+        // A real named prospect who was only ever tracked here (not also a
+        // dynasty's own living heir, which already ages and dies through
+        // simulateDynasties) has their own real lifespan too — see
+        // ageMarriageProspects(). Once they've died of age, they're gone for
+        // good, the same as a figure who was actually married off.
+        .filter(p => !(game.worldFlags.deceasedRoyalProspects || []).includes(p.id))
         .map(p => {
             if (p.id === "charles_bold" && game.worldFlags.charlesIsDuke) {
                 return Object.assign({}, p, { name: "Charles the Bold, Duke of Burgundy" });
             }
             return p;
         });
+}
+
+// Every named royal-tier prospect carries a real birthYear except the handful
+// who are actually somebody's dynasty heir already (Charles the Bold, Richard
+// of Gloucester, Maximilian, Ferdinand of Aragon, Galeazzo Maria, Alfonso of
+// Calabria) — those already age and can die through simulateDynasties or the
+// scripted WORLD_TIMELINE, and rolling a second, independent death for the
+// same person here would just double-count one life. For everyone else, this
+// is the only place their lifespan is tracked at all, so without it a figure
+// like Margaret of York or Bona of Savoy would sit "available" forever, even
+// decades after they'd realistically be dead.
+function ageMarriageProspects(recapLines) {
+    Object.values(MARRIAGE_MARKET).forEach(market => {
+        if (!market.royal) return;
+        ["F", "M"].forEach(genderKey => {
+            (market.royal.prospects[genderKey] || []).forEach(p => {
+                if (!p.birthYear) return;
+                if ((game.worldFlags.marriedRoyalProspects || []).includes(p.id)) return;
+                if ((game.worldFlags.deceasedRoyalProspects || []).includes(p.id)) return;
+                const age = game.year - p.birthYear;
+                const chance = age < 15 ? childMortalityChance(age) : mortalityChance(age, null);
+                if (Math.random() < chance) {
+                    if (!game.worldFlags.deceasedRoyalProspects) game.worldFlags.deceasedRoyalProspects = [];
+                    game.worldFlags.deceasedRoyalProspects.push(p.id);
+                    const shortName = p.name.split(",")[0];
+                    recapLines.push(`Word reaches you from ${market.country}: ${shortName}${age < 20 ? ", still young," : ""} has died — one more of this era's possible matches now closed for good.`);
+                }
+            });
+        });
+    });
 }
 
 // Picks a real royal-tier match when one is actually available (favored, for
@@ -7040,6 +7152,11 @@ function advanceTime(months) {
             // The wider world's dynasties keep living, dying, and marrying whether or
             // not their hand-scripted history has run out yet.
             simulateDynasties(recapLines);
+
+            // Named marriage prospects who aren't already tracked as a living
+            // dynasty heir have their own real lifespan too — see the comment
+            // on ageMarriageProspects() for why this doesn't double-count.
+            ageMarriageProspects(recapLines);
 
             // Childhood in this era is genuinely dangerous — a living child isn't
             // automatically safe just because they survived being born. A child
