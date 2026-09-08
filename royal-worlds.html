@@ -2946,7 +2946,12 @@ function startGame(index) {
             loyalty: 55,
             isSibling: true,
             gender: sib.gender,
-            age: sib.age
+            age: sib.age,
+            title: sib.role,
+            location: house.homeCountry,
+            spouseName: null,
+            spouseCountry: null,
+            children: []
         })).concat([{ name: "Marriage connection", relation: "In-law", loyalty: 35 }])
         : [
             { name: "Senior family member", relation: "Kin", loyalty: 55 },
@@ -3481,6 +3486,13 @@ function renderFamily(content) {
 
         card.className = "card";
 
+        const siblingDetails = member.isSibling ? `
+            ${member.title ? `<div class="stat">Title <strong>${member.title}</strong></div>` : ""}
+            ${member.location ? `<div class="stat">Currently at <strong>${member.location}</strong></div>` : ""}
+            <div class="stat">Spouse <strong>${member.spouseName ? `${member.spouseName}${member.spouseCountry ? `, of ${member.spouseCountry}` : ""}` : "Unmarried"}</strong></div>
+            <div class="stat">Children <strong>${member.children && member.children.length ? member.children.map(c => c.name).join(", ") : "None"}</strong></div>
+        ` : "";
+
         card.innerHTML = `
 
             <strong>${member.name}</strong>
@@ -3488,6 +3500,8 @@ function renderFamily(content) {
             <p class="muted">
                 ${member.relation}
             </p>
+
+            ${siblingDetails}
 
             <p>
                 Family loyalty:
@@ -5822,6 +5836,7 @@ function succeedToHeir(reason) {
 
     survivingSiblings.forEach(({ child: c, oldLoyalty }) => {
         const age = Math.max(0, game.year - c.birthYear);
+        const title = c.rulingAbroad ? `Ruler of ${c.rulingAbroad}` : c.churchTrack ? c.churchRank : (c.gender === "F" ? "Lady" : "Lord");
         const roleNote = c.rulingAbroad ? `ruling ${c.rulingAbroad}` : c.married ? `married into ${c.spouseCountry || "a foreign court"}` : "unmarried";
         game.family.push({
             name: c.name,
@@ -5830,7 +5845,11 @@ function succeedToHeir(reason) {
             isSibling: true,
             gender: c.gender,
             age,
-            location: c.location || c.rulingAbroad || (c.married ? c.spouseCountry : game.homeCountry) || null
+            title,
+            location: c.location || c.rulingAbroad || (c.married ? c.spouseCountry : game.homeCountry) || null,
+            spouseName: c.spouseName || null,
+            spouseCountry: c.spouseCountry || null,
+            children: c.ownChildren ? c.ownChildren.slice() : []
         });
     });
 
@@ -7567,6 +7586,31 @@ function advanceTime(months) {
                 if (Math.random() < siblingMortality) {
                     recapLines.push(`Word comes that ${member.name} has died${member.location && member.location !== game.homeCountry ? `, at ${member.location}` : ""} — one more loss this era rarely spares anyone.`);
                     game.family.splice(fi, 1);
+                    continue;
+                }
+
+                // A sibling's own life keeps unfolding too — an unmarried adult
+                // sibling can be matched into a marriage of their own over time,
+                // and once married, can go on to have children (your own
+                // nephews and nieces), the same as a married child of your own.
+                if (!member.spouseName && member.age >= 16 && member.age <= 45 && Math.random() < 0.06) {
+                    const spouseGender = member.gender === "F" ? "M" : "F";
+                    const poolKey = HOUSE_NAME_POOL_KEY[game.house] || game.house;
+                    const pool = NOBLE_NAME_POOLS[poolKey] || NOBLE_NAME_POOLS.england;
+                    // England's own pool has no generic surname list — only the
+                    // Yorkist/Lancastrian split every other noble match there
+                    // already draws on — so a sibling's own spouse follows suit
+                    // instead of falling through to an incongruous merchant name.
+                    const surnamePool = pool.surnames || pool.yorkistSurnames;
+                    member.spouseName = generatePeriodName(poolKey, spouseGender, surnamePool);
+                    member.spouseCountry = member.location || game.homeCountry;
+                    recapLines.push(`Word comes that ${member.name} has married ${member.spouseName}.`);
+                } else if (member.spouseName && member.age >= 16 && member.age <= 45 && Math.random() < 0.10) {
+                    const kidGender = Math.random() < 0.5 ? "M" : "F";
+                    const kidName = pickChildName(kidGender);
+                    member.children = member.children || [];
+                    member.children.push({ name: kidName, gender: kidGender, birthYear: game.year });
+                    recapLines.push(`Word comes that ${member.name} has welcomed a ${kidGender === "F" ? "daughter" : "son"}, ${kidName} — your own nephew or niece.`);
                 }
             }
 
