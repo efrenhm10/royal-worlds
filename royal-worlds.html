@@ -1920,9 +1920,22 @@ const WORLD_TIMELINE = [
 
     { id: "francesco_sforza_dies", year: 1466, month: 3, personalTo: "Francesco Sforza",
       text: `News from Milan: Duke Francesco Sforza, the mercenary captain who fought his way to a coronet, has died. His son Galeazzo Maria succeeds him as Duke of Milan.`,
-      apply: (g) => {
+      apply: (g, recapLines) => {
           g.worldFlags.francescoSforzaDead = true;
           g.worldFlags.galeazzoMariaIsDuke = true;
+
+          // If you married Galeazzo Maria directly (rather than a child of
+          // yours doing so), the consort title was deliberately withheld at
+          // the altar — he was still only heir to Milan then, with his own
+          // father still reigning (see finalizeMarriage's deferred-elevation
+          // handling). Now that he has actually succeeded, it applies for real.
+          if (g.pendingConsortElevation && g.pendingConsortElevation.countryId === "Milan") {
+              g.role = g.pendingConsortElevation.consortTitle;
+              g.rulingRealm = "Milan";
+              g.rulingStatus = "consort";
+              g.pendingConsortElevation = null;
+              if (recapLines) recapLines.push(`With Galeazzo Maria's own succession, your marriage into this house finally comes into its own — you are recognized as ${g.role}.`);
+          }
       } },
 
     { id: "galeazzo_maria_assassinated", year: 1476, month: 12, personalTo: "Galeazzo Maria Sforza",
@@ -1988,11 +2001,23 @@ const WORLD_TIMELINE = [
 
     { id: "ferrante_dies", year: 1494, month: 1, personalTo: "Ferdinand I of Naples",
       text: `News from Naples: King Ferdinand I — Ferrante, as all Italy knew him — has died, just as a French army mustering beyond the Alps prepares to press its own ancient claim to his throne. His son Alfonso succeeds him as King of Naples, inheriting a crown that may not sit easily on his head for long.`,
-      apply: (g) => {
+      apply: (g, recapLines) => {
           g.worldFlags.ferranteDead = true;
           DYNASTIES.Naples.ruler = { name: "Alfonso, Duke of Calabria", gender: "M", age: 46 };
           DYNASTIES.Naples.heir = null;
           DYNASTIES.Naples.active = true;
+
+          // If you married Alfonso directly, the consort title was deliberately
+          // withheld at the altar — he was still only heir then, with Ferrante
+          // still reigning (see finalizeMarriage's deferred-elevation handling).
+          // Now that he has actually succeeded, it applies for real.
+          if (g.pendingConsortElevation && g.pendingConsortElevation.countryId === "Naples") {
+              g.role = g.pendingConsortElevation.consortTitle;
+              g.rulingRealm = "Naples";
+              g.rulingStatus = "consort";
+              g.pendingConsortElevation = null;
+              if (recapLines) recapLines.push(`With Alfonso's own succession, your marriage into this house finally comes into its own — you are recognized as ${g.role}.`);
+          }
 
           // Same adaptation as Milan and Burgundy: your own heir, if you married
           // into this house, is who the wider world now recognizes.
@@ -2285,16 +2310,26 @@ function simulateDynasties(recapLines) {
             return;
         }
 
+        // Whether you're married into this dynasty's direct line at all, and if
+        // so, whether that marriage is still awaiting your spouse's own
+        // succession (game.pendingConsortElevation — see finalizeMarriage) or
+        // has already resolved into being married to the actual sitting ruler.
+        // This is checked by that pending flag rather than by comparing names:
+        // the market's own display name for a prospect ("Ferdinand, heir to
+        // Aragon") and the name DYNASTIES tracks internally for the same
+        // person ("Ferdinand of Aragon") are deliberately different strings.
+        const marriedIntoRelKey = game.married && game.spouseRelKey === d.relKey;
+        const spouseAwaitingThisSuccession = marriedIntoRelKey && !!(game.pendingConsortElevation && game.pendingConsortElevation.countryId === country);
+
         // If you're actually married to this dynasty's CURRENT ruler, the wider
         // world defers to your own family — your own heir (if any) IS this
         // dynasty's heir, and the generic ruler-mortality tracking below is
         // skipped entirely in favor of the general game.spouseAge system, which
-        // already owns your spouse's fate. Checking the actual ruler's name (not
-        // just the relKey) matters: the relKey alone doesn't distinguish having
-        // married the reigning ruler from having married their heir, who hasn't
-        // inherited yet — conflating the two would freeze this ruler's mortality
-        // forever the moment you married their still-waiting heir.
-        if (game.married && game.spouseRelKey === d.relKey && game.spouseName === d.ruler.name) {
+        // already owns your spouse's fate. Not true yet if your marriage is
+        // still awaiting their succession (see above) — conflating the two
+        // would freeze this ruler's mortality forever the moment you married
+        // their still-waiting heir.
+        if (marriedIntoRelKey && !spouseAwaitingThisSuccession) {
             d.marriedToPlayer = true;
             d.heir = game.heir
                 ? { name: game.heir.name, gender: game.heir.gender, age: Math.max(0, game.year - (game.heir.birthYear || game.year)), married: !!game.heir.married, fromPlayer: true }
@@ -2311,7 +2346,7 @@ function simulateDynasties(recapLines) {
         // isn't "married to the ruler" yet — but your spouse's own fate is
         // still owned by the general spousal-mortality system, not rolled a
         // second, independent time here as an ordinary heir would be.
-        const heirIsPlayerSpouse = !!(game.married && game.spouseRelKey === d.relKey && d.heir && d.heir.name === game.spouseName);
+        const heirIsPlayerSpouse = spouseAwaitingThisSuccession;
 
         // A child of yours (not the player themselves) may have married into this
         // dynasty's real bloodline too — if so, any child later born to that union
@@ -4684,6 +4719,17 @@ function negotiationAction(action) {
 }
 
 
+// The handful of royal-tier prospects who are a real dynasty's own named heir
+// rather than a collateral sibling/cousin (Ferdinand of Aragon, Maximilian of
+// Austria, Galeazzo Maria Sforza of Milan, Alfonso of Naples) are all, at the
+// moment they first become marriageable, still just heirs — their own father
+// is the one actually reigning. Identified by prospectId rather than by
+// matching display names against DYNASTIES' internal records: the market
+// listing's name ("Ferdinand, heir to Aragon") and the tracked heir's own
+// name ("Ferdinand of Aragon") are deliberately different strings, so name
+// matching would silently never fire.
+const HEIR_NOT_YET_RULING_PROSPECT_IDS = new Set(["ferdinand_aragon", "maximilian_habsburg", "galeazzo_maria", "alfonso_calabria"]);
+
 // The actual mechanics of a marriage taking effect — who relocates where,
 // what title (if any) is taken up, and updating either the player's own
 // record or the named child's. Shared by player-initiated negotiations
@@ -4749,10 +4795,12 @@ function finalizeMarriage({ subject, childIndex, name, countryId, relKey, consor
     // both still just heirs when they first become marriageable). The consort
     // title only genuinely applies once that heir actually inherits — granting
     // it immediately would make you "Queen of Aragon" while John II still
-    // reigns. simulateDynasties applies it for real the moment the succession
-    // actually happens (see game.pendingConsortElevation there).
+    // reigns. It's applied for real the moment the succession actually
+    // happens — see game.pendingConsortElevation in simulateDynasties (for
+    // Aragon/Austria) and in the relevant WORLD_TIMELINE entries (for Milan/
+    // Naples, whose succession is scripted rather than procedural).
     const targetDynasty = DYNASTIES[countryId];
-    const marryingHeirNotYetRuling = !!(targetDynasty && targetDynasty.heir && targetDynasty.heir.name === name && targetDynasty.ruler.name !== name);
+    const marryingHeirNotYetRuling = HEIR_NOT_YET_RULING_PROSPECT_IDS.has(prospectId) && !!(targetDynasty && targetDynasty.heir);
 
     if (consortTitle && !alreadySovereign && !marryingHeirNotYetRuling) {
         game.role = consortTitle;
