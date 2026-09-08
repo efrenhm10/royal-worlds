@@ -3554,6 +3554,16 @@ function homeCrownRelKey() {
     return map[game.homeCountry] || null;
 }
 
+// Same idea as homeCrownRelKey, but for an arbitrary country rather than
+// always your own home one — for tracking your standing with a foreign
+// court you actually reside at (e.g. as a dowager, on that crown's own
+// sufferance) rather than the one you were born into.
+function crownRelKeyFor(country) {
+    if (DYNASTIES[country]) return DYNASTIES[country].relKey;
+    const map = { England: "Edward", Castile: "Castile" };
+    return map[country] || country;
+}
+
 function petitionForLandGrant(key) {
 
     const rel = game.relationships[key] || 20;
@@ -7552,6 +7562,32 @@ function advanceTime(months) {
                 if (Math.random() < siblingMortality) {
                     recapLines.push(`Word comes that ${member.name} has died${member.location && member.location !== game.homeCountry ? `, at ${member.location}` : ""} — one more loss this era rarely spares anyone.`);
                     game.family.splice(fi, 1);
+                }
+            }
+
+            // A dowager holds her place at a foreign court on the reigning crown's
+            // own sufferance, not by any real claim of her own — nothing like the
+            // sovereign's own unquestioned right to stay. Her welcome can run out.
+            // Exempted when the current ruler there is actually her own
+            // descendant (fromPlayer) — a grandchild isn't going to evict their
+            // own grandmother from the only home she has left there.
+            if (game.rulingStatus === "dowager" && game.rulingRealm) {
+                const hostedByOwnBlood = DYNASTIES[game.rulingRealm] && DYNASTIES[game.rulingRealm].ruler && DYNASTIES[game.rulingRealm].ruler.fromPlayer;
+                if (!hostedByOwnBlood) {
+                    const relKey = crownRelKeyFor(game.rulingRealm);
+                    const favor = game.relationships[relKey] != null ? game.relationships[relKey] : 30;
+                    const evictChance = favor < 20 ? 0.15 : favor < 35 ? 0.06 : 0.02;
+                    if (Math.random() < evictChance) {
+                        const oldRealm = game.rulingRealm;
+                        game.location = game.homeCountry;
+                        game.arrivedYear = game.year;
+                        game.arrivedMonth = game.month;
+                        game.role = game.gender === "F" ? "Lady" : "Lord";
+                        game.rulingRealm = null;
+                        game.rulingStatus = null;
+                        game.prestige = Math.max(0, game.prestige - 8);
+                        recapLines.push(`Word comes, none too gently, that your place at the ${oldRealm} court is no longer wanted — the current household has tired of an old dowager's presence, and you are asked to return home to ${game.homeCountry}.`);
+                    }
                 }
             }
 
