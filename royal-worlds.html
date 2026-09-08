@@ -1411,11 +1411,20 @@ function resolveHeirTitle(oldRole, heirGender) {
 // DYNASTIES.Austria.titleM/F, which stay exactly what the succession
 // machinery already expects.
 function displayRole() {
+    let display = game.role;
     if (game.rulingRealm === "Austria" && (game.rulingStatus === "sovereign" || game.rulingStatus === "consort")) {
         const imperial = game.gender === "F" ? "Holy Roman Empress" : "Holy Roman Emperor";
-        return `${imperial} (${game.role})`;
+        display = `${imperial} (${game.role})`;
     }
-    return game.role;
+    // Married into a real dynasty's own heir before they've actually
+    // inherited (see game.pendingConsortElevation, set by finalizeMarriage):
+    // the real title deliberately isn't granted yet, but the player should
+    // still SEE that the marriage did something real, not a role that looks
+    // completely unchanged until the day it suddenly, invisibly updates.
+    if (game.pendingConsortElevation) {
+        display = `${display} — betrothed to the future ${game.pendingConsortElevation.consortTitle}`;
+    }
+    return display;
 }
 
 // A courtesy title for a child, reflecting the parent's actual current standing AND
@@ -3732,6 +3741,7 @@ function renderMarriage(content) {
                 <h2>💍 Your Marriage</h2>
                 <p>You are wed to <strong>${game.spouseName}</strong>, of ${game.spouseCountry}.</p>
                 <p class="muted">The match is sealed. Its political value is already reflected in your prestige and influence.</p>
+                ${game.pendingConsortElevation ? `<p><strong>${game.spouseName}</strong> is still only heir, not yet ruling — the moment they actually succeed, you become ${game.pendingConsortElevation.consortTitle} in truth, not just in name.</p>` : ""}
             </div>
 
             <div class="card">
