@@ -4048,6 +4048,7 @@ function renderChildren(content) {
             <div class="stat">Marital status <strong>${child.married ? "Wed to " + child.spouseName + " (" + child.spouseCountry + ")" : child.churchTrack ? "In the Church's service" : "Unmarried"}</strong></div>
             ${child.married && child.location ? `<div class="stat">Residing in <strong>${child.location}</strong></div>` : ""}
             ${child.churchTrack ? `<div class="stat">Church career <strong>${child.churchRank}</strong></div>` : ""}
+            ${child.ownChildren && child.ownChildren.length ? `<div class="stat">Your grandchildren, through ${child.name} <strong>${child.ownChildren.map(g => g.name).join(", ")}</strong></div>` : ""}
             <div class="grid" id="schoolGrid${i}"></div>
             ${!isHeir && !child.churchTrack ? `<button data-designate="${i}" class="secondary">Name as Heir</button>` : ""}
             ${!child.married && !child.churchTrack && age >= 12 ? `<button data-marry="${i}">Arrange a Marriage</button>` : ""}
@@ -4863,6 +4864,13 @@ function finalizeMarriage({ subject, childIndex, name, countryId, relKey, consor
         const relocationNote = relocates
             ? ` ${child.name} relocates to ${countryId} to join ${name}'s household${marryingIntoRealTitle ? `, taking up the title of ${consortTitle} there` : ""}.`
             : ` ${name} comes to join ${child.name}'s household here, rather than the other way around.`;
+
+        // A married child's life has genuinely moved on — the Family tab
+        // should say so, instead of still calling them "Your child" forever,
+        // the same way a sibling's own entry already reflects where their
+        // life actually ended up.
+        const familyEntry = game.family.find(f => f.name === child.name);
+        if (familyEntry) familyEntry.relation = `Your child (married to ${name}, of ${countryId})`;
 
         return { childName: child.name, relocationNote };
 
@@ -7500,6 +7508,28 @@ function advanceTime(months) {
             // own; becoming Pope depends on an actual conclave, handled where
             // Rome's own elective succession is resolved.
             game.children.forEach(child => advanceChurchCareer(child, recapLines));
+
+            // A married child's own life doesn't pause the moment the wedding
+            // is sealed — a marriage into an ordinary noble/merchant household,
+            // or a foreign house's collateral line, keeps unfolding on its own
+            // from here, the same real years passing for them as for you. A
+            // child married into an actual tracked dynasty's own direct
+            // bloodline is left alone here — simulateDynasties already gives
+            // that specific union its own real births (and those actually
+            // matter for succession); this is everyone else's ordinary life.
+            game.children.forEach(child => {
+                if (!child.married || child.rulingAbroad || child.churchTrack) return;
+                if (Object.values(DYNASTIES).some(d => d.active && d.relKey === child.spouseRelKey)) return;
+                const childAge = game.year - child.birthYear;
+                if (childAge < 16 || childAge > 45) return;
+                if (Math.random() < 0.10) {
+                    const grandkidGender = Math.random() < 0.5 ? "M" : "F";
+                    const grandkidName = pickChildName(grandkidGender);
+                    child.ownChildren = child.ownChildren || [];
+                    child.ownChildren.push({ name: grandkidName, gender: grandkidGender, birthYear: game.year });
+                    recapLines.push(`Word reaches you from ${child.spouseCountry || child.location || "abroad"}: your ${child.gender === "F" ? "daughter" : "son"} ${child.name} has welcomed a ${grandkidGender === "F" ? "daughter" : "son"} of their own, ${grandkidName} — your own grandchild, growing up far from your own household.`);
+                }
+            });
 
             // Tracked siblings age and can die too — without this, a sibling would
             // linger in the Family tab forever, still writing to ask for help long
