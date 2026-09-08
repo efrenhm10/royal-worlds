@@ -5582,6 +5582,11 @@ function widowedDecision(deceasedName, contextLine) {
     });
 
     document.getElementById("widowRemarry").addEventListener("click", () => {
+        // Giving up the old position (whatever it was) is the whole point of
+        // choosing to look elsewhere — without resetting the title itself,
+        // it stayed stuck at the dead spouse's style forever, masking
+        // whatever a genuinely new marriage later did or didn't grant.
+        game.role = game.gender === "F" ? "Lady" : "Lord";
         game.rulingRealm = null;
         game.rulingStatus = null;
         game.chronicle.unshift(`${game.year}: You resolve to look for a new match when the time is right.`);
