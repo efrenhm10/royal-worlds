@@ -3822,12 +3822,32 @@ function chooseSchooling(childIndex, optionId) {
 // inherit. A child already ruling a foreign realm in their own right
 // (rulingAbroad) is left out of the running here — they already have a crown
 // of their own, and the continuity system already knows how to handle them.
+// A child who has entered the Church's service is left out too — taking
+// vows was always understood as leaving secular inheritance behind, the same
+// way it already forecloses marriage.
 function primogenitureHeir(children) {
-    const eligible = children.filter(c => !c.rulingAbroad);
+    const eligible = children.filter(c => !c.rulingAbroad && !c.churchTrack);
     if (!eligible.length) return null;
     const sons = eligible.filter(c => c.gender === "M").sort((a, b) => a.birthYear - b.birthYear);
     if (sons.length) return sons[0];
     const daughters = eligible.filter(c => c.gender === "F").sort((a, b) => a.birthYear - b.birthYear);
+    return daughters.length ? daughters[0] : null;
+}
+
+// The same male-preference rule applies one branch further out: dying with no
+// children of your own was never automatically the end of the line in this
+// era — a living sibling (or their own line) was the next real recourse, and
+// dynasties and duchies alike genuinely did pass collaterally this way. Only
+// considers an actual tracked sibling (isSibling), not an in-law or other
+// family entry, and — same as primogenitureHeir — leaves out anyone already
+// ruling a realm of their own or bound by Church vows, neither of whom is a
+// realistic secular claimant here.
+function primogenitureFromFamily(family) {
+    const eligible = family.filter(f => f.isSibling && !f.rulingAbroad && !f.churchTrack && f.age != null);
+    if (!eligible.length) return null;
+    const sons = eligible.filter(f => f.gender === "M").sort((a, b) => b.age - a.age);
+    if (sons.length) return sons[0];
+    const daughters = eligible.filter(f => f.gender === "F").sort((a, b) => b.age - a.age);
     return daughters.length ? daughters[0] : null;
 }
 
@@ -3973,7 +3993,7 @@ function renderChildren(content) {
             ${child.married && child.location ? `<div class="stat">Residing in <strong>${child.location}</strong></div>` : ""}
             ${child.churchTrack ? `<div class="stat">Church career <strong>${child.churchRank}</strong></div>` : ""}
             <div class="grid" id="schoolGrid${i}"></div>
-            ${!isHeir ? `<button data-designate="${i}" class="secondary">Name as Heir</button>` : ""}
+            ${!isHeir && !child.churchTrack ? `<button data-designate="${i}" class="secondary">Name as Heir</button>` : ""}
             ${!child.married && !child.churchTrack && age >= 12 ? `<button data-marry="${i}">Arrange a Marriage</button>` : ""}
             ${!child.married && !child.churchTrack && age >= 12 ? `<button data-church="${i}" class="secondary">Send into Church Service</button>` : ""}
         `;
@@ -4032,7 +4052,19 @@ function sendChildToChurch(index) {
     child.churchRank = "Priest";
     child.churchYears = 0;
 
-    game.chronicle.unshift(`${game.year}: ${child.name} enters the Church's service, beginning a life bound by vows rather than any marriage bed.`);
+    let heirNote = "";
+    // Entering the Church means leaving secular inheritance behind, same as
+    // it already forecloses marriage — if this child was actually your named
+    // or presumptive heir, that passes to whoever stands next in line now.
+    if (game.heir === child) {
+        game.heirManuallySet = false;
+        game.heir = primogenitureHeir(game.children.filter(c => c !== child));
+        heirNote = game.heir
+            ? ` With ${child.name} bound for the Church, ${game.heir.name} now stands as heir instead.`
+            : " With no other child to stand as heir, the succession is suddenly an open question.";
+    }
+
+    game.chronicle.unshift(`${game.year}: ${child.name} enters the Church's service, beginning a life bound by vows rather than any marriage bed.${heirNote}`);
 
     render();
 
@@ -4306,7 +4338,7 @@ function eligibleMarriageOfferTargets(g) {
     const targets = [];
     if (!g.married) targets.push({ subject: "self", name: g.person, gender: g.gender, isHeirLike: true, weight: 3 });
     g.children.forEach((c, i) => {
-        if (!c.married && Math.max(0, g.year - c.birthYear) >= 12) {
+        if (!c.married && !c.churchTrack && Math.max(0, g.year - c.birthYear) >= 12) {
             const isHeirLike = g.heir === c;
             targets.push({ subject: "child", childIndex: i, name: c.name, gender: c.gender, isHeirLike, weight: isHeirLike ? 3 : 1 });
         }
@@ -5409,9 +5441,25 @@ function handleDeath(reason) {
     applyPersonalHistoricalWorldEvent();
 
     if (game.heir) {
+
         succeedToHeir(reason);
+
     } else {
-        showGameOverPopup(reason);
+
+        // No child of your own to inherit — but a living sibling is a real,
+        // historically genuine next recourse before the story simply ends.
+        const siblingHeir = primogenitureFromFamily(game.family);
+
+        if (siblingHeir) {
+            game.heir = Object.assign(synthesizeDescendant(siblingHeir.name, siblingHeir.gender, siblingHeir.age), {
+                location: siblingHeir.location || game.location,
+            });
+            game.chronicle.unshift(`${game.year}: With no child of your own, the line passes collaterally to your sibling, ${siblingHeir.name}.`);
+            succeedToHeir(reason);
+        } else {
+            showGameOverPopup(reason);
+        }
+
     }
 
 }
