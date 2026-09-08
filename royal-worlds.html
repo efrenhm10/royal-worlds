@@ -3741,13 +3741,16 @@ function renderMarriage(content) {
                 ${
                     game.pregnancy
                         ? `<p><strong>${game.pregnancy.carrier === "self" ? "You are" : game.spouseName + " is"}</strong> currently expecting — roughly ${game.pregnancy.monthsLeft} month${game.pregnancy.monthsLeft === 1 ? "" : "s"} to go.</p>`
-                        : `<button id="tryHeir">🤰 Try for an Heir</button>`
+                        : (fertilityChance(game.gender === "F" ? game.age : game.spouseAge, game.gender === "F" ? game.spouseAge : game.age) > 0
+                            ? `<button id="tryHeir">🤰 Try for an Heir</button>`
+                            : `<p class="muted"><em>${game.gender === "F" ? "You are" : `${game.spouseName} is`} past the years when a child is realistically still possible.</em></p>`)
                 }
             </div>
         `;
 
         if (!game.pregnancy) {
-            document.getElementById("tryHeir").addEventListener("click", tryForHeir);
+            const tryHeirBtn = document.getElementById("tryHeir");
+            if (tryHeirBtn) tryHeirBtn.addEventListener("click", tryForHeir);
         }
 
         return;
@@ -3760,6 +3763,24 @@ function renderMarriage(content) {
 
     if (game.pendingCountry && game.pendingSubject === "self") {
         renderProspectChoice(content);
+        return;
+    }
+
+    // A marriage this young would be arranged entirely by guardians, not
+    // something meaningfully negotiated as your own decision — the same
+    // minimum age already governing when one of your own children can be
+    // married off.
+    if (game.age < 12) {
+        content.innerHTML = `
+            <div class="card">
+                <h2>💍 Seek a Marriage</h2>
+                <p>
+                At ${game.age}, you are far too young to be meaningfully negotiating your own marriage —
+                that decision, if it comes at all this early, belongs to whoever is actually
+                governing in your name. Check back once you're older.
+                </p>
+            </div>
+        `;
         return;
     }
 
@@ -4443,7 +4464,7 @@ function pickIncomingProspect(market, targetGender, isHeirLike) {
 // in which tier of prospect shows up once picked.
 function eligibleMarriageOfferTargets(g) {
     const targets = [];
-    if (!g.married) targets.push({ subject: "self", name: g.person, gender: g.gender, isHeirLike: true, weight: 3 });
+    if (!g.married && g.age >= 12) targets.push({ subject: "self", name: g.person, gender: g.gender, isHeirLike: true, weight: 3 });
     g.children.forEach((c, i) => {
         if (!c.married && !c.churchTrack && Math.max(0, g.year - c.birthYear) >= 12) {
             const isHeirLike = g.heir === c;
@@ -5017,6 +5038,23 @@ function resolveNegotiationRound() {
    or the chronicle ending if none exists.
 ========================================================= */
 
+// Fertility was never a flat coin flip that stayed the same from a bride's
+// wedding day to her fifties — it rises through the 20s, tapers through the
+// 30s, and is realistically over well before the carrying partner's own
+// lifespan ends. Both partners also need to have actually reached a
+// plausible age for this at all, regardless of which one is carrying.
+function fertilityChance(carrierAge, partnerAge) {
+    if (carrierAge == null || carrierAge < 14) return 0;
+    if (partnerAge != null && partnerAge < 14) return 0;
+    if (carrierAge < 20) return 0.45;
+    if (carrierAge < 30) return 0.6;
+    if (carrierAge < 35) return 0.5;
+    if (carrierAge < 40) return 0.35;
+    if (carrierAge < 45) return 0.15;
+    if (carrierAge < 50) return 0.05;
+    return 0;
+}
+
 function tryForHeir() {
 
     if (game.pregnancy) {
@@ -5024,10 +5062,21 @@ function tryForHeir() {
         return;
     }
 
-    if (Math.random() < 0.6) {
+    const carrierIsSelf = game.gender === "F";
+    const carrierAge = carrierIsSelf ? game.age : game.spouseAge;
+    const partnerAge = carrierIsSelf ? game.spouseAge : game.age;
+    const chance = fertilityChance(carrierAge, partnerAge);
+
+    if (chance <= 0) {
+        const who = carrierIsSelf ? "You are" : `${game.spouseName} is`;
+        showEvent("Past Childbearing Years", `${who} past the years when a child is realistically still possible. This isn't in fortune's hands anymore — nothing to be done about it now.`);
+        return;
+    }
+
+    if (Math.random() < chance) {
 
         game.pregnancy = {
-            carrier: game.gender === "F" ? "self" : "spouse",
+            carrier: carrierIsSelf ? "self" : "spouse",
             monthsLeft: 9
         };
 
