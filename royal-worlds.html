@@ -2835,6 +2835,39 @@ function siblingsForSelection(houseKey, personIndex) {
     });
 }
 
+// A plausible title for a procedurally-generated sibling, echoing the
+// standing the chosen character's OWN starting role already implies — a
+// household actually styled "Prince of the Blood" or "King's Daughter"
+// realistically has siblings of similar rank, not a random commoner.
+function proceduralSiblingTitle(personRole, gender) {
+    const role = personRole || "";
+    if (/King's|Queen's/.test(role)) return gender === "F" ? "King's Daughter" : "King's Son";
+    if (/Prince|Princess/.test(role)) return gender === "F" ? "Princess" : "Prince";
+    if (/Duke|Duchess|Archduke|Archduchess/.test(role)) return gender === "F" ? "Lady" : "Lord";
+    return gender === "F" ? "Lady" : "Lord";
+}
+
+// Only a handful of houses have their real, historically-attested siblings
+// curated in HOUSE_SIBLING_GROUPS — every other house (most of them) used to
+// fall back to placeholder "Senior family member" / "Younger relative"
+// entries that were never actually tagged isSibling, so none of the sibling
+// system (title, location, marriage, children, aging, mortality, asking for
+// help) ever applied to them at all. This generates real, plausible
+// siblings — same naming machinery already used for a house's own
+// "Plausible" placeholder people — so every house gets a working family,
+// not just the four with a curated record.
+function generateProceduralSiblings(houseKey, personAge, personRole) {
+    const count = 1 + (Math.random() < 0.6 ? 1 : 0);
+    const siblings = [];
+    for (let i = 0; i < count; i++) {
+        const gender = Math.random() < 0.5 ? "M" : "F";
+        const name = generateStartingCharacterName(houseKey, gender);
+        const age = Math.max(2, personAge + Math.round((Math.random() * 24) - 12));
+        siblings.push({ name, gender, age, role: proceduralSiblingTitle(personRole, gender) });
+    }
+    return siblings;
+}
+
 // A few HOUSES keys don't line up 1:1 with NOBLE_NAME_POOLS' country-keyed
 // entries (e.g. the Valois court's house key is "valois", but its name pool is
 // filed under "france") — this maps those through to the right pool.
@@ -2938,26 +2971,25 @@ function startGame(index) {
     const resolvedGender = person[3] || "F";
     const resolvedName = ensureRealName(selectedHouse, index);
 
-    const siblings = siblingsForSelection(selectedHouse, index);
-    const familyEntries = siblings.length
-        ? siblings.map(sib => ({
-            name: sib.name,
-            relation: `Sibling (${sib.role})`,
-            loyalty: 55,
-            isSibling: true,
-            gender: sib.gender,
-            age: sib.age,
-            title: sib.role,
-            location: house.homeCountry,
-            spouseName: null,
-            spouseCountry: null,
-            children: []
-        })).concat([{ name: "Marriage connection", relation: "In-law", loyalty: 35 }])
-        : [
-            { name: "Senior family member", relation: "Kin", loyalty: 55 },
-            { name: "Younger relative", relation: "Kin", loyalty: 50 },
-            { name: "Marriage connection", relation: "In-law", loyalty: 35 }
-        ];
+    // A curated, historically-attested sibling group takes priority where
+    // one exists; every other house still gets real, working siblings
+    // instead of placeholder kin who were never tagged as family at all.
+    const curatedSiblings = siblingsForSelection(selectedHouse, index);
+    const siblings = curatedSiblings.length ? curatedSiblings : generateProceduralSiblings(selectedHouse, person[1], person[2]);
+
+    const familyEntries = siblings.map(sib => ({
+        name: sib.name,
+        relation: `Sibling (${sib.role})`,
+        loyalty: 55,
+        isSibling: true,
+        gender: sib.gender,
+        age: sib.age,
+        title: sib.role,
+        location: house.homeCountry,
+        spouseName: null,
+        spouseCountry: null,
+        children: []
+    })).concat([{ name: "Marriage connection", relation: "In-law", loyalty: 35 }]);
 
     game = {
 
