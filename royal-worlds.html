@@ -1824,7 +1824,33 @@ function isStillAdjusting() {
 const WORLD_TIMELINE = [
     { id: "philip_dies", year: 1467, month: 6, personalTo: "Philip the Good",
       text: `News from Burgundy: Duke Philip the Good has died. His son Charles the Bold succeeds him as Duke of Burgundy.`,
-      apply: (g) => { g.worldFlags.charlesIsDuke = true; } },
+      apply: (g, recapLines) => {
+          g.worldFlags.charlesIsDuke = true;
+
+          // If you married Charles the Bold directly, the consort title was
+          // deliberately withheld at the altar — he was still only heir
+          // then, with Philip still reigning (see finalizeMarriage's
+          // deferred-elevation handling). Now that he has actually
+          // succeeded, it applies for real.
+          if (g.pendingConsortElevation && g.pendingConsortElevation.countryId === "Burgundy") {
+              g.role = g.pendingConsortElevation.consortTitle;
+              g.rulingRealm = "Burgundy";
+              g.rulingStatus = "consort";
+              g.pendingConsortElevation = null;
+              if (recapLines) recapLines.push(`With Charles's own succession, your marriage into this house finally comes into its own — you are recognized as ${g.role}.`);
+          }
+
+          // Same deferred elevation, but for a CHILD who married Charles
+          // rather than the player themselves.
+          g.children.forEach(child => {
+              if (child.pendingConsortElevation && child.pendingConsortElevation.countryId === "Burgundy") {
+                  child.consortTitle = child.pendingConsortElevation.consortTitle;
+                  child.consortRealm = "Burgundy";
+                  child.pendingConsortElevation = null;
+                  if (recapLines) recapLines.push(`With Charles's own succession, your child ${child.name}'s marriage into this house finally comes into its own — recognized as ${child.consortTitle}.`);
+              }
+          });
+      } },
 
     { id: "public_weal", year: 1465, month: 6,
       text: `News from France: a league of great nobles — Burgundy foremost among them — has risen against King Louis XI's centralizing rule, in what is already being called the War of the Public Weal.`,
@@ -2002,6 +2028,17 @@ const WORLD_TIMELINE = [
               g.pendingConsortElevation = null;
               if (recapLines) recapLines.push(`With Galeazzo Maria's own succession, your marriage into this house finally comes into its own — you are recognized as ${g.role}.`);
           }
+
+          // Same deferred elevation, but for a CHILD who married Galeazzo
+          // Maria rather than the player themselves.
+          g.children.forEach(child => {
+              if (child.pendingConsortElevation && child.pendingConsortElevation.countryId === "Milan") {
+                  child.consortTitle = child.pendingConsortElevation.consortTitle;
+                  child.consortRealm = "Milan";
+                  child.pendingConsortElevation = null;
+                  if (recapLines) recapLines.push(`With Galeazzo Maria's own succession, your child ${child.name}'s marriage into this house finally comes into its own — recognized as ${child.consortTitle}.`);
+              }
+          });
       } },
 
     { id: "galeazzo_maria_assassinated", year: 1476, month: 12, personalTo: "Galeazzo Maria Sforza",
@@ -2084,6 +2121,17 @@ const WORLD_TIMELINE = [
               g.pendingConsortElevation = null;
               if (recapLines) recapLines.push(`With Alfonso's own succession, your marriage into this house finally comes into its own — you are recognized as ${g.role}.`);
           }
+
+          // Same deferred elevation, but for a CHILD who married Alfonso
+          // rather than the player themselves.
+          g.children.forEach(child => {
+              if (child.pendingConsortElevation && child.pendingConsortElevation.countryId === "Naples") {
+                  child.consortTitle = child.pendingConsortElevation.consortTitle;
+                  child.consortRealm = "Naples";
+                  child.pendingConsortElevation = null;
+                  if (recapLines) recapLines.push(`With Alfonso's own succession, your child ${child.name}'s marriage into this house finally comes into its own — recognized as ${child.consortTitle}.`);
+              }
+          });
 
           // Same adaptation as Milan and Burgundy: your own heir, if you married
           // into this house, is who the wider world now recognizes.
@@ -2260,26 +2308,43 @@ const CONSORT_RELKEY_COUNTRY = {
     AustriaConsort: "Austria",
     MilanConsort: "Milan",
     NaplesConsort: "Naples",
+    AnneBurgundy: "Burgundy",
 };
 
+// True if a relKey represents a real blood/marriage tie into this specific
+// country's own ruling house — either a collateral cousin's relKey (see
+// CONSORT_RELKEY_COUNTRY) or the dynasty's own direct relKey (marrying its
+// actual heir, not just a cousin, carries exactly the same kind of claim).
+function relKeyTiesToCountry(relKey, country) {
+    if (!relKey) return false;
+    if (CONSORT_RELKEY_COUNTRY[relKey] === country) return true;
+    const d = DYNASTIES[country];
+    return !!(d && d.relKey === relKey);
+}
+
 // A collateral claim can come through either side of the family: the player's
-// OWN marriage to a sovereign's sibling (their children are the dead ruler's
-// real nephews or nieces, and are the ones pressed forward), or a CHILD of the
-// player's marriage to that same kind of collateral figure (that child is
-// already married into the house itself, and is the one pressed forward
-// directly, rather than yet another generation down — the same
-// one-generation-at-a-time abstraction the rest of the game's succession
-// already uses). Either is excluded from being the current domestic heir,
-// so a single person can't end up doing double duty as both.
+// OWN marriage to a sovereign's sibling or heir (their children are the dead
+// ruler's real nephews/nieces or grandchildren, and are the ones pressed
+// forward), or a CHILD of the player's marriage to that same kind of figure
+// (that child is already married into the house itself, and is the one
+// pressed forward directly, rather than yet another generation down — the
+// same one-generation-at-a-time abstraction the rest of the game's
+// succession already uses). Either is excluded from being the current
+// domestic heir, so a single person can't end up doing double duty as both.
+// The player's OWN tie survives widowhood — game.spouseRelKey clears the
+// moment a spouse dies, but game.everMarriedRelKey doesn't, and a blood claim
+// through a marriage that's since ended (the heir you married died before
+// ever inheriting, say) is still a real claim through any child of that
+// marriage — it doesn't just evaporate the day you're widowed.
 function findCollateralClaimant(country) {
 
-    if (game.married && CONSORT_RELKEY_COUNTRY[game.spouseRelKey] === country) {
+    if (relKeyTiesToCountry(game.spouseRelKey || game.everMarriedRelKey, country)) {
         const candidate = primogenitureHeir(game.children.filter(c => c !== game.heir));
         if (candidate) return { claimant: candidate, viaSelf: true };
     }
 
     const marriedChild = game.children.find(c =>
-        c !== game.heir && c.married && !c.rulingAbroad && CONSORT_RELKEY_COUNTRY[c.spouseRelKey] === country
+        c !== game.heir && c.married && !c.rulingAbroad && relKeyTiesToCountry(c.spouseRelKey, country)
     );
     if (marriedChild) return { claimant: marriedChild, viaSelf: false };
 
@@ -2517,6 +2582,18 @@ function simulateDynasties(recapLines) {
                     game.pendingConsortElevation = null;
                     recapLines.push(`With ${d.ruler.name}'s own succession, your marriage into this house finally comes into its own — you are recognized as ${game.role}.`);
                 }
+
+                // The same deferred elevation, but for a CHILD who married this
+                // dynasty's heir rather than the player themselves — see the
+                // matching logic in finalizeMarriage's child branch.
+                game.children.forEach(child => {
+                    if (child.pendingConsortElevation && child.pendingConsortElevation.countryId === country) {
+                        child.consortTitle = child.pendingConsortElevation.consortTitle;
+                        child.consortRealm = country;
+                        child.pendingConsortElevation = null;
+                        recapLines.push(`With ${d.ruler.name}'s own succession, your child ${child.name}'s marriage into this house finally comes into its own — recognized as ${child.consortTitle}.`);
+                    }
+                });
 
             } else if (findCollateralClaimant(country)) {
 
@@ -3147,6 +3224,7 @@ function startGame(index) {
         spouseCountry: null,
         spouseAge: null,
         spouseRelKey: null,
+        everMarriedRelKey: null,
 
         // Which realm you actually govern, and on what footing — a title alone isn't
         // rule. "sovereign" means the claim is your own blood right (it survives your
@@ -4169,6 +4247,8 @@ function renderChildren(content) {
             <div class="stat">Age <strong>${age}</strong></div>
             <div class="stat">Schooling <strong>${child.schooling || "None yet"}</strong></div>
             <div class="stat">Marital status <strong>${child.married ? "Wed to " + child.spouseName + " (" + child.spouseCountry + ")" : child.churchTrack ? "In the Church's service" : "Unmarried"}</strong></div>
+            ${child.consortTitle ? `<div class="stat">Recognized abroad <strong>${child.consortTitle}${child.consortRealm ? ` of ${child.consortRealm}` : ""}</strong></div>` : ""}
+            ${child.pendingConsortElevation ? `<p class="muted"><em>${child.spouseName} is still only heir to ${child.pendingConsortElevation.countryId}, not yet ruling — the title of ${child.pendingConsortElevation.consortTitle} will be ${child.name}'s in truth the moment that changes.</em></p>` : ""}
             ${child.married && child.location ? `<div class="stat">Residing in <strong>${child.location}</strong></div>` : ""}
             ${child.churchTrack ? `<div class="stat">Church career <strong>${child.churchRank}</strong></div>` : ""}
             ${child.ownChildren && child.ownChildren.length ? `<div class="stat">Your grandchildren, through ${child.name} <strong>${child.ownChildren.map(g => g.name).join(", ")}</strong></div>` : ""}
@@ -4973,16 +5053,23 @@ function negotiationAction(action) {
 }
 
 
-// The handful of royal-tier prospects who are a real dynasty's own named heir
-// rather than a collateral sibling/cousin (Ferdinand of Aragon, Maximilian of
-// Austria, Galeazzo Maria Sforza of Milan, Alfonso of Naples) are all, at the
-// moment they first become marriageable, still just heirs — their own father
-// is the one actually reigning. Identified by prospectId rather than by
-// matching display names against DYNASTIES' internal records: the market
-// listing's name ("Ferdinand, heir to Aragon") and the tracked heir's own
-// name ("Ferdinand of Aragon") are deliberately different strings, so name
-// matching would silently never fire.
-const HEIR_NOT_YET_RULING_PROSPECT_IDS = new Set(["ferdinand_aragon", "maximilian_habsburg", "galeazzo_maria", "alfonso_calabria"]);
+// True when marrying into this specific relKey/country is a match with a
+// dynasty's own HEIR who hasn't actually inherited yet — the consort title
+// only genuinely applies once that happens (see game.pendingConsortElevation
+// below). Almost always this just means "does DYNASTIES currently track a
+// living heir for that country," which covers every hardcoded named heir
+// (Ferdinand of Aragon, Maximilian, Galeazzo Maria, Alfonso of Calabria) and
+// every dynamically-generated one alike. Burgundy is the one exception:
+// Philip the Good -> Charles the Bold is scripted beat-by-beat through
+// WORLD_TIMELINE rather than tracked as a DYNASTIES heir (DYNASTIES.Burgundy
+// stays inactive, with heir permanently null, for as long as Charles reigns),
+// so it needs its own flag-based check instead.
+function marryingIntoNotYetRulingHeir(countryId, relKey, consortTitle) {
+    if (!consortTitle) return false;
+    if (relKey === "Charles") return !game.worldFlags.charlesIsDuke;
+    const d = DYNASTIES[countryId];
+    return !!(d && d.heir);
+}
 
 // The actual mechanics of a marriage taking effect — who relocates where,
 // what title (if any) is taken up, and updating either the player's own
@@ -5021,6 +5108,28 @@ function finalizeMarriage({ subject, childIndex, name, countryId, relKey, consor
         const relocates = child.gender === "F" || marryingIntoRealTitle;
         child.location = relocates ? countryId : game.homeCountry;
 
+        // Exactly the same "still only heir" distinction as the player's own
+        // self-marriage (see below): a child marrying a real dynasty's HEIR,
+        // not its sitting ruler, doesn't actually become that realm's consort
+        // the day the wedding happens — only once the heir actually succeeds.
+        // Without this, a married-in child simply never received any record
+        // of the title at all, deferred or otherwise — nothing was ever there
+        // for simulateDynasties to resolve once the succession really happened.
+        const marryingHeirNotYetRuling = marryingIntoNotYetRulingHeir(countryId, relKey, consortTitle);
+        if (consortTitle && !marryingHeirNotYetRuling) {
+            child.consortTitle = consortTitle;
+            child.consortRealm = countryId;
+        } else if (consortTitle && marryingHeirNotYetRuling) {
+            child.pendingConsortElevation = { countryId, consortTitle };
+        }
+        // The wider world's own random matchmaking (see simulateDynasties)
+        // only ever proposes a match for an heir it still believes is
+        // unmarried — without this, the heir your child just married could
+        // be "married off" a second time to some unrelated foreign court.
+        if (marryingHeirNotYetRuling && DYNASTIES[countryId] && DYNASTIES[countryId].heir) {
+            DYNASTIES[countryId].heir.married = true;
+        }
+
         const relocationNote = relocates
             ? ` ${child.name} relocates to ${countryId} to join ${name}'s household${marryingIntoRealTitle ? `, taking up the title of ${consortTitle} there` : ""}.`
             : ` ${name} comes to join ${child.name}'s household here, rather than the other way around.`;
@@ -5039,7 +5148,15 @@ function finalizeMarriage({ subject, childIndex, name, countryId, relKey, consor
     game.married = true;
     game.spouseName = name;
     game.spouseCountry = countryId;
-    game.spouseAge = Math.max(14, game.age + Math.round((Math.random() * 16) - 8));
+
+    // A real dynasty's own tracked heir already has a real age of their own —
+    // use it instead of a random guess, so the DYNASTIES simulation's copy of
+    // this exact person and the player's own spouseAge don't quietly drift
+    // into two different ages for the same individual.
+    const targetDynasty = DYNASTIES[countryId];
+    game.spouseAge = targetDynasty && targetDynasty.heir
+        ? targetDynasty.heir.age
+        : Math.max(14, game.age + Math.round((Math.random() * 16) - 8));
     game.spouseRelKey = relKey;
 
     // Marrying into the House of York specifically has real, lasting stakes
@@ -5048,6 +5165,12 @@ function finalizeMarriage({ subject, childIndex, name, countryId, relKey, consor
     // game.spouseRelKey gets cleared. Tracked separately so the later
     // Tudor-era reckoning still knows to find you.
     if (relKey === "Edward") game.worldFlags.marriedIntoYork = true;
+
+    // A blood claim through this marriage (yours, or any child born of it)
+    // outlives the marriage itself — widowhood clears game.spouseRelKey, but
+    // findCollateralClaimant still needs to recognize that claim years later
+    // if this dynasty's own line runs out. Never cleared, unlike spouseRelKey.
+    game.everMarriedRelKey = relKey;
 
     // A reigning sovereign doesn't abandon their own throne to go marry someone
     // else's — the same "the ruler stays, the spouse joins them" rule already
@@ -5059,15 +5182,31 @@ function finalizeMarriage({ subject, childIndex, name, countryId, relKey, consor
 
     // Marrying a real dynasty's own HEIR — not its sitting ruler — is a real,
     // fairly common case (Ferdinand of Aragon and Maximilian of Austria are
-    // both still just heirs when they first become marriageable). The consort
-    // title only genuinely applies once that heir actually inherits — granting
-    // it immediately would make you "Queen of Aragon" while John II still
-    // reigns. It's applied for real the moment the succession actually
-    // happens — see game.pendingConsortElevation in simulateDynasties (for
-    // Aragon/Austria) and in the relevant WORLD_TIMELINE entries (for Milan/
-    // Naples, whose succession is scripted rather than procedural).
-    const targetDynasty = DYNASTIES[countryId];
-    const marryingHeirNotYetRuling = HEIR_NOT_YET_RULING_PROSPECT_IDS.has(prospectId) && !!(targetDynasty && targetDynasty.heir);
+    // both still just heirs when they first become marriageable, and so is
+    // every dynamically-generated heir prospect a dynasty's own life later
+    // produces once its original named cast is exhausted). The consort title
+    // only genuinely applies once that heir actually inherits — granting it
+    // immediately would make you "Queen of Aragon" while John II still
+    // reigns, AND would incorrectly make the wider dynasty simulation think
+    // you're already married to the sitting ruler, freezing that ruler's own
+    // aging and mortality forever since nothing would ever again check
+    // whether they've died. It's applied for real the moment the succession
+    // actually happens — see game.pendingConsortElevation in simulateDynasties
+    // (for every DYNASTIES-tracked country) and in the relevant WORLD_TIMELINE
+    // entries (for Milan/Naples, whose immediate succession is scripted).
+    // This used to only recognize four hardcoded prospect IDs — missing both
+    // Charles the Bold (Burgundy, while his father Philip the Good still
+    // lived) and, worse, every dynamically-generated heir prospect, which is
+    // exactly the mechanism keeping the marriage market alive long-term.
+    const marryingHeirNotYetRuling = marryingIntoNotYetRulingHeir(countryId, relKey, consortTitle);
+
+    // The wider world's own random matchmaking (see simulateDynasties) only
+    // ever proposes a match for an heir it still believes is unmarried —
+    // without this, the very person you just married could be "married off"
+    // a second time to some unrelated foreign court.
+    if (marryingHeirNotYetRuling && targetDynasty && targetDynasty.heir) {
+        targetDynasty.heir.married = true;
+    }
 
     // The same patrilocal/virilocal convention already governing a child's
     // own marriage applies here too: a woman joins her husband's household
