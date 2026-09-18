@@ -4962,7 +4962,6 @@ function finalizeMarriage({ subject, childIndex, name, countryId, relKey, consor
     // (and any dynastic consequences that later unfold on their own, like an
     // eventual heir) is new.
     const alreadySovereign = game.rulingStatus === "sovereign";
-    const relocated = !alreadySovereign && countryId !== game.location;
 
     // Marrying a real dynasty's own HEIR — not its sitting ruler — is a real,
     // fairly common case (Ferdinand of Aragon and Maximilian of Austria are
@@ -4975,6 +4974,18 @@ function finalizeMarriage({ subject, childIndex, name, countryId, relKey, consor
     // Naples, whose succession is scripted rather than procedural).
     const targetDynasty = DYNASTIES[countryId];
     const marryingHeirNotYetRuling = HEIR_NOT_YET_RULING_PROSPECT_IDS.has(prospectId) && !!(targetDynasty && targetDynasty.heir);
+
+    // The same patrilocal/virilocal convention already governing a child's
+    // own marriage applies here too: a woman joins her husband's household
+    // wherever that is, but a man normally stays put and brings his bride
+    // home — UNLESS he's marrying into a real, inheritable position there
+    // (consortTitle set, including a not-yet-ruling heir he'll one day
+    // actually succeed), in which case the match itself is why he moves.
+    // Without this, a male player marrying a foreign princess with no real
+    // claim of her own would relocate to HER court regardless — backwards
+    // from how such a match would actually have been arranged.
+    const marryingIntoRealTitle = !!consortTitle;
+    const relocated = !alreadySovereign && (game.gender === "F" || marryingIntoRealTitle) && countryId !== game.location;
 
     if (consortTitle && !alreadySovereign && !marryingHeirNotYetRuling) {
         game.role = consortTitle;
