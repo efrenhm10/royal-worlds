@@ -1881,7 +1881,7 @@ const WORLD_TIMELINE = [
 
     { id: "edward_middleham_dies", year: 1484, month: 4,
       text: `News from England: King Richard III's only legitimate son, young Edward of Middleham, has died. The King is said to be devastated, and his line's future is suddenly much less secure.`,
-      apply: () => {} },
+      apply: (g) => { g.worldFlags.richardHeirDead = true; } },
 
     { id: "bosworth_news", year: 1485, month: 8,
       eligible: (g) => g.location !== "England" && !g.worldFlags.richardDead,
@@ -4947,6 +4947,13 @@ function finalizeMarriage({ subject, childIndex, name, countryId, relKey, consor
     game.spouseCountry = countryId;
     game.spouseAge = Math.max(14, game.age + Math.round((Math.random() * 16) - 8));
     game.spouseRelKey = relKey;
+
+    // Marrying into the House of York specifically has real, lasting stakes
+    // in England's own fixed history — a stake that outlives the marriage
+    // itself (through any children of it) even if you're later widowed and
+    // game.spouseRelKey gets cleared. Tracked separately so the later
+    // Tudor-era reckoning still knows to find you.
+    if (relKey === "Edward") game.worldFlags.marriedIntoYork = true;
 
     // A reigning sovereign doesn't abandon their own throne to go marry someone
     // else's — the same "the ruler stays, the spouse joins them" rule already
@@ -8430,6 +8437,100 @@ function tryHistoricalEvent() {
                     return { msg: "You carry word of the meeting to the King's men. It buys you favor with Richard's regime — and, should Lady Margaret's son ever have his day, a debt of an entirely different kind." };
                 }},
             ]
+        };
+
+        showChoiceEvent(ev);
+        return true;
+
+    }
+
+    // Marrying into the House of York is never just a marriage — with
+    // Richard III's own legitimate son dead, your own child by a York bride
+    // (or groom) genuinely is Yorkist blood, sitting closer to a real claim
+    // than almost anyone else alive. This never actually changes who wears
+    // the crown here — England's own succession stays exactly as it did —
+    // but it gives a married-in player something real to weigh, and sets
+    // up how dangerous the Tudor reckoning below turns out to be.
+    if (game.worldFlags.richardHeirDead && !game.worldFlags.richardDead && !game.flags.yorkistClaimMoment
+        && game.worldFlags.marriedIntoYork && game.children.length) {
+
+        game.flags.yorkistClaimMoment = true;
+
+        const ev = {
+            title: "👑 A Yorkist Claim, If You Dared",
+            text: `Word of young Edward of Middleham's death travels fast, and not everyone hearing it is thinking only of King Richard's grief. Your own child, born of a marriage into the House of York, is genuinely of that blood — closer to it, whispers a few careful voices at court, than almost anyone left alive outside the King himself. No one is fool enough to say the word "claim" aloud. But it hangs in the room all the same.`,
+            choices: [
+                { label: "Quietly let it be known your child's blood might one day matter", effect: () => {
+                    game.worldFlags.yorkistClaimPressed = true;
+                    game.prestige += 8;
+                    game.influence += 6;
+                    game.relationships.Edward = Math.max(0, (game.relationships.Edward || 30) - 15);
+                    return { msg: "You say nothing outright, but you make sure the right people understand what your marriage actually means. It raises your household's standing — and paints a target on it that won't fade quickly." };
+                }},
+                { label: "This is not your fight — stay silent", effect: () => {
+                    return { msg: "You keep your own counsel and let the moment pass unremarked. Whatever your child's blood is worth, it isn't worth this particular risk, not yet." };
+                }},
+            ]
+        };
+
+        showChoiceEvent(ev);
+        return true;
+
+    }
+
+    // Once Henry Tudor actually wins, a household married into the House of
+    // York with living children isn't just politically inconvenient to the
+    // new regime — it's a rival bloodline sitting in plain sight. How
+    // exposed you are depends on whether you're still in England to be
+    // reached at all, and on whether you were ever foolish enough to press
+    // the claim above out loud.
+    if (game.worldFlags.henryVIITudor && game.worldFlags.marriedIntoYork && game.children.length && !game.flags.tudorReckoning) {
+
+        game.flags.tudorReckoning = true;
+        const pressed = !!game.worldFlags.yorkistClaimPressed;
+        const inEngland = game.location === "England";
+
+        const choices = [];
+
+        if (inEngland) {
+            choices.push({ label: `Flee home to ${game.homeCountry} with your family`, effect: () => {
+                game.location = game.homeCountry;
+                game.arrivedYear = game.year;
+                game.arrivedMonth = game.month;
+                game.prestige = Math.max(0, game.prestige - 10);
+                return { msg: `You gather your household and cross the water before anyone can stop you. It costs you standing here, but your family is out of the new King's reach.` };
+            }});
+        }
+
+        choices.push({ label: "Publicly submit and pledge loyalty to King Henry VII", effect: () => {
+            const cost = 30;
+            if (game.wealth < cost) return { fail: true, msg: "You haven't the means to make a submission this public look convincing." };
+            game.wealth -= cost;
+            const failChance = pressed ? 0.4 : 0.12;
+            if (Math.random() < failChance) {
+                game.prestige = Math.max(0, game.prestige - 20);
+                game.influence = Math.max(0, game.influence - 15);
+                return { msg: `Your submission is accepted, formally — but the new King's court has a long memory for a Yorkist marriage that was once talked up as more than it should have been. You're watched closely from here on.` };
+            }
+            game.relationships.Edward = Math.min(100, (game.relationships.Edward || 30) + 15);
+            return { msg: `You make your loyalty to the new regime unmistakable, publicly and early. It's accepted, and the danger — for now — passes.` };
+        }});
+
+        choices.push({ label: "Do nothing and hope you're beneath notice", effect: () => {
+            const badChance = pressed ? 0.5 : 0.2;
+            if (Math.random() < badChance) {
+                game.prestige = Math.max(0, game.prestige - 15);
+                game.wealth = Math.max(0, game.wealth - 40);
+                game.health = Math.max(10, game.health - 10);
+                return { msg: `Silence is read as defiance, not humility. Your household is fined heavily and watched — a hard, frightening season, though it passes short of anything worse.` };
+            }
+            return { msg: `Nothing comes of it. Whatever your marriage once meant, the new King has larger concerns than one quiet household.` };
+        }});
+
+        const ev = {
+            title: "⚔️ The New King's Long Memory",
+            text: `Henry Tudor is crowned King Henry VII, his own claim knitted to Lancaster and, through his new Queen, to York as well — but a rival Yorkist bloodline still living under his own nose is exactly the kind of loose thread a new dynasty doesn't leave untied.${pressed ? " Word of how openly you once spoke of your own child's blood has, unfortunately, traveled ahead of you." : ""}`,
+            choices
         };
 
         showChoiceEvent(ev);
