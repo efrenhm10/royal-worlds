@@ -1377,7 +1377,7 @@ function generatePeriodName(countryKey, gender, surnamePool) {
 // Requires the matched word to actually END there (the whole string, or immediately
 // followed by a space) — a plain indexOf/regex substring match would also fire on
 // something like "King's Daughter", turning it into the nonsensical "Queen's Daughter".
-const GENDER_TITLE_PAIRS = [["Duke","Duchess"], ["King","Queen"], ["Lord","Lady"], ["Earl","Countess"], ["Count","Countess"], ["Archduke","Archduchess"], ["Dowager Duke","Dowager Duchess"]];
+const GENDER_TITLE_PAIRS = [["Duke","Duchess"], ["King","Queen"], ["Lord","Lady"], ["Earl","Countess"], ["Count","Countess"], ["Archduke","Archduchess"], ["Dowager Duke","Dowager Duchess"], ["Prince","Princess"], ["Marquess","Marchioness"], ["Viscount","Viscountess"], ["Baron","Baroness"], ["Knight","Dame"]];
 function adaptTitleGender(title, gender) {
     if (!title) return title;
     for (const [m, f] of GENDER_TITLE_PAIRS) {
@@ -1447,7 +1447,14 @@ function displayRole() {
 // A courtesy title for a child, reflecting the parent's actual current standing AND
 // the child's own place in the succession — the recognized heir reads as genuinely
 // grander than a younger sibling, not just the same style with a suffix tacked on.
-function childCourtesyTitle(child, isHeir) {
+// Below the crown, this walks the real historical ladder of noble rank one full
+// step down for a non-heir child (Duke -> Marquess, Marquess -> Earl, Earl ->
+// Viscount, Viscount -> Baron) rather than collapsing everything below Earl into
+// an undifferentiated "Lord/Lady" — a duke's own younger child and a baron's
+// wouldn't really have worn the same style. age is optional; when supplied it lets
+// an untitled gentry family's own grown, non-heir son plausibly be shown as
+// knighted rather than a bare esquire forever.
+function childCourtesyTitle(child, isHeir, age) {
 
     const base = child.gender === "F" ? "Lady" : "Lord";
     const role = game.role || "";
@@ -1458,22 +1465,55 @@ function childCourtesyTitle(child, isHeir) {
         return `${royalBase} ${child.name}`;
     }
 
+    if (/Prince|Princess/.test(role)) {
+        const royalBase = child.gender === "F" ? "Princess" : "Prince";
+        if (isHeir) return `${royalBase} ${child.name}, next in the line of the blood`;
+        return `${royalBase} ${child.name}`;
+    }
+
     if (/Archduke|Archduchess/.test(role)) {
-        if (isHeir) return `${base} ${child.name}, Heir to the Archduchy of ${game.location}`;
-        return `${base} ${child.name}`;
+        const archBase = child.gender === "F" ? "Archduchess" : "Archduke";
+        if (isHeir) return `${archBase} ${child.name}, Heir to the Archduchy of ${game.location}`;
+        return `${archBase} ${child.name} of ${game.location}`;
     }
 
     if (/Duke|Duchess/.test(role)) {
         if (isHeir) return `${base} ${child.name}, Heir to the Duchy of ${game.location}`;
-        return `${base} ${child.name}`;
+        return `${child.gender === "F" ? "Marchioness" : "Marquess"} ${child.name}`;
     }
 
-    if (/Earl|Countess/.test(role)) {
+    if (/Marquess|Marchioness/.test(role)) {
+        if (isHeir) return `${base} ${child.name}, Heir to the Marquessate of ${game.location}`;
+        return `${child.gender === "F" ? "Countess" : "Earl"} ${child.name}`;
+    }
+
+    if (/Earl|Countess|Count\b/.test(role)) {
         if (isHeir) return `${base} ${child.name}, Heir to the Earldom of ${game.location}`;
-        return `${base} ${child.name}`;
+        return `${child.gender === "F" ? "Viscountess" : "Viscount"} ${child.name}`;
     }
 
+    if (/Viscount|Viscountess/.test(role)) {
+        if (isHeir) return `${base} ${child.name}, Heir to the Viscountcy of ${game.location}`;
+        return `${child.gender === "F" ? "Baroness" : "Baron"} ${child.name}`;
+    }
+
+    if (/Baron|Baroness/.test(role)) {
+        if (isHeir) return `${base} ${child.name}, Heir to the Barony of ${game.location}`;
+        return child.gender === "F" ? `Lady ${child.name}` : `Sir ${child.name}`;
+    }
+
+    if (/Knight|^Dame\b/.test(role)) {
+        if (isHeir) return `${base} ${child.name}, named heir to the family's holdings`;
+        return child.gender === "F" ? `Lady ${child.name}` : `${child.name}, Esquire`;
+    }
+
+    // An untitled gentry family's own recognized heir still carries the plain
+    // family style — the estate is theirs to inherit as-is. A younger, non-heir
+    // son of the same family wasn't going to inherit any of it either way, and
+    // realistically either earned his own knighthood by adulthood or, while
+    // still young, was simply styled Esquire pending that.
     if (isHeir) return `${base} ${child.name}, named heir to the family's holdings`;
+    if (child.gender === "M") return age != null && age >= 21 ? `Sir ${child.name}` : `${child.name}, Esquire`;
     return `${base} ${child.name}`;
 
 }
@@ -4107,7 +4147,7 @@ function renderChildren(content) {
 
         const age = Math.max(0, game.year - child.birthYear);
         const isHeir = game.heir === child;
-        const title = childCourtesyTitle(child, isHeir);
+        const title = childCourtesyTitle(child, isHeir, age);
         const childPortrait = renderPortraitSVG(child.appearance, child.gender, {
             size: 60,
             seed: child.name,
@@ -4402,6 +4442,25 @@ function heirTiedProspectStillValid(prospectId) {
     return true;
 }
 
+// A generated noble-tier match previously carried no rank at all — just a bare
+// period name, indistinguishable from an untitled commoner, even though "Noble
+// match" is specifically supposed to sit a real rung below the royal tier. Real
+// landed gentry of this era mostly sat in the lower rungs of the peerage — a
+// handful of actual barons and viscounts, far more knights and esquires — so
+// the weighting below reflects that instead of handing out rank evenly.
+function randomNobleMatchTitle(gender) {
+    const roll = Math.random();
+    if (roll < 0.08) return gender === "F" ? "Viscountess" : "Viscount";
+    if (roll < 0.22) return gender === "F" ? "Baroness" : "Baron";
+    if (roll < 0.55) return gender === "F" ? "Dame" : "Sir";
+    return gender === "F" ? null : "Esquire";
+}
+function styleNobleMatchName(name, gender) {
+    const title = randomNobleMatchTitle(gender);
+    if (!title) return name;
+    return title === "Esquire" ? `${name}, Esquire` : `${title} ${name}`;
+}
+
 // The four prospects above are each a specific, real historical figure — but
 // a dynasty's own life doesn't end once that one generation marries, dies, or
 // succeeds. Once none of a country's fixed named prospects is still valid,
@@ -4542,7 +4601,7 @@ function pickIncomingProspect(market, targetGender, isHeirLike) {
     const surnamePool = market.countryKey === "england"
         ? (tierData === market.noble.houses.lancastrian ? NOBLE_NAME_POOLS.england.lancastrianSurnames : NOBLE_NAME_POOLS.england.yorkistSurnames)
         : (NOBLE_NAME_POOLS[market.countryKey] || {}).surnames || MERCHANT_SURNAMES.england;
-    const name = generatePeriodName(market.countryKey, prospectGender, surnamePool);
+    const name = styleNobleMatchName(generatePeriodName(market.countryKey, prospectGender, surnamePool), prospectGender);
 
     return { tier: "noble", prospect: { name, relKey: tierData.relKey, demandGold: tierData.demandGold, demandLand: tierData.demandLand, consortTitle: null } };
 
@@ -4703,12 +4762,20 @@ function renderCustomMatchEntry(content, market, subjectGender, subjectName) {
     // tabs and coming back, etc.) doesn't hand you a different person than the
     // one you were just looking at; picking a genuinely different tier or
     // house naturally invalidates the cache and generates someone new.
+    const matchGender = subjectGender === "F" ? "M" : "F";
     const matchKey = `${market.country}|${game.pendingTier}|${game.pendingHouse || ""}`;
     if (!game.pendingGeneratedMatch || game.pendingGeneratedMatch.key !== matchKey) {
-        game.pendingGeneratedMatch = { key: matchKey, name: generatePeriodName(market.countryKey, subjectGender, surnamePool) };
+        // The match is being courted BY the subject, so their first name has to
+        // be drawn from their own (opposite) gender's name pool — passing
+        // subjectGender here, as this once did, would generate a same-sex name
+        // for what the portrait right below is already correctly showing as an
+        // opposite-gender match, exactly the kind of mismatch players reported
+        // seeing ("I was a man and it offered me another man").
+        const rawName = generatePeriodName(market.countryKey, matchGender, surnamePool);
+        const styledName = game.pendingTier === "noble" ? styleNobleMatchName(rawName, matchGender) : rawName;
+        game.pendingGeneratedMatch = { key: matchKey, name: styledName };
     }
     const matchName = game.pendingGeneratedMatch.name;
-    const matchGender = subjectGender === "F" ? "M" : "F";
 
     const matchPortrait = renderPortraitSVG(appearanceFor(matchName, matchGender), matchGender, {
         size: 48,
