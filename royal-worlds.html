@@ -1124,8 +1124,25 @@ const MARRIAGE_MARKET = {
     royal: {
       tierLabel: "Royal match",
       prospects: {
-        F: [{ id: "richard_gloucester", name: "Richard, Duke of Gloucester", relKey: "Edward", demandGold: 60, demandLand: 2, consortTitle: null }],
-        M: [{ id: "margaret_york", name: "Margaret of York, the King's sister", relKey: "Edward", demandGold: 60, demandLand: 2, consortTitle: null, birthYear: 1446 }]
+        // Once Richard of Gloucester and Margaret of York are each spoken
+        // for (or dead), England's royal tier would otherwise sit
+        // permanently empty for the rest of a playthrough that can easily
+        // run another 40+ years past Bosworth. Henry VII's own real
+        // children — each with their real birth year — keep it alive
+        // afterward, gated on requiresFlag so none of them can appear a
+        // moment before Henry VII actually takes the throne. None of this
+        // touches the fixed spine itself: Richard still dies at Bosworth,
+        // Henry VII still wins it, on the same historical date either way.
+        F: [
+            { id: "richard_gloucester", name: "Richard, Duke of Gloucester", relKey: "Edward", demandGold: 60, demandLand: 2, consortTitle: null },
+            { id: "arthur_tudor", name: "Arthur, Prince of Wales, the King's elder son", relKey: "TudorConsort", demandGold: 65, demandLand: 2, consortTitle: null, birthYear: 1486, requiresFlag: "henryVIITudor" },
+            { id: "henry_tudor_prince", name: "Henry, Duke of York, the King's younger son", relKey: "TudorConsort", demandGold: 60, demandLand: 2, consortTitle: null, birthYear: 1491, requiresFlag: "henryVIITudor" },
+        ],
+        M: [
+            { id: "margaret_york", name: "Margaret of York, the King's sister", relKey: "Edward", demandGold: 60, demandLand: 2, consortTitle: null, birthYear: 1446 },
+            { id: "margaret_tudor", name: "Margaret Tudor, the King's elder daughter", relKey: "TudorConsort", demandGold: 60, demandLand: 2, consortTitle: null, birthYear: 1489, requiresFlag: "henryVIITudor" },
+            { id: "mary_tudor_princess", name: "Mary Tudor, the King's younger daughter", relKey: "TudorConsort", demandGold: 55, demandLand: 2, consortTitle: null, birthYear: 1496, requiresFlag: "henryVIITudor" },
+        ]
       }
     },
     noble: {
@@ -4428,6 +4445,15 @@ function getEligibleRoyalProspects(market, subjectGender) {
         .filter(p => !(p.id === "charles_bold" && game.worldFlags.charlesDead))
         .filter(p => !(p.id === "richard_gloucester" && (game.worldFlags.richardIsKing || game.worldFlags.richardDead)))
         .filter(p => !(p.id in HEIR_TIED_PROSPECT_HEIR_NAME) || heirTiedProspectStillValid(p.id))
+        // A prospect gated behind a real historical moment (Henry VII's own
+        // children, who obviously can't be courted before he's even king)
+        // stays invisible until that flag is actually set.
+        .filter(p => !p.requiresFlag || game.worldFlags[p.requiresFlag])
+        // A prospect with a real birth year isn't a plausible match until
+        // they've actually reached a marriageable age — without this, a
+        // newly-added figure like an infant Tudor prince would otherwise be
+        // offered for marriage the moment they're born.
+        .filter(p => !p.birthYear || game.year - p.birthYear >= 12)
         // A named, real prospect (Margaret of York and the like) who has
         // already actually been married off — to the player, to one of their
         // children, or accepted via an incoming offer — stops being offered
@@ -4478,6 +4504,7 @@ function ageMarriageProspects(recapLines) {
         ["F", "M"].forEach(genderKey => {
             (market.royal.prospects[genderKey] || []).forEach(p => {
                 if (!p.birthYear) return;
+                if (game.year < p.birthYear) return;
                 if ((game.worldFlags.marriedRoyalProspects || []).includes(p.id)) return;
                 if ((game.worldFlags.deceasedRoyalProspects || []).includes(p.id)) return;
                 const age = game.year - p.birthYear;
