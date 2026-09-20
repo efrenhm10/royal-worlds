@@ -5635,8 +5635,13 @@ function finalizeMarriage({ subject, childIndex, name, countryId, relKey, consor
     // (drawn from the PLAYER's own age plus a random offset), incorrectly
     // showing that real, named, still-fertile person as past childbearing
     // years or otherwise not matching who they actually are.
+    // Only pull the dynasty's own tracked heir age when this marriage is
+    // genuinely into THAT heir (relKey matches the dynasty's own relKey) —
+    // a noble or merchant match negotiated in a country that happens to also
+    // have a DYNASTIES entry (Florence's Medici, say) has nothing to do with
+    // that dynasty's heir and must not borrow their age.
     const targetDynasty = DYNASTIES[countryId];
-    game.spouseAge = targetDynasty && targetDynasty.heir
+    game.spouseAge = targetDynasty && targetDynasty.heir && relKey === targetDynasty.relKey
         ? targetDynasty.heir.age
         : birthYear
             ? Math.max(0, game.year - birthYear)
