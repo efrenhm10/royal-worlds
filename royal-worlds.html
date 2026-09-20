@@ -3274,6 +3274,7 @@ function startGame(index) {
         pendingCountry: null,
         pendingTier: null,
         pendingHouse: null,
+        pendingNobleRank: null,
         pendingSubject: null,
         pendingChildIndex: null,
         pendingGeneratedMatch: null,
@@ -4405,12 +4406,49 @@ function renderProspectChoice(content) {
         return;
     }
 
+    if (game.pendingTier === "noble" && !game.pendingNobleRank) {
+        renderNobleRankChoice(content, market, subjectName);
+        return;
+    }
+
     if (game.pendingTier === "royal") {
         renderRoyalProspects(content, market, subjectGender, subjectName);
         return;
     }
 
     renderCustomMatchEntry(content, market, subjectGender, subjectName);
+
+}
+
+
+// Which rung of the peerage to actually court — a real Viscount costs and
+// weighs more than a plain untitled esquire, and the choice is the player's
+// to make rather than a random roll deciding it for them.
+function renderNobleRankChoice(content, market, subjectName) {
+
+    content.innerHTML = `
+        <div class="card">
+            <h2>🛡️ ${market.noble.tierLabel || "Noble Match"}</h2>
+            <p class="muted">On behalf of <strong>${subjectName}</strong>. Which rank of family are you actually courting here?</p>
+        </div>
+        <div class="grid" id="rankGrid"></div>
+        <button class="secondary" id="backFromRank">← Back</button>
+    `;
+
+    const grid = content.querySelector("#rankGrid");
+
+    NOBLE_RANK_TIERS.forEach(rank => {
+        const btn = document.createElement("button");
+        btn.innerHTML = `<strong>${rank.labelM}${rank.labelF ? ` / ${rank.labelF}` : ""}</strong><br><span class="muted">${rank.blurb}</span>`;
+        btn.addEventListener("click", () => { game.pendingNobleRank = rank.id; render(); });
+        grid.appendChild(btn);
+    });
+
+    content.querySelector("#backFromRank").addEventListener("click", () => {
+        if (market.noble.houses) game.pendingHouse = null;
+        else game.pendingTier = null;
+        render();
+    });
 
 }
 
@@ -4450,6 +4488,7 @@ function renderTierChoice(content, market, subjectName) {
         game.pendingCountry = null;
         game.pendingTier = null;
         game.pendingHouse = null;
+        game.pendingNobleRank = null;
         game.pendingSubject = null;
         game.pendingChildIndex = null;
         game.manageChildIndex = null;
@@ -4575,6 +4614,75 @@ function styleNobleMatchName(name, gender) {
     const title = randomNobleMatchTitle(gender);
     if (!title) return name;
     return title === "Esquire" ? `${name}, Esquire` : `${title} ${name}`;
+}
+
+// Unlike a foreign court's own incoming proposal (randomly styled above),
+// a player actually going out to arrange a noble match should be able to
+// choose which rung of the peerage they're actually courting — a real
+// Viscount costs and weighs more, at both the bargaining table and in how
+// it reads against the family's own standing, than a plain untitled esquire.
+const NOBLE_RANK_TIERS = [
+    { id: "viscount", labelM: "Viscount", labelF: "Viscountess", goldMult: 1.8, landBonus: 1, stationIndex: 5,
+        blurb: "A real seat in the peerage — costly, but the match carries genuine weight." },
+    { id: "baron", labelM: "Baron", labelF: "Baroness", goldMult: 1.3, landBonus: 0, stationIndex: 6,
+        blurb: "Solid, landed nobility — respectable, and not out of easy reach." },
+    { id: "knight", labelM: "Sir", labelF: "Dame", goldMult: 1.0, landBonus: 0, stationIndex: 7,
+        blurb: "A knighted family — modest standing, and easily afforded." },
+    { id: "esquire", labelM: "Esquire", labelF: null, goldMult: 0.6, landBonus: 0, stationIndex: 8,
+        blurb: "Untitled gentry — the cheapest match available, and the least prestigious." },
+];
+function styleNobleMatchNameForRank(name, gender, rankId) {
+    const rank = NOBLE_RANK_TIERS.find(r => r.id === rankId);
+    if (!rank) return name;
+    if (gender === "F" && !rank.labelF) return name;
+    const label = gender === "F" ? rank.labelF : rank.labelM;
+    return rank.id === "esquire" ? `${name}, Esquire` : `${label} ${name}`;
+}
+
+// The same noble/royal/Prince/Duke/Earl/Baron ladder childCourtesyTitle
+// already walks, reduced to a single comparable number — 0 is a crown, 8 is
+// bare untitled gentry — so a marriage can be judged as reaching up, down,
+// or roughly level with the family's own actual standing.
+function stationRankIndex(role) {
+    const cleaned = (role || "").replace(/^(Dowager|Deposed)\s+/, "");
+    if (/King|Queen/.test(cleaned)) return 0;
+    if (/Prince|Princess/.test(cleaned)) return 1;
+    if (/Archduke|Archduchess|Duke|Duchess/.test(cleaned)) return 2;
+    if (/Marquess|Marchioness/.test(cleaned)) return 3;
+    if (/Earl|Countess|Count\b/.test(cleaned)) return 4;
+    if (/Viscount|Viscountess/.test(cleaned)) return 5;
+    if (/Baron|Baroness/.test(cleaned)) return 6;
+    if (/Knight|^Dame\b/.test(cleaned)) return 7;
+    return 8;
+}
+
+// A royal-tier prospect is always a real prince/princess of their own house
+// (a King's sibling or cousin, or a dynasty's own heir) regardless of
+// whether their eventual title is granted right away or deferred — see
+// marryingIntoNotYetRulingHeir. A noble-tier prospect's station is whichever
+// rank was actually chosen; merchant wealth carries no rank of its own at all.
+function prospectStationIndex(tier, rankId) {
+    if (tier === "royal") return 1;
+    if (tier === "merchant") return 9;
+    const rank = NOBLE_RANK_TIERS.find(r => r.id === rankId);
+    return rank ? rank.stationIndex : 7;
+}
+
+// A one-off informational notice — not a blocking choice — shown the moment
+// negotiations actually open, so the consequence (or cost) of the match is
+// known up front rather than discovered only after the fact.
+function showStationNotice(kind, gapSize, prospectName) {
+    if (kind === "below") {
+        showEvent(
+            "Marrying Below Your Station",
+            `Courting ${prospectName} on these terms will raise eyebrows — a match this far beneath your own family's standing tends to be remembered as a lapse in judgment, not a romance. Word of it will cost you some standing at court if the marriage actually goes through.`
+        );
+    } else {
+        showEvent(
+            "Marrying Above Your Station",
+            `${prospectName}'s family knows exactly how far above your own standing this match would reach — expect them to ask for considerably more than they would from an equal, and to hold firm on it.`
+        );
+    }
 }
 
 // The four prospects above are each a specific, real historical figure — but
@@ -4872,14 +4980,22 @@ function renderCustomMatchEntry(content, market, subjectGender, subjectName) {
         surnamePool = (NOBLE_NAME_POOLS[market.countryKey] || {}).surnames || MERCHANT_SURNAMES.england;
     }
 
+    // A noble-tier match's actual demands scale with the rank the player
+    // chose in renderNobleRankChoice — a real Viscount asks for considerably
+    // more than a plain esquire would.
+    const chosenRank = game.pendingTier === "noble" ? NOBLE_RANK_TIERS.find(r => r.id === game.pendingNobleRank) : null;
+    const demandGold = chosenRank ? Math.round(tierData.demandGold * chosenRank.goldMult) : tierData.demandGold;
+    const demandLand = chosenRank ? tierData.demandLand + chosenRank.landBonus : tierData.demandLand;
+
     // No chronicler recorded this person's name, so one is generated for them —
     // never the player's own to type in. It's cached against this exact
-    // country/tier/house context so re-rendering this same screen (switching
-    // tabs and coming back, etc.) doesn't hand you a different person than the
-    // one you were just looking at; picking a genuinely different tier or
-    // house naturally invalidates the cache and generates someone new.
+    // country/tier/house/rank context so re-rendering this same screen
+    // (switching tabs and coming back, etc.) doesn't hand you a different
+    // person than the one you were just looking at; picking a genuinely
+    // different tier, house, or rank naturally invalidates the cache and
+    // generates someone new.
     const matchGender = subjectGender === "F" ? "M" : "F";
-    const matchKey = `${market.country}|${game.pendingTier}|${game.pendingHouse || ""}`;
+    const matchKey = `${market.country}|${game.pendingTier}|${game.pendingHouse || ""}|${game.pendingNobleRank || ""}`;
     if (!game.pendingGeneratedMatch || game.pendingGeneratedMatch.key !== matchKey) {
         // The match is being courted BY the subject, so their first name has to
         // be drawn from their own (opposite) gender's name pool — passing
@@ -4888,7 +5004,7 @@ function renderCustomMatchEntry(content, market, subjectGender, subjectName) {
         // opposite-gender match, exactly the kind of mismatch players reported
         // seeing ("I was a man and it offered me another man").
         const rawName = generatePeriodName(market.countryKey, matchGender, surnamePool);
-        const styledName = game.pendingTier === "noble" ? styleNobleMatchName(rawName, matchGender) : rawName;
+        const styledName = chosenRank ? styleNobleMatchNameForRank(rawName, matchGender, chosenRank.id) : rawName;
         game.pendingGeneratedMatch = { key: matchKey, name: styledName };
     }
     const matchName = game.pendingGeneratedMatch.name;
@@ -4909,7 +5025,7 @@ function renderCustomMatchEntry(content, market, subjectGender, subjectName) {
                 <span>
                     <strong>${matchName}</strong>
                     <br>
-                    <span class="muted">Expected to seek roughly ${tierData.demandGold} gold and ${tierData.demandLand} land in terms</span>
+                    <span class="muted">Expected to seek roughly ${demandGold} gold and ${demandLand} land in terms</span>
                 </span>
             </div>
         </div>
@@ -4924,8 +5040,8 @@ function renderCustomMatchEntry(content, market, subjectGender, subjectName) {
             id: "custom_" + Date.now(),
             name: matchName,
             relKey: tierData.relKey,
-            demandGold: tierData.demandGold,
-            demandLand: tierData.demandLand,
+            demandGold,
+            demandLand,
             consortTitle: null
         };
         game.pendingGeneratedMatch = null;
@@ -4934,7 +5050,7 @@ function renderCustomMatchEntry(content, market, subjectGender, subjectName) {
 
     document.getElementById("backFromCustom").addEventListener("click", () => {
         game.pendingGeneratedMatch = null;
-        if (game.pendingTier === "noble" && market.noble.houses) game.pendingHouse = null;
+        if (game.pendingTier === "noble") game.pendingNobleRank = null;
         else game.pendingTier = null;
         render();
     });
@@ -4948,6 +5064,32 @@ function startNegotiation(market, prospect) {
     const childIndex = subject === "child" ? game.pendingChildIndex : null;
     const subjectName = subject === "child" ? game.children[childIndex].name : game.person;
 
+    // How the match compares to the subject's own real standing — a plain
+    // esquire's family reaching for a Viscount's daughter, or a King's own
+    // daughter courting a bare untitled gentleman, both carry a real
+    // consequence rather than the family's own actual rank being invisible
+    // to who they can plausibly marry. A non-heir child's own station sits
+    // one rung below the parent's, matching childCourtesyTitle's own ladder.
+    const baseStationIdx = stationRankIndex(game.role);
+    const subjectStationIdx = subject === "child" && game.heir !== game.children[childIndex]
+        ? Math.min(8, baseStationIdx + 1)
+        : baseStationIdx;
+    const prospectStationIdx = prospectStationIndex(market.tier, game.pendingNobleRank);
+    const stationGap = prospectStationIdx - subjectStationIdx;
+
+    let demandGold = prospect.demandGold;
+    let belowStationPenalty = 0;
+    if (stationGap >= 2) {
+        // The cost of marrying down isn't paid at the bargaining table — it's
+        // paid in standing, once the marriage actually happens (see
+        // resolveNegotiationRound).
+        belowStationPenalty = Math.min(20, stationGap * 5);
+    } else if (stationGap <= -2) {
+        // Reaching above the family's own real standing means the other side
+        // knows exactly how much leverage they hold, and prices accordingly.
+        demandGold = Math.round(demandGold * (1 + (-stationGap) * 0.25));
+    }
+
     game.negotiation = {
         subject,
         childIndex,
@@ -4955,10 +5097,11 @@ function startNegotiation(market, prospect) {
         tier: market.tier,
         name: prospect.name,
         relKey: prospect.relKey,
-        demandGold: prospect.demandGold,
+        demandGold,
         demandLand: prospect.demandLand,
         consortTitle: prospect.consortTitle || null,
         prospectId: prospect.id || null,
+        belowStationPenalty,
         offer: { gold: 0, land: 0, title: false, political: false },
         rounds: 0
     };
@@ -4966,12 +5109,16 @@ function startNegotiation(market, prospect) {
     game.pendingCountry = null;
     game.pendingTier = null;
     game.pendingHouse = null;
+    game.pendingNobleRank = null;
 
     game.chronicle.unshift(
         `${game.year}: You open marriage negotiations on behalf of ${subjectName} with ${prospect.name}'s family, in ${market.country}.`
     );
 
     render();
+
+    if (stationGap >= 2) showStationNotice("below", stationGap, prospect.name);
+    else if (stationGap <= -2) showStationNotice("above", -stationGap, prospect.name);
 
 }
 
@@ -5071,6 +5218,7 @@ function negotiationAction(action) {
         game.manageChildIndex = null;
         game.pendingTier = null;
         game.pendingHouse = null;
+        game.pendingNobleRank = null;
 
         render();
 
@@ -5307,6 +5455,14 @@ function resolveNegotiationRound() {
         game.influence += 15;
         game.prestige += (neg.tier === "royal") ? 20 : (neg.tier === "noble" ? 10 : 5);
 
+        // The cost of marrying well below the family's own station (see
+        // startNegotiation/showStationNotice) is paid here, now that the
+        // marriage has actually gone through — not merely threatened at the
+        // negotiating table.
+        const shamePenalty = neg.belowStationPenalty || 0;
+        if (shamePenalty) game.prestige = Math.max(0, game.prestige - shamePenalty);
+        const shameClause = shamePenalty ? ` The match is remembered as a lapse in judgment as much as a marriage — your standing takes a real hit for it.` : "";
+
         if (neg.subject === "child") {
 
             const { childName, relocationNote } = finalizeMarriage({
@@ -5315,7 +5471,7 @@ function resolveNegotiationRound() {
                 prospectId: neg.tier === "royal" ? neg.prospectId : null
             });
 
-            game.chronicle.unshift(`${game.year}: You secure a marriage for ${childName} to ${neg.name}, of ${neg.countryId}.${relocationNote}`);
+            game.chronicle.unshift(`${game.year}: You secure a marriage for ${childName} to ${neg.name}, of ${neg.countryId}.${relocationNote}${shameClause}`);
 
             game.negotiation = null;
             game.pendingSubject = null;
@@ -5326,7 +5482,7 @@ function resolveNegotiationRound() {
 
             showEvent(
                 "A Marriage Is Sealed",
-                `Terms are agreed on ${childName}'s behalf, and the marriage is sealed before witnesses.`
+                `Terms are agreed on ${childName}'s behalf, and the marriage is sealed before witnesses.${shameClause}`
             );
 
         } else {
@@ -5340,9 +5496,9 @@ function resolveNegotiationRound() {
             const titleClause = titleGrantedNow ? `, becoming ${neg.consortTitle}` : "";
 
             if (relocated) {
-                game.chronicle.unshift(`${game.year}: You marry ${neg.name}${titleClause} and relocate your household to ${neg.countryId}. Everything here — the language, the customs, the faces — will take time to learn.`);
+                game.chronicle.unshift(`${game.year}: You marry ${neg.name}${titleClause} and relocate your household to ${neg.countryId}. Everything here — the language, the customs, the faces — will take time to learn.${shameClause}`);
             } else {
-                game.chronicle.unshift(`${game.year}: You marry ${neg.name}${titleClause}.`);
+                game.chronicle.unshift(`${game.year}: You marry ${neg.name}${titleClause}.${shameClause}`);
             }
 
             game.negotiation = null;
@@ -5352,7 +5508,7 @@ function resolveNegotiationRound() {
 
             showEvent(
                 "A Marriage Is Sealed",
-                `Terms are agreed and the marriage is sealed before witnesses.${titleGrantedNow ? ` You are now ${neg.consortTitle}.` : ""}${titleDeferred ? ` ${neg.name} is still only heir, not yet ruling — the title of ${neg.consortTitle} will be yours in truth the moment that changes.` : ""}${relocated ? ` Your household now moves to ${neg.countryId}.` : ""}`
+                `Terms are agreed and the marriage is sealed before witnesses.${titleGrantedNow ? ` You are now ${neg.consortTitle}.` : ""}${titleDeferred ? ` ${neg.name} is still only heir, not yet ruling — the title of ${neg.consortTitle} will be yours in truth the moment that changes.` : ""}${relocated ? ` Your household now moves to ${neg.countryId}.` : ""}${shameClause}`
             );
 
         }
@@ -6152,6 +6308,7 @@ function succeedToHeir(reason) {
     game.pendingChildIndex = null;
     game.pendingTier = null;
     game.pendingHouse = null;
+    game.pendingNobleRank = null;
     game.manageChildIndex = null;
 
     // The heir's own siblings — the dead parent's other children — don't just
