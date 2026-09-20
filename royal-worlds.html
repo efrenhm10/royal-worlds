@@ -1507,6 +1507,17 @@ function childCourtesyTitle(child, isHeir, age) {
         return child.gender === "F" ? `Lady ${child.name}` : `${child.name}, Esquire`;
     }
 
+    // The bottom of the ladder by the PLAYER's own standing doesn't mean the
+    // child is untitled by birth — one born of a real royal or princely
+    // marriage (see ROYAL_BLOOD_RELKEYS, tracked on the child at birth) still
+    // carries that blood from their other parent, whatever title (if any)
+    // this parent themselves happens to hold.
+    if (child.royalBloodCountry) {
+        const royalBase = child.gender === "F" ? "Princess" : "Prince";
+        if (isHeir) return `${royalBase} ${child.name}, named heir to the family's holdings`;
+        return `${royalBase} ${child.name} of ${child.royalBloodCountry}`;
+    }
+
     // An untitled gentry family's own recognized heir still carries the plain
     // family style — the estate is theirs to inherit as-is. A younger, non-heir
     // son of the same family wasn't going to inherit any of it either way, and
@@ -2311,6 +2322,16 @@ const CONSORT_RELKEY_COUNTRY = {
     AnneBurgundy: "Burgundy",
 };
 
+// relKeys representing a marriage into a real royal or princely bloodline —
+// every collateral "King's sibling/cousin" relKey above, plus England's own
+// direct royal relKeys ("Edward" for Richard of Gloucester/Margaret of York,
+// "TudorConsort" for Henry VII's own children) — used so a child born of
+// exactly this kind of marriage is recognized as royal blood in
+// childCourtesyTitle even when the OTHER parent's own title never reflects
+// it (England's own royal marriages never grant a consort title at all,
+// since its succession is the game's fixed historical spine).
+const ROYAL_BLOOD_RELKEYS = new Set([...Object.keys(CONSORT_RELKEY_COUNTRY), "Edward", "TudorConsort"]);
+
 // True if a relKey represents a real blood/marriage tie into this specific
 // country's own ruling house — either a collateral cousin's relKey (see
 // CONSORT_RELKEY_COUNTRY) or the dynasty's own direct relKey (marrying its
@@ -2783,6 +2804,21 @@ function livingLabel(key, defaultLabel) {
     }
 
     return defaultLabel;
+}
+
+// A short "King Louis XI" / "Duke Charles the Bold" style reference for
+// ambient RANDOM_EVENTS flavor text that needs to read naturally in a
+// possessive ("Louis XI's court...") without livingLabel's own trailing
+// "of France" getting in the way. Without this, a handful of location-gated
+// events kept naming whichever monarch was on the throne at game start by
+// name, forever — reading as though Louis XI or Frederick III could simply
+// never die, long after the DYNASTIES simulation had actually moved on to
+// their successor.
+function currentRulerShortTitle(country, fallbackTitle, fallbackName) {
+    const d = DYNASTIES[country];
+    if (!d || !d.active) return `${fallbackTitle} ${fallbackName}`;
+    const title = d.elective ? "Doge" : d.ruler.gender === "F" ? d.titleF : d.titleM;
+    return `${title} ${d.ruler.name}`;
 }
 
 
@@ -4249,7 +4285,7 @@ function renderChildren(content) {
             <div class="stat">Marital status <strong>${child.married ? "Wed to " + child.spouseName + " (" + child.spouseCountry + ")" : child.churchTrack ? "In the Church's service" : "Unmarried"}</strong></div>
             ${child.consortTitle ? `<div class="stat">Recognized abroad <strong>${child.consortTitle}${child.consortRealm ? ` of ${child.consortRealm}` : ""}</strong></div>` : ""}
             ${child.pendingConsortElevation ? `<p class="muted"><em>${child.spouseName} is still only heir to ${child.pendingConsortElevation.countryId}, not yet ruling — the title of ${child.pendingConsortElevation.consortTitle} will be ${child.name}'s in truth the moment that changes.</em></p>` : ""}
-            ${child.married && child.location ? `<div class="stat">Residing in <strong>${child.location}</strong></div>` : ""}
+            ${child.location ? `<div class="stat">Residing in <strong>${child.location}</strong></div>` : ""}
             ${child.churchTrack ? `<div class="stat">Church career <strong>${child.churchRank}</strong></div>` : ""}
             ${child.ownChildren && child.ownChildren.length ? `<div class="stat">Your grandchildren, through ${child.name} <strong>${child.ownChildren.map(g => g.name).join(", ")}</strong></div>` : ""}
             <div class="grid" id="schoolGrid${i}"></div>
@@ -5745,15 +5781,38 @@ function resolveBirth(withPhysician) {
     const childGender = Math.random() < 0.5 ? "M" : "F";
     const childName = pickChildName(childGender);
 
+    // A marriage into a real royal or princely bloodline (a foreign King's own
+    // sibling or cousin, or a dynasty's own not-yet-ruling heir) doesn't
+    // necessarily grant the OTHER parent any title of their own to reflect it —
+    // England's own royal marriages never grant a consort title at all (its
+    // succession is the game's fixed historical spine), and a foreign heir's
+    // marriage doesn't either until their own succession actually happens (see
+    // game.pendingConsortElevation). Without tracking this on the child
+    // directly, a child born of exactly that kind of marriage got no
+    // recognition whatsoever — styled the same bare "Lady"/"Esquire" as any
+    // untitled gentry child, regardless of who their other parent actually was.
+    const royalBloodCountry = ROYAL_BLOOD_RELKEYS.has(game.spouseRelKey)
+        ? game.spouseCountry
+        : (game.pendingConsortElevation ? game.pendingConsortElevation.countryId : null);
+
     function addChild() {
         const child = {
             name: childName,
             gender: childGender,
             birthYear: game.year,
+            // Where a child actually grows up is wherever their parents are
+            // living AT BIRTH — not, years later, wherever a widowed parent
+            // happens to relocate to afterward. Without this, succeedToHeir's
+            // own fallback (heir.location || game.location) would hand a
+            // never-independently-married heir the PARENT's location at the
+            // moment of death, which could easily be a home country the heir
+            // themselves never actually lived in.
+            location: game.location,
             schooling: null,
             married: false,
             spouseName: null,
             spouseCountry: null,
+            royalBloodCountry,
             appearance: generateAppearance(game.house, game.appearance),
             trait: generateTrait(game.house, game.trait),
             cohortNote: historicalCohortNote(game.year, game.homeCountry)
@@ -9212,30 +9271,33 @@ const RANDOM_EVENTS = [
 
     // ===== BURGUNDY =====
 
-    { eligible: (g) => g.location === "Burgundy" && !g.worldFlags.burgundyAnnexed, build: () => ({
-        title: "French Incursions on the Border",
-        text: `Word reaches the ducal court of King Louis XI's men probing Burgundian border territories again — testing, as they always do, for weakness. The garrison commanders want to know what the court intends to do about it.`,
-        choices: [
-            { label: "Raise and send men (−1 land)", effect: () => {
-                if (game.land < 1) return { fail: true, msg: "You have no free levies left to send." };
-                game.land -= 1;
-                const success = Math.random() < 0.65;
-                if (success) { game.prestige += 8; game.influence += 5; return { msg: "The men you send drive the incursion back cleanly. Burgundy's border holds, and the court notices who actually answered the call." }; }
-                game.prestige = Math.max(0, game.prestige - 4);
-                return { msg: "The skirmish goes badly. You lose the men and the ground both — a costly lesson in Louis XI's patience for testing weak points." };
-            }},
-            { label: "Fund the garrison instead (−20 gold)", effect: () => {
-                if (game.wealth < 20) return { fail: true, msg: "Your treasury cannot support this right now." };
-                game.wealth -= 20;
-                game.prestige += 4;
-                return { msg: "You pay for the border to be properly held without risking your own household's men directly." };
-            }},
-            { label: "Let the local lords handle it themselves", effect: () => {
-                if (Math.random() < 0.4) { game.land = Math.max(0, game.land - 1); return { msg: "The local lords are overwhelmed. Some Burgundian land is lost before the incursion is finally driven off." }; }
-                return { msg: "The local lords manage well enough without you. Nothing is lost, but nothing is gained either." };
-            }},
-        ]
-    })},
+    { eligible: (g) => g.location === "Burgundy" && !g.worldFlags.burgundyAnnexed, build: () => {
+        const franceRuler = currentRulerShortTitle("France", "King", "Louis XI");
+        return {
+            title: "French Incursions on the Border",
+            text: `Word reaches the ducal court of ${franceRuler}'s men probing Burgundian border territories again — testing, as they always do, for weakness. The garrison commanders want to know what the court intends to do about it.`,
+            choices: [
+                { label: "Raise and send men (−1 land)", effect: () => {
+                    if (game.land < 1) return { fail: true, msg: "You have no free levies left to send." };
+                    game.land -= 1;
+                    const success = Math.random() < 0.65;
+                    if (success) { game.prestige += 8; game.influence += 5; return { msg: "The men you send drive the incursion back cleanly. Burgundy's border holds, and the court notices who actually answered the call." }; }
+                    game.prestige = Math.max(0, game.prestige - 4);
+                    return { msg: `The skirmish goes badly. You lose the men and the ground both — a costly lesson in ${franceRuler}'s patience for testing weak points.` };
+                }},
+                { label: "Fund the garrison instead (−20 gold)", effect: () => {
+                    if (game.wealth < 20) return { fail: true, msg: "Your treasury cannot support this right now." };
+                    game.wealth -= 20;
+                    game.prestige += 4;
+                    return { msg: "You pay for the border to be properly held without risking your own household's men directly." };
+                }},
+                { label: "Let the local lords handle it themselves", effect: () => {
+                    if (Math.random() < 0.4) { game.land = Math.max(0, game.land - 1); return { msg: "The local lords are overwhelmed. Some Burgundian land is lost before the incursion is finally driven off." }; }
+                    return { msg: "The local lords manage well enough without you. Nothing is lost, but nothing is gained either." };
+                }},
+            ]
+        };
+    }},
 
     { eligible: (g) => g.location === "Burgundy", build: () => {
         const dukeName = game.worldFlags.charlesDead ? "Duchess Mary's" : game.worldFlags.charlesIsDuke ? "Duke Charles's" : "Duke Philip's";
@@ -9277,7 +9339,7 @@ const RANDOM_EVENTS = [
 
     { eligible: (g) => g.location === "France", build: () => ({
         title: "The Watchful French Court",
-        text: `Louis XI's court runs on suspicion as much as ceremony — everyone here seems to be watching everyone else, and you are not exempt from the watching.`,
+        text: `${currentRulerShortTitle("France", "King", "Louis XI")}'s court runs on suspicion as much as ceremony — everyone here seems to be watching everyone else, and you are not exempt from the watching.`,
         choices: [
             { label: "Play it careful and quiet", effect: () => {
                 game.prestige += 4;
@@ -9480,8 +9542,8 @@ const RANDOM_EVENTS = [
     // ===== AUSTRIA =====
 
     { eligible: (g) => g.location === "Austria", build: () => ({
-        title: "The Emperor's Patience",
-        text: `Frederick III is famous even among his own court for a patience that borders on inertia — decisions here move at the pace of decades, not seasons, and everyone learns to work within it or grows frustrated trying not to.`,
+        title: "The Archducal Court's Patience",
+        text: `${currentRulerShortTitle("Austria", "Archduke", "Frederick III")} presides over a court famous for a patience that borders on inertia — decisions here move at the pace of decades, not seasons, and everyone learns to work within it or grows frustrated trying not to.`,
         choices: [
             { label: "Adapt to the slow, careful pace", effect: () => {
                 game.prestige += 5;
