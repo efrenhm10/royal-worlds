@@ -5191,7 +5191,8 @@ function buildIncomingMarriageOffer() {
                 const { relocated, titleGrantedNow, titleDeferred } = finalizeMarriage({
                     subject: "self", name: prospect.name, countryId: market.country,
                     relKey: prospect.relKey, consortTitle: prospect.consortTitle,
-                    prospectId: tier === "royal" ? prospect.id : null
+                    prospectId: tier === "royal" ? prospect.id : null,
+                    birthYear: prospect.birthYear || null
                 });
                 game.chronicle.unshift(`${game.year}: ${market.country} proposes a marriage to you, and you accept${titleGrantedNow ? `, becoming ${prospect.consortTitle}` : ""}.${relocated ? ` Your household moves to ${market.country}.` : ""}`);
                 return { msg: `You accept the match. Terms are agreed and the marriage is sealed before witnesses.${titleGrantedNow ? ` You are now ${prospect.consortTitle}.` : ""}${titleDeferred ? ` ${prospect.name} is still only heir, not yet ruling — the title of ${prospect.consortTitle} will be yours in truth the moment that changes.` : ""}` };
@@ -5393,6 +5394,7 @@ function startNegotiation(market, prospect) {
         demandLand: prospect.demandLand,
         consortTitle: prospect.consortTitle || null,
         prospectId: prospect.id || null,
+        birthYear: prospect.birthYear || null,
         belowStationPenalty,
         offer: { gold: 0, land: 0, title: false, political: false },
         rounds: 0
@@ -5555,7 +5557,7 @@ function marryingIntoNotYetRulingHeir(countryId, relKey, consortTitle) {
 // path rather than two versions that could quietly drift apart. Returns a
 // small descriptor the caller uses to build its own chronicle/event text,
 // since a negotiated match and an offered one are framed differently.
-function finalizeMarriage({ subject, childIndex, name, countryId, relKey, consortTitle, prospectId }) {
+function finalizeMarriage({ subject, childIndex, name, countryId, relKey, consortTitle, prospectId, birthYear }) {
 
     if (prospectId) {
         if (!game.worldFlags.marriedRoyalProspects) game.worldFlags.marriedRoyalProspects = [];
@@ -5625,14 +5627,20 @@ function finalizeMarriage({ subject, childIndex, name, countryId, relKey, consor
     game.spouseName = name;
     game.spouseCountry = countryId;
 
-    // A real dynasty's own tracked heir already has a real age of their own —
-    // use it instead of a random guess, so the DYNASTIES simulation's copy of
-    // this exact person and the player's own spouseAge don't quietly drift
-    // into two different ages for the same individual.
+    // A real, named prospect already has a real age of their own — either a
+    // dynasty's own tracked heir, or a birthYear carried right on the market
+    // listing (Margaret of York, Bona of Savoy, and the like) — use it
+    // instead of a random guess. Without this, a player marrying a prospect
+    // who is, say, 27 could still end up with a wildly different spouseAge
+    // (drawn from the PLAYER's own age plus a random offset), incorrectly
+    // showing that real, named, still-fertile person as past childbearing
+    // years or otherwise not matching who they actually are.
     const targetDynasty = DYNASTIES[countryId];
     game.spouseAge = targetDynasty && targetDynasty.heir
         ? targetDynasty.heir.age
-        : Math.max(14, game.age + Math.round((Math.random() * 16) - 8));
+        : birthYear
+            ? Math.max(0, game.year - birthYear)
+            : Math.max(14, game.age + Math.round((Math.random() * 16) - 8));
     game.spouseRelKey = relKey;
 
     // Marrying into the House of York specifically has real, lasting stakes
@@ -5782,7 +5790,8 @@ function resolveNegotiationRound() {
             const { relocated, titleGrantedNow, titleDeferred } = finalizeMarriage({
                 subject: "self", name: neg.name, countryId: neg.countryId,
                 relKey: neg.relKey, consortTitle: neg.consortTitle,
-                prospectId: neg.tier === "royal" ? neg.prospectId : null
+                prospectId: neg.tier === "royal" ? neg.prospectId : null,
+                birthYear: neg.birthYear
             });
 
             const titleClause = titleGrantedNow ? `, becoming ${neg.consortTitle}` : "";
