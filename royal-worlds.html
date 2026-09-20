@@ -170,6 +170,63 @@ button.secondary.active,
     box-shadow: 0 3px 14px rgba(60,38,12,0.1);
 }
 
+/* The realm-selection map: a stylized political map of Europe, 1461 — each
+   realm is still a real <button> (so the rest of the game, and every test
+   that drives the UI by clicking one, keeps working exactly as before), just
+   positioned and shaped to read as a map region instead of stacked in a
+   list. clip-path gives each one an irregular, hand-drawn silhouette rather
+   than a uniform grid of rectangles. */
+#realms #realmList {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 11;
+    min-height: 420px;
+    margin: 14px 0 6px;
+    border-radius: 14px;
+    background:
+        radial-gradient(ellipse at 30% 20%, rgba(255,255,255,0.10), transparent 60%),
+        linear-gradient(160deg, #6f95c2 0%, #4f7bab 55%, #3c6491 100%);
+    border: 1px solid #1a3d8f;
+    box-shadow: inset 0 0 40px rgba(10,20,50,0.35), 0 3px 14px var(--shadow-warm);
+    overflow: hidden;
+}
+
+.map-region {
+    position: absolute;
+    width: auto;
+    margin: 0;
+    padding: 10px 8px;
+    background: linear-gradient(160deg, var(--parchment-panel) 0%, var(--parchment-deep) 100%);
+    color: var(--ink);
+    border: 1px solid rgba(42,28,16,0.55);
+    border-radius: 0;
+    box-shadow: 0 2px 6px rgba(10,20,50,0.35);
+    font-size: 12px;
+    line-height: 1.2;
+    font-weight: 700;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: filter .12s ease, transform .12s ease, z-index 0s;
+    z-index: 1;
+}
+
+.map-region:hover {
+    filter: brightness(1.14);
+    transform: scale(1.045);
+    box-shadow: 0 4px 12px rgba(10,20,50,0.5);
+    z-index: 5;
+}
+
+.map-region:active { transform: scale(1.0); }
+
+.map-region .muted { display: none; }
+
+#mapHoverInfo {
+    min-height: 64px;
+}
+
 .card::before {
     content: "❧";
     position: absolute;
@@ -400,10 +457,16 @@ ENTER WORLD →
 <p class="muted">
 Europe is not just England. Kingdoms, duchies, electorates, the Church
 and the great banking houses each have their own court, their own
-politics, and their own way of playing the game.
+politics, and their own way of playing the game. Hover a realm on the map,
+then click it to begin there.
 </p>
 
-<div id="realmList" class="grid"></div>
+<div id="realmList"></div>
+
+<div class="card" id="mapHoverInfo">
+    <strong id="mapHoverTitle">Hover a realm above</strong>
+    <p class="muted" id="mapHoverDesc">Its court, its politics, and its own way of playing the game will show here.</p>
+</div>
 
 </section>
 
@@ -2874,6 +2937,31 @@ const REALM_DESCRIPTIONS = {
     "Kingdom of Naples": "The whole southern half of the Italian peninsula, ruled by a cadet branch of the House of Aragon over a more traditionally feudal court than the mercantile north.",
 };
 
+// A stylized, board-game political map of Europe in 1461 — not a precise
+// coastline, just each realm's own rough position relative to the others
+// (Iberia in the southwest, Italy as a north-south strip in the southeast,
+// the Empire's own patchwork to the east) so the realm-selection screen
+// reads as an actual map to click into, the way a Paradox-style map does,
+// rather than a plain list of names. Percentages are of #realmList's own
+// box (set to a fixed aspect ratio in CSS), and clip-path gives each realm
+// an irregular silhouette instead of a uniform grid of rectangles.
+const MAP_REGIONS = {
+    "Kingdom of England": { left: 5, top: 6, width: 17, height: 19, clip: "polygon(6% 0%, 100% 5%, 96% 100%, 0% 94%)" },
+    "Duchy of Brittany": { left: 7, top: 30, width: 12, height: 13, clip: "polygon(12% 0%, 100% 8%, 90% 100%, 0% 92%)" },
+    "Kingdom of France": { left: 21, top: 12, width: 21, height: 32, clip: "polygon(6% 0%, 100% 4%, 96% 92%, 60% 100%, 0% 88%)" },
+    "Duchy of Burgundy": { left: 42, top: 16, width: 10, height: 13, clip: "polygon(0% 6%, 90% 0%, 100% 82%, 20% 100%)" },
+    "The Holy Roman Empire": { left: 51, top: 3, width: 24, height: 28, clip: "polygon(4% 0%, 100% 5%, 96% 90%, 45% 100%, 0% 78%)" },
+    "Archduchy of Austria": { left: 55, top: 34, width: 16, height: 15, clip: "polygon(0% 8%, 90% 0%, 100% 88%, 12% 100%)" },
+    "Kingdom of Portugal": { left: 2, top: 58, width: 9, height: 22, clip: "polygon(15% 0%, 100% 6%, 90% 100%, 0% 92%)" },
+    "Crown of Castile": { left: 11, top: 54, width: 16, height: 26, clip: "polygon(10% 0%, 100% 8%, 94% 96%, 8% 100%, 0% 50%)" },
+    "Crown of Aragon": { left: 27, top: 58, width: 13, height: 20, clip: "polygon(8% 0%, 100% 10%, 90% 100%, 0% 90%)" },
+    "Duchy of Milan": { left: 42, top: 50, width: 10, height: 10, clip: "polygon(6% 0%, 100% 8%, 92% 100%, 0% 90%)" },
+    "Republic of Venice": { left: 53, top: 51, width: 11, height: 10, clip: "polygon(3% 6%, 94% 0%, 100% 94%, 8% 100%)" },
+    "The Medici Bank": { left: 42, top: 61, width: 10, height: 10, clip: "polygon(8% 0%, 100% 10%, 90% 100%, 0% 90%)" },
+    "The Roman Church": { left: 43, top: 72, width: 10, height: 10, clip: "polygon(6% 0%, 100% 8%, 92% 100%, 0% 92%)" },
+    "Kingdom of Naples": { left: 44, top: 83, width: 13, height: 14, clip: "polygon(10% 0%, 100% 6%, 88% 100%, 0% 94%)" },
+};
+
 function showRealms() {
 
     const realmOrder = [];
@@ -2886,12 +2974,27 @@ function showRealms() {
     realmOrder.forEach(realm => {
 
         const button = document.createElement("button");
+        button.className = "map-region";
+
+        const pos = MAP_REGIONS[realm];
+        if (pos) {
+            button.style.left = pos.left + "%";
+            button.style.top = pos.top + "%";
+            button.style.width = pos.width + "%";
+            button.style.height = pos.height + "%";
+            if (pos.clip) button.style.clipPath = pos.clip;
+        }
 
         button.innerHTML = `
             <strong>${realm}</strong>
             <br>
             <span class="muted">${REALM_DESCRIPTIONS[realm] || ""}</span>
         `;
+
+        button.addEventListener("mouseenter", () => {
+            document.getElementById("mapHoverTitle").textContent = realm;
+            document.getElementById("mapHoverDesc").textContent = REALM_DESCRIPTIONS[realm] || "";
+        });
 
         button.addEventListener("click", () => chooseRealm(realm));
 
