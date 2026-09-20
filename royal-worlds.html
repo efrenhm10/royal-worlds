@@ -3664,6 +3664,216 @@ function askSiblingForMoney(index) {
 
 }
 
+// The reverse-direction political counterpart to askSiblingForMoney — calling
+// on a sibling's own standing rather than their purse. Same loyalty-gated
+// success chance and cooldown pattern, kept as a fully separate cooldown
+// field so leaning on the same sibling for money doesn't quietly block
+// leaning on them for influence too.
+function askSiblingForSupport(index) {
+
+    const member = game.family[index];
+    if (!member || !member.isSibling) return;
+
+    if (member.lastAskedForSupportYear != null && game.year - member.lastAskedForSupportYear < 3) {
+        showEvent("Too Soon to Ask Again", `You've already called on ${member.name}'s own standing recently — asking again so soon would strain things further.`);
+        return;
+    }
+
+    member.lastAskedForSupportYear = game.year;
+    const success = Math.random() * 100 < member.loyalty;
+
+    if (success) {
+        const amount = 5 + Math.round(member.loyalty / 10);
+        game.influence += amount;
+        member.loyalty = Math.max(0, member.loyalty - 8);
+        game.chronicle.unshift(`${game.year}: You call on ${member.name}'s own standing for support, and it's given without much fuss.`);
+        showEvent("Family Speaks Up For You", `${member.name} puts their own name behind yours where it matters — real influence, not just a kind word.`);
+    } else {
+        member.loyalty = Math.max(0, member.loyalty - 4);
+        game.chronicle.unshift(`${game.year}: You ask ${member.name} to speak up for you, but they decline to spend their own standing on it.`);
+        showEvent("Declined", `${member.name} isn't willing to put their own name behind this — and the asking itself made things a little awkward between you.`);
+    }
+
+    render();
+
+}
+
+// Relocating your own household to a sibling's court — a real, if temporary,
+// change of residence, not just a visit. Costs a little to travel and settle
+// in, but time actually spent together is worth something real between two
+// branches of the same family.
+function goStayWithSibling(index) {
+
+    const member = game.family[index];
+    if (!member || !member.isSibling || !member.location) return;
+
+    if (member.location === game.location) {
+        showEvent("Already There", `You're already at ${game.location} — there's nowhere to go.`);
+        return;
+    }
+
+    const travelCost = 10;
+    if (game.wealth < travelCost) {
+        showEvent("Cannot Afford the Journey", `You cannot currently afford to travel to ${member.location}.`);
+        return;
+    }
+
+    game.wealth -= travelCost;
+    const oldLocation = game.location;
+    game.location = member.location;
+    game.arrivedYear = game.year;
+    game.arrivedMonth = game.month;
+    member.loyalty = Math.min(100, member.loyalty + 6);
+
+    game.chronicle.unshift(`${game.year}: You leave ${oldLocation} to go stay with ${member.name} at ${member.location} for a time.`);
+    showEvent("A Household Reunited", `You settle in at ${member.location}, in ${member.name}'s own household. Time actually spent together is worth something real, whatever else divides you.`);
+
+    render();
+
+}
+
+// Fostering a child with a sibling's household was a genuine, era-appropriate
+// way to bind two branches of a family together — the child spends part of
+// their upbringing away from home, and the tie it builds is real on both
+// sides.
+function sendChildToFoster(siblingIndex, childName) {
+
+    const member = game.family[siblingIndex];
+    const child = game.children.find(c => c.name === childName);
+    if (!member || !member.isSibling || !member.location || !child) return;
+
+    child.location = member.location;
+    member.loyalty = Math.min(100, member.loyalty + 10);
+    game.influence += 5;
+
+    game.chronicle.unshift(`${game.year}: You send ${child.name} to be fostered in ${member.name}'s own household, at ${member.location}.`);
+    showEvent("A Child Sent to Foster", `${child.name} goes to grow up partly under ${member.name}'s own roof at ${member.location} — a real, lasting tie between your two households, the way such things were actually built in this era.`);
+
+    render();
+
+}
+
+// Shared by the family-tree cards below: builds the standard action grid for
+// one family member (the generic help options, plus whichever sibling-only
+// asks currently apply) into the given grid element.
+function renderFamilyMemberActions(grid, member, index) {
+
+    FAMILY_HELP_OPTIONS.forEach(opt => {
+        const costLabel = opt.cost.gold ? `−${opt.cost.gold} gold` : `−${opt.cost.influence} influence`;
+        const btn = document.createElement("button");
+        btn.innerHTML = `<strong>${opt.label} (${costLabel})</strong><br><span class="muted">${opt.desc}</span>`;
+        btn.addEventListener("click", () => helpFamilyMember(index, opt.id));
+        grid.appendChild(btn);
+    });
+
+    if (!member.isSibling) return;
+
+    // Lean on them for money, when your own coffers are thin.
+    const moneyCooldown = member.lastAskedForMoneyYear != null && game.year - member.lastAskedForMoneyYear < 3;
+    if (game.wealth < 25 && !moneyCooldown) {
+        const askBtn = document.createElement("button");
+        askBtn.innerHTML = `<strong>🙏 Ask ${member.name} for Money</strong><br><span class="muted">Your own coffers are thin — lean on family instead. Not guaranteed, and it costs a little loyalty either way.</span>`;
+        askBtn.addEventListener("click", () => askSiblingForMoney(index));
+        grid.appendChild(askBtn);
+    }
+
+    // Lean on them for political support instead — a separate ask, a
+    // separate cooldown, and a separate kind of favor being spent.
+    const supportCooldown = member.lastAskedForSupportYear != null && game.year - member.lastAskedForSupportYear < 3;
+    if (!supportCooldown) {
+        const supportBtn = document.createElement("button");
+        supportBtn.innerHTML = `<strong>🗳️ Ask for Political Support</strong><br><span class="muted">Call on their own standing to help yours. Not guaranteed, and it costs a little loyalty either way.</span>`;
+        supportBtn.addEventListener("click", () => askSiblingForSupport(index));
+        grid.appendChild(supportBtn);
+    }
+
+    // Go stay with them, wherever they currently are.
+    if (member.location && member.location !== game.location) {
+        const stayBtn = document.createElement("button");
+        stayBtn.className = "secondary";
+        stayBtn.innerHTML = `<strong>🏠 Go Stay With Them (−10 gold)</strong><br><span class="muted">Relocate your own household to ${member.location} for a time.</span>`;
+        stayBtn.addEventListener("click", () => goStayWithSibling(index));
+        grid.appendChild(stayBtn);
+    }
+
+    // Send one of your own (unmarried, still-young) children to foster with
+    // them — a real, era-appropriate way to bind two branches together.
+    if (member.location) {
+        game.children
+            .filter(c => !c.married && !c.churchTrack && Math.max(0, game.year - c.birthYear) < 16 && c.location !== member.location)
+            .forEach(child => {
+                const sendBtn = document.createElement("button");
+                sendBtn.className = "secondary";
+                sendBtn.innerHTML = `<strong>👶 Send ${child.name} to Foster With Them</strong><br><span class="muted">Raise ${child.name} partly in ${member.name}'s own household, at ${member.location}.</span>`;
+                sendBtn.addEventListener("click", () => sendChildToFoster(index, child.name));
+                grid.appendChild(sendBtn);
+            });
+    }
+
+}
+
+// One sibling's own family unit — their own portrait, their spouse's if
+// they're married, and their children's beneath that — read the way an
+// actual family tree would show a single branch, rather than the sibling's
+// spouse and children being just three lines of text.
+function renderSiblingTreeCard(container, member, index) {
+
+    const card = document.createElement("div");
+    card.className = "card";
+
+    const gender = member.gender || "M";
+    const memberPortrait = renderPortraitSVG(appearanceFor(member.name, gender), gender, {
+        size: 60, seed: member.name, crown: null, ringColor: "var(--azure)",
+    });
+
+    const spouseGender = gender === "F" ? "M" : "F";
+    const spouseBlock = member.spouseName ? `
+        <div class="stat">Spouse <strong>${member.spouseName}${member.spouseCountry ? `, of ${member.spouseCountry}` : ""}</strong></div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:6px;padding-top:10px;border-top:1px solid var(--border, rgba(128,128,128,0.25));">
+            <span style="font-size:20px;">💍</span>
+            ${renderPortraitSVG(appearanceFor(member.spouseName, spouseGender), spouseGender, { size: 44, seed: member.spouseName, crown: null, ringColor: "var(--gilt)" })}
+            <span>
+                <strong>${member.spouseName}</strong>
+                ${member.spouseCountry ? `<br><span class="muted">of ${member.spouseCountry}</span>` : ""}
+            </span>
+        </div>
+    ` : `<div class="stat">Spouse <strong>Unmarried</strong></div>`;
+
+    const kids = member.children || [];
+    const kidsBlock = kids.length ? `
+        <div class="stat">Children <strong>${kids.map(k => k.name).join(", ")}</strong></div>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:6px;">
+            ${kids.map(kid => `
+                <div style="text-align:center;width:48px;">
+                    ${renderPortraitSVG(appearanceFor(kid.name, kid.gender), kid.gender, { size: 36, seed: kid.name, crown: null, ringColor: "var(--azure)" })}
+                    <div class="muted" style="font-size:11px;line-height:1.2;">${kid.name}</div>
+                </div>
+            `).join("")}
+        </div>
+    ` : `<div class="stat">Children <strong>None</strong></div>`;
+
+    card.innerHTML = `
+        <div style="display:flex;align-items:center;gap:14px;">
+            ${memberPortrait}
+            <div>
+                <strong>${member.name}</strong>
+                <p class="muted" style="margin:2px 0;">${member.relation}</p>
+            </div>
+        </div>
+        ${member.title ? `<div class="stat">Title <strong>${member.title}</strong></div>` : ""}
+        ${member.location ? `<div class="stat">Currently at <strong>${member.location}</strong></div>` : ""}
+        ${spouseBlock}
+        ${kidsBlock}
+        <p style="margin-top:10px;">Family loyalty: ${member.loyalty}/100</p>
+        <div class="meter"><span style="width:${member.loyalty}%"></span></div>
+        <div class="grid" id="familyHelp${index}"></div>
+    `;
+
+    container.appendChild(card);
+    renderFamilyMemberActions(card.querySelector(`#familyHelp${index}`), member, index);
+
+}
+
 function renderFamily(content) {
 
     content.innerHTML = `
@@ -3681,69 +3891,48 @@ function renderFamily(content) {
 
         </div>
 
+        <div id="siblingTree"></div>
+        <div id="otherFamily"></div>
+
     `;
+
+    const siblingContainer = content.querySelector("#siblingTree");
+    const otherContainer = content.querySelector("#otherFamily");
+
+    let sawSiblingHeader = false;
+    let sawOtherHeader = false;
 
     game.family.forEach((member, index) => {
 
-        const card =
-            document.createElement("div");
-
-        card.className = "card";
-
-        const siblingDetails = member.isSibling ? `
-            ${member.title ? `<div class="stat">Title <strong>${member.title}</strong></div>` : ""}
-            ${member.location ? `<div class="stat">Currently at <strong>${member.location}</strong></div>` : ""}
-            <div class="stat">Spouse <strong>${member.spouseName ? `${member.spouseName}${member.spouseCountry ? `, of ${member.spouseCountry}` : ""}` : "Unmarried"}</strong></div>
-            <div class="stat">Children <strong>${member.children && member.children.length ? member.children.map(c => c.name).join(", ") : "None"}</strong></div>
-        ` : "";
-
-        card.innerHTML = `
-
-            <strong>${member.name}</strong>
-
-            <p class="muted">
-                ${member.relation}
-            </p>
-
-            ${siblingDetails}
-
-            <p>
-                Family loyalty:
-                ${member.loyalty}/100
-            </p>
-
-            <div class="meter"><span style="width:${member.loyalty}%"></span></div>
-
-            <div class="grid" id="familyHelp${index}"></div>
-
-        `;
-
-        content.appendChild(card);
-
-        const grid = card.querySelector(`#familyHelp${index}`);
-
-        FAMILY_HELP_OPTIONS.forEach(opt => {
-
-            const costLabel = opt.cost.gold ? `−${opt.cost.gold} gold` : `−${opt.cost.influence} influence`;
-            const btn = document.createElement("button");
-
-            btn.innerHTML = `<strong>${opt.label} (${costLabel})</strong><br><span class="muted">${opt.desc}</span>`;
-            btn.addEventListener("click", () => helpFamilyMember(index, opt.id));
-
-            grid.appendChild(btn);
-
-        });
-
-        // The reverse direction: when your own treasury is genuinely thin, a
-        // living sibling is someone you can actually turn to, not just someone
-        // who occasionally turns to you.
-        const onCooldown = member.lastAskedForMoneyYear != null && game.year - member.lastAskedForMoneyYear < 3;
-        if (member.isSibling && game.wealth < 25 && !onCooldown) {
-            const askBtn = document.createElement("button");
-            askBtn.innerHTML = `<strong>🙏 Ask ${member.name} for Money</strong><br><span class="muted">Your own coffers are thin — lean on family instead. Not guaranteed, and it costs a little loyalty either way.</span>`;
-            askBtn.addEventListener("click", () => askSiblingForMoney(index));
-            grid.appendChild(askBtn);
+        if (member.isSibling) {
+            if (!sawSiblingHeader) {
+                const h = document.createElement("h3");
+                h.textContent = "Your Siblings";
+                siblingContainer.appendChild(h);
+                sawSiblingHeader = true;
+            }
+            renderSiblingTreeCard(siblingContainer, member, index);
+            return;
         }
+
+        if (!sawOtherHeader) {
+            const h = document.createElement("h3");
+            h.textContent = "Other Family";
+            otherContainer.appendChild(h);
+            sawOtherHeader = true;
+        }
+
+        const card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML = `
+            <strong>${member.name}</strong>
+            <p class="muted">${member.relation}</p>
+            <p>Family loyalty: ${member.loyalty}/100</p>
+            <div class="meter"><span style="width:${member.loyalty}%"></span></div>
+            <div class="grid" id="familyHelp${index}"></div>
+        `;
+        otherContainer.appendChild(card);
+        renderFamilyMemberActions(card.querySelector(`#familyHelp${index}`), member, index);
 
     });
 
