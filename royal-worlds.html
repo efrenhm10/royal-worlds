@@ -4899,6 +4899,14 @@ function heirTiedProspectStillValid(prospectId) {
 // landed gentry of this era mostly sat in the lower rungs of the peerage — a
 // handful of actual barons and viscounts, far more knights and esquires — so
 // the weighting below reflects that instead of handing out rank evenly.
+// A real, independent age for a generated match — 16 through 45, matching
+// the era's actual marriageable range — used for both noble/merchant custom
+// matches and incoming foreign offers, so a marriage's later fertility
+// reflects who was actually married, not a guess derived from the player's
+// own age.
+function randomMatchAge() {
+    return 16 + Math.floor(Math.random() * 30);
+}
 function randomNobleMatchRankId() {
     const roll = Math.random();
     if (roll < 0.01) return "duke";
@@ -5147,8 +5155,13 @@ function pickIncomingProspect(market, targetGender, isHeirLike) {
     // player-initiated noble match flow, where the rank chosen is what the
     // subject themselves ends up styled as.
     const nobleTitle = nobleRankTitleForGender(rankId, targetGender, market.countryKey);
+    // A real, independent age, shown in the offer letter itself — the same
+    // fix as the player's own outgoing matches, so an incoming proposal
+    // doesn't quietly hand you a spouse whose fertility outcome was really
+    // just a guess based on your own age.
+    const age = randomMatchAge();
 
-    return { tier: "noble", prospect: { name, relKey: tierData.relKey, demandGold: tierData.demandGold, demandLand: tierData.demandLand, consortTitle: null, nobleTitle } };
+    return { tier: "noble", prospect: { name, relKey: tierData.relKey, demandGold: tierData.demandGold, demandLand: tierData.demandLand, consortTitle: null, nobleTitle, age, birthYear: game.year - age } };
 
 }
 
@@ -5197,9 +5210,18 @@ function buildIncomingMarriageOffer() {
         ? `your ${target.isHeirLike ? "heir, " : ""}${target.name}`
         : "you";
 
+    // A real, known age up front, the same as the player's own outgoing
+    // matches — so accepting or declining can actually weigh whether a
+    // child is realistically still possible.
+    const offerDynasty = DYNASTIES[market.country];
+    const prospectAge = prospect.age != null ? prospect.age
+        : prospect.birthYear ? Math.max(0, game.year - prospect.birthYear)
+        : (offerDynasty && offerDynasty.heir && prospect.relKey === offerDynasty.relKey) ? offerDynasty.heir.age
+        : null;
+
     return {
         title: `✉️ A Marriage Offer From ${market.country}`,
-        text: `A letter arrives from ${market.country}: ${prospect.name}'s family proposes a match with ${onBehalfOf}${prospect.consortTitle ? `, which would bring the title of ${prospect.consortTitle}` : prospect.nobleTitle ? `, which would bring the title of ${prospect.nobleTitle}` : ""}. They ask for roughly ${prospect.demandGold} gold and ${prospect.demandLand} land in return, but the approach itself is theirs, not yours.`,
+        text: `A letter arrives from ${market.country}: ${prospect.name}${prospectAge != null ? ` (age ${prospectAge})` : ""}'s family proposes a match with ${onBehalfOf}${prospect.consortTitle ? `, which would bring the title of ${prospect.consortTitle}` : prospect.nobleTitle ? `, which would bring the title of ${prospect.nobleTitle}` : ""}. They ask for roughly ${prospect.demandGold} gold and ${prospect.demandLand} land in return, but the approach itself is theirs, not yours.`,
         choices: [
             { label: "Accept the proposal", effect: () => {
                 if (game.wealth < prospect.demandGold || game.land < prospect.demandLand) {
@@ -5257,6 +5279,8 @@ function renderRoyalProspects(content, market, subjectGender, subjectName) {
     const grid = content.querySelector("#prospectGrid");
     const prospectGender = subjectGender === "F" ? "M" : "F";
 
+    const prospectDynasty = DYNASTIES[market.country];
+
     prospects.forEach(p => {
 
         const btn = document.createElement("button");
@@ -5267,11 +5291,19 @@ function renderRoyalProspects(content, market, subjectGender, subjectName) {
             ringColor: "var(--gilt)",
         });
 
+        // A real, known age up front — a fixed named prospect's own birthYear,
+        // or a dynamically-generated heir's real tracked age — so the choice
+        // of who to court can actually weigh whether a child is realistically
+        // still possible, not discover that only after the marriage is sealed.
+        const prospectAge = p.birthYear ? Math.max(0, game.year - p.birthYear)
+            : (prospectDynasty && prospectDynasty.heir && p.relKey === prospectDynasty.relKey) ? prospectDynasty.heir.age
+            : null;
+
         btn.innerHTML = `
             <div style="display:flex;align-items:center;gap:12px;text-align:left;">
                 ${prospectPortrait}
                 <span>
-                    <strong>${p.name}</strong>
+                    <strong>${p.name}</strong>${prospectAge != null ? ` · Age ${prospectAge}` : ""}
                     <br>
                     <span class="muted">Expected to seek roughly ${p.demandGold} gold and ${p.demandLand} land in terms</span>
                 </span>
@@ -5329,9 +5361,18 @@ function renderCustomMatchEntry(content, market, subjectGender, subjectName) {
         // seeing ("I was a man and it offered me another man").
         const rawName = generatePeriodName(market.countryKey, matchGender, surnamePool);
         const styledName = chosenRank ? styleNobleMatchNameForRank(rawName, matchGender, chosenRank.id, market.countryKey) : rawName;
-        game.pendingGeneratedMatch = { key: matchKey, name: styledName };
+        // A generated match used to carry no age of their own at all — the
+        // marriage's actual fertility outcome then depended entirely on the
+        // PLAYER's own age (see finalizeMarriage's random-guess fallback),
+        // so an older player always ended up with an implausibly old,
+        // already-infertile spouse with no way to see that coming or choose
+        // differently. Every generated match now carries its own real,
+        // independent age, generated once and shown up front.
+        const matchAge = randomMatchAge();
+        game.pendingGeneratedMatch = { key: matchKey, name: styledName, age: matchAge, birthYear: game.year - matchAge };
     }
     const matchName = game.pendingGeneratedMatch.name;
+    const matchAge = game.pendingGeneratedMatch.age;
 
     const matchPortrait = renderPortraitSVG(appearanceFor(matchName, matchGender), matchGender, {
         size: 48,
@@ -5347,7 +5388,7 @@ function renderCustomMatchEntry(content, market, subjectGender, subjectName) {
             <div style="display:flex;align-items:center;gap:12px;margin-top:10px;">
                 ${matchPortrait}
                 <span>
-                    <strong>${matchName}</strong>
+                    <strong>${matchName}</strong> · Age ${matchAge}
                     <br>
                     <span class="muted">Expected to seek roughly ${demandGold} gold and ${demandLand} land in terms</span>
                 </span>
@@ -5372,7 +5413,8 @@ function renderCustomMatchEntry(content, market, subjectGender, subjectName) {
             demandGold,
             demandLand,
             consortTitle: null,
-            nobleTitle
+            nobleTitle,
+            birthYear: game.pendingGeneratedMatch.birthYear
         };
         game.pendingGeneratedMatch = null;
         startNegotiation({ country: market.country, tier: game.pendingTier }, prospect);
@@ -5407,6 +5449,17 @@ function startNegotiation(market, prospect) {
     const prospectStationIdx = prospectStationIndex(market.tier, game.pendingNobleRank);
     const stationGap = prospectStationIdx - subjectStationIdx;
 
+    // The age actually shown during negotiation — a fixed named royal
+    // prospect and every noble/merchant match now carry a real birthYear;
+    // a dynamically-generated dynasty heir prospect (see
+    // livingDynastyHeirProspect) has no birthYear of its own but is tied to
+    // a real tracked heir whose age is already known.
+    const negDynasty = DYNASTIES[market.country];
+    const displayAge = prospect.age != null ? prospect.age
+        : prospect.birthYear ? Math.max(0, game.year - prospect.birthYear)
+        : (negDynasty && negDynasty.heir && prospect.relKey === negDynasty.relKey) ? negDynasty.heir.age
+        : null;
+
     let demandGold = prospect.demandGold;
     let belowStationPenalty = 0;
     if (stationGap >= 2) {
@@ -5433,6 +5486,7 @@ function startNegotiation(market, prospect) {
         nobleTitle: prospect.nobleTitle || null,
         prospectId: prospect.id || null,
         birthYear: prospect.birthYear || null,
+        displayAge,
         belowStationPenalty,
         offer: { gold: 0, land: 0, title: false, political: false },
         rounds: 0
@@ -5467,7 +5521,7 @@ function renderNegotiation(content) {
 
         <div class="card">
             <h2>💍 Negotiating: ${neg.name}</h2>
-            <p class="muted">On behalf of <strong>${subjectName}</strong> · ${neg.countryId} · Round ${neg.rounds + 1}</p>
+            <p class="muted">On behalf of <strong>${subjectName}</strong> · ${neg.countryId} · Round ${neg.rounds + 1}${neg.displayAge != null ? ` · Age ${neg.displayAge}` : ""}</p>
 
             <div class="stat">
                 Their family's disposition toward you
