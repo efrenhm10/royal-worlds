@@ -3871,11 +3871,13 @@ function renderFamilyMemberActions(grid, member, index) {
 
     if (!member.isSibling) return;
 
-    // Lean on them for money, when your own coffers are thin.
+    // Lean on them for money — always available, not just once the player's
+    // own coffers happen to run thin (that used to hide the option entirely
+    // whenever wealth sat at 25 or above, with no explanation on screen).
     const moneyCooldown = member.lastAskedForMoneyYear != null && game.year - member.lastAskedForMoneyYear < 3;
-    if (game.wealth < 25 && !moneyCooldown) {
+    if (!moneyCooldown) {
         const askBtn = document.createElement("button");
-        askBtn.innerHTML = `<strong>🙏 Ask ${member.name} for Money</strong><br><span class="muted">Your own coffers are thin — lean on family instead. Not guaranteed, and it costs a little loyalty either way.</span>`;
+        askBtn.innerHTML = `<strong>🙏 Ask ${member.name} for Money</strong><br><span class="muted">Lean on family for coin. Not guaranteed, and it costs a little loyalty either way.</span>`;
         askBtn.addEventListener("click", () => askSiblingForMoney(index));
         grid.appendChild(askBtn);
     }
@@ -4577,6 +4579,7 @@ function renderChildren(content) {
             <div class="stat">Schooling <strong>${child.schooling || "None yet"}</strong></div>
             <div class="stat">Marital status <strong>${child.married ? "Wed to " + child.spouseName + " (" + child.spouseCountry + ")" : child.churchTrack ? "In the Church's service" : "Unmarried"}</strong></div>
             ${child.consortTitle ? `<div class="stat">Recognized abroad <strong>${child.consortTitle}${child.consortRealm ? ` of ${child.consortRealm}` : ""}</strong></div>` : ""}
+            ${child.nobleTitle ? `<div class="stat">Title by marriage <strong>${child.nobleTitle} ${child.name}</strong></div>` : ""}
             ${child.pendingConsortElevation ? `<p class="muted"><em>${child.spouseName} is still only heir to ${child.pendingConsortElevation.countryId}, not yet ruling — the title of ${child.pendingConsortElevation.consortTitle} will be ${child.name}'s in truth the moment that changes.</em></p>` : ""}
             ${child.location ? `<div class="stat">Residing in <strong>${child.location}</strong></div>` : ""}
             ${child.churchTrack ? `<div class="stat">Church career <strong>${child.churchRank}</strong></div>` : ""}
@@ -4731,7 +4734,8 @@ function renderNobleRankChoice(content, market, subjectName) {
 
     NOBLE_RANK_TIERS.forEach(rank => {
         const btn = document.createElement("button");
-        btn.innerHTML = `<strong>${rank.labelM}${rank.labelF ? ` / ${rank.labelF}` : ""}</strong><br><span class="muted">${rank.blurb}</span>`;
+        const labelM = nobleRankLabelM(rank, market.countryKey);
+        btn.innerHTML = `<strong>${labelM}${rank.labelF ? ` / ${rank.labelF}` : ""}</strong><br><span class="muted">${rank.blurb}</span>`;
         btn.addEventListener("click", () => { game.pendingNobleRank = rank.id; render(); });
         grid.appendChild(btn);
     });
@@ -4895,17 +4899,15 @@ function heirTiedProspectStillValid(prospectId) {
 // landed gentry of this era mostly sat in the lower rungs of the peerage — a
 // handful of actual barons and viscounts, far more knights and esquires — so
 // the weighting below reflects that instead of handing out rank evenly.
-function randomNobleMatchTitle(gender) {
+function randomNobleMatchRankId() {
     const roll = Math.random();
-    if (roll < 0.08) return gender === "F" ? "Viscountess" : "Viscount";
-    if (roll < 0.22) return gender === "F" ? "Baroness" : "Baron";
-    if (roll < 0.55) return gender === "F" ? "Dame" : "Sir";
-    return gender === "F" ? null : "Esquire";
-}
-function styleNobleMatchName(name, gender) {
-    const title = randomNobleMatchTitle(gender);
-    if (!title) return name;
-    return title === "Esquire" ? `${name}, Esquire` : `${title} ${name}`;
+    if (roll < 0.01) return "duke";
+    if (roll < 0.03) return "marquess";
+    if (roll < 0.08) return "count";
+    if (roll < 0.16) return "viscount";
+    if (roll < 0.30) return "baron";
+    if (roll < 0.65) return "knight";
+    return "esquire";
 }
 
 // Unlike a foreign court's own incoming proposal (randomly styled above),
@@ -4914,6 +4916,12 @@ function styleNobleMatchName(name, gender) {
 // Viscount costs and weighs more, at both the bargaining table and in how
 // it reads against the family's own standing, than a plain untitled esquire.
 const NOBLE_RANK_TIERS = [
+    { id: "duke", labelM: "Duke", labelF: "Duchess", goldMult: 4.0, landBonus: 3, stationIndex: 2,
+        blurb: "A genuine ducal house — among the very highest standing a subject can hold, at a price to match." },
+    { id: "marquess", labelM: "Marquess", labelF: "Marchioness", goldMult: 3.0, landBonus: 2, stationIndex: 3,
+        blurb: "A marcher lordship of real consequence — rare, and dearly bought." },
+    { id: "count", labelM: "Count", labelF: "Countess", englandLabelM: "Earl", goldMult: 2.4, landBonus: 2, stationIndex: 4,
+        blurb: "A true county seat — substantial land and real weight at court." },
     { id: "viscount", labelM: "Viscount", labelF: "Viscountess", goldMult: 1.8, landBonus: 1, stationIndex: 5,
         blurb: "A real seat in the peerage — costly, but the match carries genuine weight." },
     { id: "baron", labelM: "Baron", labelF: "Baroness", goldMult: 1.3, landBonus: 0, stationIndex: 6,
@@ -4923,12 +4931,27 @@ const NOBLE_RANK_TIERS = [
     { id: "esquire", labelM: "Esquire", labelF: null, goldMult: 0.6, landBonus: 0, stationIndex: 8,
         blurb: "Untitled gentry — the cheapest match available, and the least prestigious." },
 ];
-function styleNobleMatchNameForRank(name, gender, rankId) {
+// England styles the "count" rank as an Earl (his wife/widow is still a
+// Countess, exactly as on the Continent) — every other rank reads the same
+// everywhere, so this is the one place that ever needs to differ by country.
+function nobleRankLabelM(rank, countryKey) {
+    return (countryKey === "england" && rank.englandLabelM) ? rank.englandLabelM : rank.labelM;
+}
+function styleNobleMatchNameForRank(name, gender, rankId, countryKey) {
     const rank = NOBLE_RANK_TIERS.find(r => r.id === rankId);
     if (!rank) return name;
     if (gender === "F" && !rank.labelF) return name;
-    const label = gender === "F" ? rank.labelF : rank.labelM;
+    const label = gender === "F" ? rank.labelF : nobleRankLabelM(rank, countryKey);
     return rank.id === "esquire" ? `${name}, Esquire` : `${label} ${name}`;
+}
+// The title the PLAYER (or child) themselves takes up by marrying into this
+// rank of family — an Esquire's daughter carries no title of her own to
+// confer, so marrying into that rank grants nothing.
+function nobleRankTitleForGender(rankId, gender, countryKey) {
+    const rank = NOBLE_RANK_TIERS.find(r => r.id === rankId);
+    if (!rank) return null;
+    if (gender === "F" && !rank.labelF) return null;
+    return gender === "F" ? rank.labelF : nobleRankLabelM(rank, countryKey);
 }
 
 // The same noble/royal/Prince/Duke/Earl/Baron ladder childCourtesyTitle
@@ -5117,9 +5140,15 @@ function pickIncomingProspect(market, targetGender, isHeirLike) {
     const surnamePool = market.countryKey === "england"
         ? (tierData === market.noble.houses.lancastrian ? NOBLE_NAME_POOLS.england.lancastrianSurnames : NOBLE_NAME_POOLS.england.yorkistSurnames)
         : (NOBLE_NAME_POOLS[market.countryKey] || {}).surnames || MERCHANT_SURNAMES.england;
-    const name = styleNobleMatchName(generatePeriodName(market.countryKey, prospectGender, surnamePool), prospectGender);
+    const rankId = randomNobleMatchRankId();
+    const name = styleNobleMatchNameForRank(generatePeriodName(market.countryKey, prospectGender, surnamePool), prospectGender, rankId, market.countryKey);
+    // Accepting this match confers the same rank's own title on the RECEIVING
+    // player (targetGender), not the prospect being married — mirroring the
+    // player-initiated noble match flow, where the rank chosen is what the
+    // subject themselves ends up styled as.
+    const nobleTitle = nobleRankTitleForGender(rankId, targetGender, market.countryKey);
 
-    return { tier: "noble", prospect: { name, relKey: tierData.relKey, demandGold: tierData.demandGold, demandLand: tierData.demandLand, consortTitle: null } };
+    return { tier: "noble", prospect: { name, relKey: tierData.relKey, demandGold: tierData.demandGold, demandLand: tierData.demandLand, consortTitle: null, nobleTitle } };
 
 }
 
@@ -5170,7 +5199,7 @@ function buildIncomingMarriageOffer() {
 
     return {
         title: `✉️ A Marriage Offer From ${market.country}`,
-        text: `A letter arrives from ${market.country}: ${prospect.name}'s family proposes a match with ${onBehalfOf}${prospect.consortTitle ? `, which would bring the title of ${prospect.consortTitle}` : ""}. They ask for roughly ${prospect.demandGold} gold and ${prospect.demandLand} land in return, but the approach itself is theirs, not yours.`,
+        text: `A letter arrives from ${market.country}: ${prospect.name}'s family proposes a match with ${onBehalfOf}${prospect.consortTitle ? `, which would bring the title of ${prospect.consortTitle}` : prospect.nobleTitle ? `, which would bring the title of ${prospect.nobleTitle}` : ""}. They ask for roughly ${prospect.demandGold} gold and ${prospect.demandLand} land in return, but the approach itself is theirs, not yours.`,
         choices: [
             { label: "Accept the proposal", effect: () => {
                 if (game.wealth < prospect.demandGold || game.land < prospect.demandLand) {
@@ -5183,19 +5212,21 @@ function buildIncomingMarriageOffer() {
                     const { childName, relocationNote } = finalizeMarriage({
                         subject: "child", childIndex: target.childIndex, name: prospect.name,
                         countryId: market.country, relKey: prospect.relKey, consortTitle: prospect.consortTitle,
-                        prospectId: tier === "royal" ? prospect.id : null
+                        prospectId: tier === "royal" ? prospect.id : null,
+                        nobleTitle: prospect.nobleTitle || null
                     });
                     game.chronicle.unshift(`${game.year}: ${market.country} proposes a marriage for ${childName} to ${prospect.name}, and you accept.${relocationNote}`);
                     return { msg: `You accept the match on ${childName}'s behalf. Terms are agreed and the marriage is sealed before witnesses.` };
                 }
-                const { relocated, titleGrantedNow, titleDeferred } = finalizeMarriage({
+                const { relocated, titleGrantedNow, titleDeferred, nobleTitleGranted } = finalizeMarriage({
                     subject: "self", name: prospect.name, countryId: market.country,
                     relKey: prospect.relKey, consortTitle: prospect.consortTitle,
                     prospectId: tier === "royal" ? prospect.id : null,
-                    birthYear: prospect.birthYear || null
+                    birthYear: prospect.birthYear || null,
+                    nobleTitle: prospect.nobleTitle || null
                 });
-                game.chronicle.unshift(`${game.year}: ${market.country} proposes a marriage to you, and you accept${titleGrantedNow ? `, becoming ${prospect.consortTitle}` : ""}.${relocated ? ` Your household moves to ${market.country}.` : ""}`);
-                return { msg: `You accept the match. Terms are agreed and the marriage is sealed before witnesses.${titleGrantedNow ? ` You are now ${prospect.consortTitle}.` : ""}${titleDeferred ? ` ${prospect.name} is still only heir, not yet ruling — the title of ${prospect.consortTitle} will be yours in truth the moment that changes.` : ""}` };
+                game.chronicle.unshift(`${game.year}: ${market.country} proposes a marriage to you, and you accept${titleGrantedNow ? `, becoming ${prospect.consortTitle}` : nobleTitleGranted ? `, becoming ${prospect.nobleTitle} ${game.person}` : ""}.${relocated ? ` Your household moves to ${market.country}.` : ""}`);
+                return { msg: `You accept the match. Terms are agreed and the marriage is sealed before witnesses.${titleGrantedNow ? ` You are now ${prospect.consortTitle}.` : ""}${titleDeferred ? ` ${prospect.name} is still only heir, not yet ruling — the title of ${prospect.consortTitle} will be yours in truth the moment that changes.` : ""}${nobleTitleGranted ? ` You are now styled ${prospect.nobleTitle} ${game.person}.` : ""}` };
             }},
             { label: "Decline politely", effect: () => {
                 game.relationships[prospect.relKey] = Math.max(0, (game.relationships[prospect.relKey] || 20) - 5);
@@ -5297,7 +5328,7 @@ function renderCustomMatchEntry(content, market, subjectGender, subjectName) {
         // opposite-gender match, exactly the kind of mismatch players reported
         // seeing ("I was a man and it offered me another man").
         const rawName = generatePeriodName(market.countryKey, matchGender, surnamePool);
-        const styledName = chosenRank ? styleNobleMatchNameForRank(rawName, matchGender, chosenRank.id) : rawName;
+        const styledName = chosenRank ? styleNobleMatchNameForRank(rawName, matchGender, chosenRank.id, market.countryKey) : rawName;
         game.pendingGeneratedMatch = { key: matchKey, name: styledName };
     }
     const matchName = game.pendingGeneratedMatch.name;
@@ -5329,13 +5360,19 @@ function renderCustomMatchEntry(content, market, subjectGender, subjectName) {
     `;
 
     document.getElementById("confirmCustomMatch").addEventListener("click", () => {
+        // A noble match at a real chosen rank confers that rank's own title on
+        // whoever the marriage is actually for — the player themselves, or the
+        // named child — the moment the match is sealed. A merchant match, or
+        // marrying into the female-titleless "esquire" rank, confers nothing.
+        const nobleTitle = chosenRank ? nobleRankTitleForGender(chosenRank.id, subjectGender, market.countryKey) : null;
         const prospect = {
             id: "custom_" + Date.now(),
             name: matchName,
             relKey: tierData.relKey,
             demandGold,
             demandLand,
-            consortTitle: null
+            consortTitle: null,
+            nobleTitle
         };
         game.pendingGeneratedMatch = null;
         startNegotiation({ country: market.country, tier: game.pendingTier }, prospect);
@@ -5393,6 +5430,7 @@ function startNegotiation(market, prospect) {
         demandGold,
         demandLand: prospect.demandLand,
         consortTitle: prospect.consortTitle || null,
+        nobleTitle: prospect.nobleTitle || null,
         prospectId: prospect.id || null,
         birthYear: prospect.birthYear || null,
         belowStationPenalty,
@@ -5557,7 +5595,7 @@ function marryingIntoNotYetRulingHeir(countryId, relKey, consortTitle) {
 // path rather than two versions that could quietly drift apart. Returns a
 // small descriptor the caller uses to build its own chronicle/event text,
 // since a negotiated match and an offered one are framed differently.
-function finalizeMarriage({ subject, childIndex, name, countryId, relKey, consortTitle, prospectId, birthYear }) {
+function finalizeMarriage({ subject, childIndex, name, countryId, relKey, consortTitle, prospectId, birthYear, nobleTitle }) {
 
     if (prospectId) {
         if (!game.worldFlags.marriedRoyalProspects) game.worldFlags.marriedRoyalProspects = [];
@@ -5607,6 +5645,12 @@ function finalizeMarriage({ subject, childIndex, name, countryId, relKey, consor
         if (marryingHeirNotYetRuling && DYNASTIES[countryId] && DYNASTIES[countryId].heir) {
             DYNASTIES[countryId].heir.married = true;
         }
+
+        // A plain noble-rank match (no real throne involved) still confers
+        // its own title on the child directly, the same way it would on the
+        // player's own marriage — just tracked on the child rather than
+        // folded into game.role.
+        if (nobleTitle && !consortTitle) child.nobleTitle = nobleTitle;
 
         const relocationNote = relocates
             ? ` ${child.name} relocates to ${countryId} to join ${name}'s household${marryingIntoRealTitle ? `, taking up the title of ${consortTitle} there` : ""}.`
@@ -5709,6 +5753,8 @@ function finalizeMarriage({ subject, childIndex, name, countryId, relKey, consor
     const marryingIntoRealTitle = !!consortTitle;
     const relocated = !alreadySovereign && (game.gender === "F" || marryingIntoRealTitle) && countryId !== game.location;
 
+    const nobleTitleGranted = !!(nobleTitle && !consortTitle && !alreadySovereign && stationRankIndex(nobleTitle) <= stationRankIndex(game.role));
+
     if (consortTitle && !alreadySovereign && !marryingHeirNotYetRuling) {
         game.role = consortTitle;
         game.rulingRealm = countryId;
@@ -5716,6 +5762,11 @@ function finalizeMarriage({ subject, childIndex, name, countryId, relKey, consor
         game.pendingConsortElevation = null;
     } else if (consortTitle && marryingHeirNotYetRuling) {
         game.pendingConsortElevation = { countryId, consortTitle };
+    } else if (nobleTitleGranted) {
+        // A plain noble-rank match isn't a foreign throne — it carries no
+        // rulingRealm/rulingStatus claim, just the title itself. Marrying
+        // "down" doesn't strip an existing higher title you already hold.
+        game.role = nobleTitle;
     }
 
     if (relocated) {
@@ -5729,7 +5780,13 @@ function finalizeMarriage({ subject, childIndex, name, countryId, relKey, consor
     // this, accepting a match with a not-yet-ruling heir would misleadingly
     // announce "you are now Queen of Aragon" the same day, years before it's
     // actually true.
-    return { relocated, titleGrantedNow: !!(consortTitle && !alreadySovereign && !marryingHeirNotYetRuling), titleDeferred: marryingHeirNotYetRuling && !!consortTitle };
+    return {
+        relocated,
+        titleGrantedNow: !!(consortTitle && !alreadySovereign && !marryingHeirNotYetRuling),
+        titleDeferred: marryingHeirNotYetRuling && !!consortTitle,
+        nobleTitleGranted,
+        nobleTitle: nobleTitleGranted ? nobleTitle : null
+    };
 
 }
 
@@ -5773,7 +5830,8 @@ function resolveNegotiationRound() {
             const { childName, relocationNote } = finalizeMarriage({
                 subject: "child", childIndex: neg.childIndex, name: neg.name,
                 countryId: neg.countryId, relKey: neg.relKey, consortTitle: neg.consortTitle,
-                prospectId: neg.tier === "royal" ? neg.prospectId : null
+                prospectId: neg.tier === "royal" ? neg.prospectId : null,
+                nobleTitle: neg.nobleTitle
             });
 
             game.chronicle.unshift(`${game.year}: You secure a marriage for ${childName} to ${neg.name}, of ${neg.countryId}.${relocationNote}${shameClause}`);
@@ -5792,14 +5850,14 @@ function resolveNegotiationRound() {
 
         } else {
 
-            const { relocated, titleGrantedNow, titleDeferred } = finalizeMarriage({
+            const { relocated, titleGrantedNow, titleDeferred, nobleTitleGranted } = finalizeMarriage({
                 subject: "self", name: neg.name, countryId: neg.countryId,
                 relKey: neg.relKey, consortTitle: neg.consortTitle,
                 prospectId: neg.tier === "royal" ? neg.prospectId : null,
-                birthYear: neg.birthYear
+                birthYear: neg.birthYear, nobleTitle: neg.nobleTitle
             });
 
-            const titleClause = titleGrantedNow ? `, becoming ${neg.consortTitle}` : "";
+            const titleClause = titleGrantedNow ? `, becoming ${neg.consortTitle}` : (nobleTitleGranted ? `, becoming ${neg.nobleTitle} ${game.person}` : "");
 
             if (relocated) {
                 game.chronicle.unshift(`${game.year}: You marry ${neg.name}${titleClause} and relocate your household to ${neg.countryId}. Everything here — the language, the customs, the faces — will take time to learn.${shameClause}`);
@@ -5814,7 +5872,7 @@ function resolveNegotiationRound() {
 
             showEvent(
                 "A Marriage Is Sealed",
-                `Terms are agreed and the marriage is sealed before witnesses.${titleGrantedNow ? ` You are now ${neg.consortTitle}.` : ""}${titleDeferred ? ` ${neg.name} is still only heir, not yet ruling — the title of ${neg.consortTitle} will be yours in truth the moment that changes.` : ""}${relocated ? ` Your household now moves to ${neg.countryId}.` : ""}${shameClause}`
+                `Terms are agreed and the marriage is sealed before witnesses.${titleGrantedNow ? ` You are now ${neg.consortTitle}.` : ""}${titleDeferred ? ` ${neg.name} is still only heir, not yet ruling — the title of ${neg.consortTitle} will be yours in truth the moment that changes.` : ""}${nobleTitleGranted ? ` You are now styled ${neg.nobleTitle} ${game.person}.` : ""}${relocated ? ` Your household now moves to ${neg.countryId}.` : ""}${shameClause}`
             );
 
         }
@@ -6375,7 +6433,13 @@ function widowedDecision(deceasedName, contextLine) {
         return;
     }
 
-    const dowagerTitle = /Duke|Duchess|King|Queen/.test(game.role) ? `Dowager ${game.role}` : game.role;
+    // A widow's own held rank deserves the "Dowager" style regardless of
+    // exactly where on the peerage ladder it sits — this used to only
+    // recognize Duke/Duchess/King/Queen, silently leaving every other real
+    // title (an Archduchess, a Countess, a Viscountess, a Baroness...)
+    // without it.
+    const dowagerEligible = /Duke|Duchess|King|Queen|Archduke|Archduchess|Marquess|Marchioness|Earl|Countess|Count\b|Viscount|Viscountess|Baron|Baroness/.test(game.role);
+    const dowagerTitle = dowagerEligible ? `Dowager ${game.role}` : game.role;
 
     document.getElementById("event").innerHTML = `
         <div class="card event">
