@@ -6622,6 +6622,15 @@ function succeedToHeir(reason) {
     const oldRulingRealm = game.rulingRealm;
     const oldRulingStatus = game.rulingStatus;
     const heirAge = Math.max(0, game.year - (heir.birthYear || game.year));
+    // A minor heir doesn't lose their whole world just because ONE parent
+    // died — if this heir is genuinely the dying player's own child (not a
+    // sibling/collateral heir stepping in for lack of one), and that
+    // player's own spouse is still alive, the child's other parent is right
+    // there raising them already. Only checked for a real child: a
+    // synthesized collateral heir (see handleDeath) isn't this player's own
+    // child, so game.spouseName has nothing to do with THEIR parentage.
+    const survivingParentAlive = game.children.includes(heir) && !!(game.married && game.spouseName);
+    const survivingParentName = survivingParentAlive ? game.spouseName : null;
 
     game.person = heir.name;
     game.age = heirAge;
@@ -6793,8 +6802,22 @@ function succeedToHeir(reason) {
 
     render();
 
-    // A minor heir always faces a real guardianship question — abroad, it's stay-and-hold
-    // versus go home; at home, it's a regency versus being fostered with a guardian.
+    // A minor heir only faces the stark stay-abroad-or-go-home/regency
+    // question when there's genuinely no surviving parent left to raise
+    // them — with one still living, nothing about where the child lives or
+    // who's raising them changes on its own; that parent would have to
+    // actually choose to send them away for that to happen.
+    if (heirAge < 16 && survivingParentAlive) {
+
+        game.chronicle.unshift(`${game.year}: ${heir.name}, only ${heirAge}, remains at ${oldLocation} in ${survivingParentName}'s care — one parent's death doesn't uproot a child who still has the other.`);
+        render();
+        return;
+
+    }
+
+    // A minor heir with no surviving parent always faces a real guardianship
+    // question — abroad, it's stay-and-hold versus go home; at home, it's a
+    // regency versus being fostered with a guardian.
     if (heirAge < 16) {
 
         const domestic = oldLocation === game.homeCountry;
