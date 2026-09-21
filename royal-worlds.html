@@ -6636,7 +6636,20 @@ function succeedToHeir(reason) {
     // If the old title actually named a specific foreign realm ("Duke of Milan"),
     // that's the realm in question — not necessarily your own home country.
     const oldTitleRealm = titleRealmFromRole(oldRole);
-    game.role = resolveHeirTitle(oldRole, heir.gender);
+    // A child's own royal blood (see ROYAL_BLOOD_RELKEYS, tracked on them at
+    // birth from whichever parent actually carried a real royal marriage —
+    // not necessarily the one whose OWN title this succession would
+    // otherwise fall back on) doesn't just vanish the moment they themselves
+    // take over the family. Without this, a child who was correctly styled
+    // Prince/Princess their whole life (see childCourtesyTitle's own
+    // royalBloodCountry branch) reverted to a bare "Lord"/"Lady" the instant
+    // they actually inherited — losing the very distinction that made them
+    // notable in the first place. A genuinely inheritable title of their
+    // own (Duke, Earl, an actual crown...) still takes priority over this
+    // courtesy style, same as it always did.
+    game.role = (!inheritable && heir.royalBloodCountry)
+        ? `${heir.gender === "F" ? "Princess" : "Prince"} of ${heir.royalBloodCountry}`
+        : resolveHeirTitle(oldRole, heir.gender);
 
     // Sovereignty passes by blood, not by marriage: your own claim (sovereign, or a
     // dowager's residual hold) reaches your heir; a claim you only ever held as a
