@@ -2384,6 +2384,14 @@ const CONSORT_RELKEY_COUNTRY = {
     NaplesConsort: "Naples",
     AnneBurgundy: "Burgundy",
 };
+// Every country with a royal marriage tier at all also gets a generic
+// "RoyalCousin" relKey — used only by proceduralRoyalCousin() below, once a
+// country's fixed cast of named royal relatives (each with a real, finite
+// lifespan) is exhausted. Built from MARRIAGE_MARKET itself so it never
+// drifts out of sync with which countries actually have a royal tier.
+Object.values(MARRIAGE_MARKET).forEach(m => {
+    if (m.royal) CONSORT_RELKEY_COUNTRY[`${m.country}RoyalCousin`] = m.country;
+});
 
 // relKeys representing a marriage into a real royal or princely bloodline —
 // every collateral "King's sibling/cousin" relKey above, plus England's own
@@ -3381,6 +3389,7 @@ function startGame(index) {
         pendingSubject: null,
         pendingChildIndex: null,
         pendingGeneratedMatch: null,
+        proceduralRoyalCousins: {},
         manageChildIndex: null,
 
         pregnancy: null,
@@ -5092,7 +5101,70 @@ function getEligibleRoyalProspects(market, subjectGender) {
         return [...staticList, dynamicHeir];
     }
 
-    return staticList;
+    if (staticList.length) return staticList;
+
+    // Nothing named or dynasty-heir-tied is currently available in this
+    // exact direction. Over a long enough playthrough this becomes the
+    // norm, not the exception: every fixed named cousin has a real,
+    // finite lifespan (see ageMarriageProspects) and is long dead by the
+    // time a game reaches, say, the 1580s, and the dynamic heir above only
+    // ever covers ONE gender per country per generation — whichever the
+    // dynasty's own current heir happens to be. Under male-preference
+    // primogeniture that's overwhelmingly the same gender across most
+    // realms at once, so a same-gender player could otherwise watch every
+    // single country's royal tier go permanently empty at once, with the
+    // world simply never generating a new opposite-gender royal again. A
+    // procedurally generated cousin of the ruling house — regenerated
+    // fresh only once the last one is spoken for — keeps a real royal
+    // option always on the table.
+    const cousin = proceduralRoyalCousin(market, subjectGender);
+    return cousin ? [cousin] : [];
+}
+
+// See getEligibleRoyalProspects above for why this exists. Cached per
+// country+gender so re-rendering the same prospect screen doesn't hand you
+// a different generated cousin than the one you were just looking at (the
+// same reasoning behind the noble/merchant match cache) — a new one is
+// only generated once the cached one is actually married off, or has aged
+// past a plausible marriageable span.
+function proceduralRoyalCousin(market, subjectGender) {
+
+    // A handful of realms (England, Castile) have no DYNASTIES entry at
+    // all — their succession is the game's fixed historical spine, scripted
+    // through WORLD_TIMELINE rather than the general simulation engine, not
+    // absent because there's no crown. Only bail out here when a DYNASTIES
+    // entry actually exists and says this realm's own royal house isn't a
+    // real, currently-reachable one (elective, not yet active, or absorbed
+    // by a conqueror) — no entry at all just means "ask the fixed spine
+    // instead," which for marriage purposes simply means the crown is real.
+    const d = DYNASTIES[market.country];
+    if (d && (d.elective || !d.active || d.absorbedBy)) return null;
+
+    const cacheKey = `${market.country}|${subjectGender}`;
+    const cached = game.proceduralRoyalCousins[cacheKey];
+    const cachedStillValid = cached
+        && !(game.worldFlags.marriedRoyalProspects || []).includes(cached.id)
+        && (game.year - cached.birthYear) < 45;
+    if (cachedStillValid) return cached;
+
+    const cousinGender = subjectGender === "F" ? "M" : "F";
+    const surnamePool = (NOBLE_NAME_POOLS[market.countryKey] || {}).surnames || MERCHANT_SURNAMES.england;
+    const rawName = generatePeriodName(market.countryKey, cousinGender, surnamePool);
+    const age = randomMatchAge();
+
+    const cousin = {
+        id: `royal_cousin_${market.countryKey}_${subjectGender}_${game.year}_${Math.floor(Math.random() * 100000)}`,
+        name: `${rawName}, a cousin of the ruling house of ${d ? d.realmNoun : market.country}`,
+        relKey: `${market.country}RoyalCousin`,
+        demandGold: 50,
+        demandLand: 2,
+        consortTitle: null,
+        birthYear: game.year - age,
+        forGender: subjectGender,
+    };
+    game.proceduralRoyalCousins[cacheKey] = cousin;
+    return cousin;
+
 }
 
 // Every named royal-tier prospect carries a real birthYear except the handful
