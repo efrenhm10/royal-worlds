@@ -321,6 +321,29 @@ button.secondary.active,
     flex-wrap: wrap;
 }
 
+#clockBar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin: 4px 0 10px;
+}
+
+#clockBar #clockDate {
+    font-weight: 700;
+    margin-right: 4px;
+}
+
+.clock-speed-btn {
+    padding: 6px 12px;
+}
+
+.clock-speed-btn.active-speed {
+    background: linear-gradient(160deg, var(--gilt) 0%, #a87a12 100%);
+    color: #fff;
+    box-shadow: 0 0 0 2px var(--azure) inset;
+}
+
 .layout {
     display: grid;
     grid-template-columns: 195px 1fr;
@@ -630,6 +653,16 @@ queen — a niece, a cousin, or a minor lord shapes this world too.
 
 </div>
 
+</div>
+
+<div id="clockBar">
+<span id="clockDate" class="pill"></span>
+<button id="clockPause" style="width:auto;">⏸ Pause</button>
+<button class="clock-speed-btn" data-speed="1" style="width:auto;">1</button>
+<button class="clock-speed-btn" data-speed="2" style="width:auto;">2</button>
+<button class="clock-speed-btn" data-speed="3" style="width:auto;">3</button>
+<button class="clock-speed-btn" data-speed="4" style="width:auto;">4</button>
+<button class="clock-speed-btn" data-speed="5" style="width:auto;">5</button>
 </div>
 
 
@@ -3534,6 +3567,15 @@ function startGame(index) {
         pendingGeneratedMatch: null,
         proceduralRoyalCousins: {},
         activeWar: null,
+        // The real-time day-tick clock (see processDayTick/setGameSpeed below).
+        // Starts paused, on day 1 of the month the character already begins on
+        // — nothing about how a game actually starts changes; this just gives
+        // the existing month/year clock a day of internal resolution to count
+        // through, and a way to let it run on its own between player actions.
+        day: 1,
+        speed: 0,
+        lastSpeed: 1,
+        tasks: [],
         manageChildIndex: null,
 
         pregnancy: null,
@@ -3604,6 +3646,8 @@ function render() {
             ${game.married ? `<span class="pill">💍 Wed to ${game.spouseName}</span>` : ""}
 
         `;
+
+    renderClockWidget();
 
     const content =
         document.getElementById("content");
@@ -8857,6 +8901,191 @@ function applyAnnualDrift() {
     game.piety = driftToward(game.piety, game.house === "curia" ? 55 : 35, 1);
 }
 
+/* =========================================================
+   THE DAY-TICK CLOCK — a real-time layer sitting ON TOP of the
+   existing month/year simulation, not a replacement for it. Every
+   character field, and every existing mechanic (marriage, war,
+   estates, succession...), keeps working exactly as it already did;
+   this just gives the clock day-level resolution, a way for it to
+   run on its own in real time at a chosen speed, and a generic
+   countdown primitive future long-running actions (a building
+   project, marching troops, fabricating a claim) can plug into.
+========================================================= */
+
+// Real milliseconds between day-ticks at each speed setting, 1 (slowest)
+// through 5 (fastest) — speed 0 means paused, and is never looked up here.
+const TICK_MS_BY_SPEED = { 1: 1500, 2: 900, 3: 500, 4: 250, 5: 120 };
+const DAYS_PER_MONTH = 30;
+
+// Handlers for completed tasks, keyed by task type — see queueTask() and
+// advanceTasks() below. Nothing registers a handler yet (no feature
+// actually queues a task of its own before the feudal-hierarchy work this
+// is laying the groundwork for), but the dispatch mechanism itself is real
+// and covered by tests now, rather than added later alongside whatever
+// first needs it.
+const TASK_HANDLERS = {};
+function registerTaskHandler(type, handlerFn) {
+    TASK_HANDLERS[type] = handlerFn;
+}
+
+// Queues a generic, real-days-long task — a building project, a march, a
+// fabricated claim, anything that shouldn't just resolve instantly on
+// click. `type` is looked up in TASK_HANDLERS the moment daysRemaining
+// actually reaches zero; `payload` is whatever that handler needs to
+// finish the job (which country, which building, whose claim...).
+function queueTask(type, label, days, payload) {
+    if (!game.tasks) game.tasks = [];
+    const task = {
+        id: `task_${game.year}_${game.month}_${game.day}_${Math.floor(Math.random() * 1000000)}`,
+        type, label,
+        daysRemaining: days,
+        totalDays: days,
+        payload: payload || {},
+    };
+    game.tasks.push(task);
+    return task;
+}
+
+// Ticks every queued task down by the days that just elapsed, firing each
+// one's registered handler exactly once the moment it actually completes
+// (never early, never more than once), then removing it. Returns whichever
+// tasks completed this call, so a caller (or a test) can see what fired
+// without having to re-derive it from game.tasks afterward.
+function advanceTasks(daysElapsed) {
+
+    if (!game || !game.tasks || !game.tasks.length) return [];
+
+    const completed = [];
+
+    for (let i = game.tasks.length - 1; i >= 0; i--) {
+        const task = game.tasks[i];
+        task.daysRemaining -= daysElapsed;
+        if (task.daysRemaining <= 0) {
+            game.tasks.splice(i, 1);
+            const handler = TASK_HANDLERS[task.type];
+            if (handler) handler(task);
+            completed.push(task);
+        }
+    }
+
+    return completed;
+
+}
+
+// The single isolated tick primitive everything else here is built on:
+// advances the clock by exactly one real day, and progresses any running
+// task countdowns by that same one day. Deliberately has no dependency on
+// rendering, timers, or the DOM — a test (or the real-time scheduler
+// below) can call it directly and inspect exactly what happened. Once a
+// full month of days has actually elapsed, it hands off to the existing,
+// already-tested advanceTime(1) unchanged — every character field and
+// every mechanic built on it stays completely intact; this never
+// reimplements aging, mortality, or the dynasty simulation at day
+// granularity.
+function processDayTick() {
+
+    if (!game) return { monthAdvanced: false, tasksCompleted: [] };
+
+    game.day = (game.day || 1) + 1;
+
+    let monthAdvanced = false;
+    if (game.day > DAYS_PER_MONTH) {
+        game.day = 1;
+        monthAdvanced = true;
+    }
+
+    const tasksCompleted = advanceTasks(1);
+
+    // advanceTime(1) runs AFTER the day/task bookkeeping above so a task
+    // that completes on the exact same tick a month rolls over still fires
+    // in a clean, predictable order (day resets, tasks resolve, then the
+    // month's own events do) rather than depending on where in this
+    // function's body the month boundary happened to fall.
+    if (monthAdvanced) advanceTime(1);
+
+    return { monthAdvanced, tasksCompleted };
+
+}
+
+let clockTimer = null;
+
+// Stops the real-time scheduler outright — used when pausing, when
+// speeding up or down (so only one interval is ever running at a time),
+// and whenever a game ends, so a stray timer never outlives the game it
+// was ticking.
+function stopClock() {
+    if (clockTimer) {
+        clearInterval(clockTimer);
+        clockTimer = null;
+    }
+}
+
+// Sets the clock's running speed (1-5), or pauses it outright at 0 —
+// exactly the Speed 1-5 + Pause control CK3 itself uses. Always tears down
+// any previous interval first, so changing speed mid-run never leaves two
+// timers racing each other.
+function setGameSpeed(speed) {
+    if (!game) return;
+    stopClock();
+    game.speed = speed;
+    if (speed > 0) {
+        game.lastSpeed = speed;
+        clockTimer = setInterval(runClockTick, TICK_MS_BY_SPEED[speed] || TICK_MS_BY_SPEED[3]);
+    }
+    renderClockWidget();
+}
+
+function pauseClock() {
+    if (!game) return;
+    stopClock();
+    game.speed = 0;
+    renderClockWidget();
+}
+
+// One real-time interval firing. If the tick just opened anything the
+// player actually has to look at or answer — the existing time-recap
+// modal, a birth, a death, a succession choice, all of which already
+// render into #event exactly as they did before this clock existed — the
+// clock pauses itself immediately, the same way CK3 stops the clock the
+// moment it needs your actual input rather than silently racing on
+// underneath a popup you haven't read yet. It does NOT try to guess which
+// popups are "safe" to auto-dismiss — every one of them pauses, and the
+// player chooses when to resume.
+function runClockTick() {
+
+    if (!game || game.speed === 0) { stopClock(); return; }
+
+    processDayTick();
+    render();
+
+    const eventEl = document.getElementById("event");
+    if (eventEl && eventEl.innerHTML.trim() !== "") {
+        pauseClock();
+    }
+
+}
+
+// Keeps the visible date + speed/pause controls in sync with game state —
+// called from render() so it never drifts out of step with anything else
+// on screen, and safe to call before those elements exist yet (the start
+// screens render before any game object does).
+function renderClockWidget() {
+
+    if (!game) return;
+
+    const dateEl = document.getElementById("clockDate");
+    if (dateEl) dateEl.textContent = `${game.year} · Month ${game.month}, Day ${game.day || 1}`;
+
+    const pauseBtn = document.getElementById("clockPause");
+    if (pauseBtn) pauseBtn.textContent = game.speed === 0 ? "▶ Play" : "⏸ Pause";
+
+    document.querySelectorAll(".clock-speed-btn").forEach(btn => {
+        const isActive = Number(btn.dataset.speed) === game.speed;
+        btn.classList.toggle("active-speed", isActive);
+    });
+
+}
+
 function advanceTime(months) {
 
     const recapLines = [];
@@ -11063,12 +11292,33 @@ document
         "click",
         () => {
 
+            stopClock();
+
             game = null;
 
             showScreen("start");
 
         }
     );
+
+
+document
+    .getElementById("clockPause")
+    .addEventListener(
+        "click",
+        () => {
+            if (!game) return;
+            if (game.speed === 0) setGameSpeed(game.lastSpeed || 1);
+            else pauseClock();
+        }
+    );
+
+
+document
+    .querySelectorAll(".clock-speed-btn")
+    .forEach(btn => {
+        btn.addEventListener("click", () => setGameSpeed(Number(btn.dataset.speed)));
+    });
 
 
 </script>
