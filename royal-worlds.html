@@ -174,9 +174,11 @@ button.secondary.active,
    realm is still a real <button> (so the rest of the game, and every test
    that drives the UI by clicking one, keeps working exactly as before), just
    positioned and shaped to read as a map region instead of stacked in a
-   list. clip-path gives each one an irregular, hand-drawn silhouette rather
-   than a uniform grid of rectangles. */
-#realms #realmList {
+   list. clip-path gives each one an irregular, hand-drawn silhouette, MAP_
+   REGIONS lays them out on a shared grid so neighbors actually share a
+   border, and a parchment "landmass" layer sits behind all of them so the
+   whole thing reads as one real continent rather than tiles adrift in blue. */
+#mapFrame {
     position: relative;
     width: 100%;
     aspect-ratio: 16 / 11;
@@ -184,11 +186,28 @@ button.secondary.active,
     margin: 14px 0 6px;
     border-radius: 14px;
     background:
-        radial-gradient(ellipse at 30% 20%, rgba(255,255,255,0.10), transparent 60%),
-        linear-gradient(160deg, #6f95c2 0%, #4f7bab 55%, #3c6491 100%);
-    border: 1px solid #1a3d8f;
-    box-shadow: inset 0 0 40px rgba(10,20,50,0.35), 0 3px 14px var(--shadow-warm);
+        repeating-linear-gradient(115deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 2px, transparent 2px, transparent 26px),
+        radial-gradient(ellipse at 30% 20%, rgba(255,255,255,0.12), transparent 60%),
+        linear-gradient(160deg, #6f95c2 0%, #4f7bab 55%, #2f5688 100%);
+    border: 3px double var(--gilt);
+    box-shadow: inset 0 0 40px rgba(10,20,50,0.4), 0 3px 14px var(--shadow-warm);
     overflow: hidden;
+}
+
+#realmList {
+    position: absolute;
+    inset: 0;
+}
+
+.map-landmass {
+    position: absolute;
+    left: 0; top: 0; width: 100%; height: 100%;
+    background:
+        radial-gradient(ellipse at 35% 15%, rgba(255,255,255,0.25), transparent 55%),
+        linear-gradient(155deg, var(--parchment-panel) 0%, var(--parchment-deep) 100%);
+    box-shadow: 0 0 0 2px rgba(42,28,16,0.5) inset;
+    pointer-events: none;
+    z-index: 0;
 }
 
 .map-region {
@@ -196,11 +215,11 @@ button.secondary.active,
     width: auto;
     margin: 0;
     padding: 10px 8px;
-    background: linear-gradient(160deg, var(--parchment-panel) 0%, var(--parchment-deep) 100%);
-    color: var(--ink);
-    border: 1px solid rgba(42,28,16,0.55);
+    color: #fdf6e6;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.75);
+    border: 1.5px solid rgba(20,14,8,0.6);
     border-radius: 0;
-    box-shadow: 0 2px 6px rgba(10,20,50,0.35);
+    box-shadow: 0 2px 6px rgba(10,20,50,0.35), 0 0 0 1px rgba(255,255,255,0.12) inset;
     font-size: 12px;
     line-height: 1.2;
     font-weight: 700;
@@ -213,15 +232,47 @@ button.secondary.active,
 }
 
 .map-region:hover {
-    filter: brightness(1.14);
+    filter: brightness(1.22) saturate(1.15);
     transform: scale(1.045);
-    box-shadow: 0 4px 12px rgba(10,20,50,0.5);
+    box-shadow: 0 4px 14px rgba(10,20,50,0.55), 0 0 0 2px var(--gilt) inset;
     z-index: 5;
 }
 
 .map-region:active { transform: scale(1.0); }
 
 .map-region .muted { display: none; }
+
+#mapTitleBanner {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 6;
+    background: linear-gradient(160deg, var(--parchment-panel) 0%, var(--parchment-deep) 100%);
+    border: 1px solid rgba(42,28,16,0.55);
+    box-shadow: 0 2px 8px rgba(10,20,50,0.4);
+    padding: 4px 16px;
+    border-radius: 3px;
+    font-family: "Cinzel", "Times New Roman", serif;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    font-size: 13px;
+    color: var(--ink);
+    pointer-events: none;
+    white-space: nowrap;
+}
+
+#mapCompass {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    width: 46px;
+    height: 46px;
+    z-index: 6;
+    opacity: 0.85;
+    pointer-events: none;
+    filter: drop-shadow(0 1px 3px rgba(0,0,0,0.5));
+}
 
 #mapHoverInfo {
     min-height: 64px;
@@ -461,7 +512,18 @@ politics, and their own way of playing the game. Hover a realm on the map,
 then click it to begin there.
 </p>
 
-<div id="realmList"></div>
+<div id="mapFrame">
+    <div id="mapTitleBanner">Europe — Anno 1461</div>
+    <svg id="mapCompass" viewBox="0 0 100 100" aria-hidden="true">
+        <circle cx="50" cy="50" r="46" fill="none" stroke="#fdf6e6" stroke-width="2"/>
+        <polygon points="50,6 58,50 50,94 42,50" fill="#fdf6e6"/>
+        <polygon points="6,50 50,42 94,50 50,58" fill="#fdf6e6"/>
+        <polygon points="50,6 54,50 50,50 46,50" fill="#c9971a"/>
+        <circle cx="50" cy="50" r="5" fill="#c9971a" stroke="#fdf6e6" stroke-width="1.5"/>
+        <text x="50" y="18" text-anchor="middle" font-size="12" fill="#fdf6e6" font-family="Georgia, serif">N</text>
+    </svg>
+    <div id="realmList"></div>
+</div>
 
 <div class="card" id="mapHoverInfo">
     <strong id="mapHoverTitle">Hover a realm above</strong>
@@ -2969,22 +3031,67 @@ const REALM_DESCRIPTIONS = {
 // rather than a plain list of names. Percentages are of #realmList's own
 // box (set to a fixed aspect ratio in CSS), and clip-path gives each realm
 // an irregular silhouette instead of a uniform grid of rectangles.
+// Laid out on a shared grid so neighboring realms actually share a border
+// (France touches Burgundy touches the Empire touches Austria; the Iberian
+// crowns sit side by side; the Italian states form one north-south spine)
+// instead of floating as disconnected islands — England is the one
+// genuine island here, separated from the mainland by a real Channel gap,
+// and the narrow gap between Aragon and Italy stands in for the
+// Mediterranean crossing. Each realm also carries its own base/light color
+// pair so the map reads as a political map of distinct powers, not a
+// uniform grid of identically-colored tiles.
 const MAP_REGIONS = {
-    "Kingdom of England": { left: 5, top: 6, width: 17, height: 19, clip: "polygon(6% 0%, 100% 5%, 96% 100%, 0% 94%)" },
-    "Duchy of Brittany": { left: 7, top: 30, width: 12, height: 13, clip: "polygon(12% 0%, 100% 8%, 90% 100%, 0% 92%)" },
-    "Kingdom of France": { left: 21, top: 12, width: 21, height: 32, clip: "polygon(6% 0%, 100% 4%, 96% 92%, 60% 100%, 0% 88%)" },
-    "Duchy of Burgundy": { left: 42, top: 16, width: 10, height: 13, clip: "polygon(0% 6%, 90% 0%, 100% 82%, 20% 100%)" },
-    "The Holy Roman Empire": { left: 51, top: 3, width: 24, height: 28, clip: "polygon(4% 0%, 100% 5%, 96% 90%, 45% 100%, 0% 78%)" },
-    "Archduchy of Austria": { left: 55, top: 34, width: 16, height: 15, clip: "polygon(0% 8%, 90% 0%, 100% 88%, 12% 100%)" },
-    "Kingdom of Portugal": { left: 2, top: 58, width: 9, height: 22, clip: "polygon(15% 0%, 100% 6%, 90% 100%, 0% 92%)" },
-    "Crown of Castile": { left: 11, top: 54, width: 16, height: 26, clip: "polygon(10% 0%, 100% 8%, 94% 96%, 8% 100%, 0% 50%)" },
-    "Crown of Aragon": { left: 27, top: 58, width: 13, height: 20, clip: "polygon(8% 0%, 100% 10%, 90% 100%, 0% 90%)" },
-    "Duchy of Milan": { left: 42, top: 50, width: 10, height: 10, clip: "polygon(6% 0%, 100% 8%, 92% 100%, 0% 90%)" },
-    "Republic of Venice": { left: 53, top: 51, width: 11, height: 10, clip: "polygon(3% 6%, 94% 0%, 100% 94%, 8% 100%)" },
-    "The Medici Bank": { left: 42, top: 61, width: 10, height: 10, clip: "polygon(8% 0%, 100% 10%, 90% 100%, 0% 90%)" },
-    "The Roman Church": { left: 43, top: 72, width: 10, height: 10, clip: "polygon(6% 0%, 100% 8%, 92% 100%, 0% 92%)" },
-    "Kingdom of Naples": { left: 44, top: 83, width: 13, height: 14, clip: "polygon(10% 0%, 100% 6%, 88% 100%, 0% 94%)" },
+    "Kingdom of England": { left: 3, top: 3, width: 16, height: 20,
+        clip: "polygon(22% 0%, 88% 6%, 100% 45%, 82% 100%, 14% 94%, 0% 42%)",
+        color: "#9c3b3b", colorLight: "#b85a52" },
+    "Duchy of Brittany": { left: 3, top: 25, width: 13, height: 15,
+        clip: "polygon(14% 0%, 100% 10%, 88% 100%, 0% 90%)",
+        color: "#3f6e5f", colorLight: "#5c927f" },
+    "Kingdom of France": { left: 17, top: 5, width: 22, height: 38,
+        clip: "polygon(10% 0%, 100% 6%, 94% 90%, 55% 100%, 0% 85%)",
+        color: "#33507d", colorLight: "#4d709e" },
+    "Duchy of Burgundy": { left: 39, top: 18, width: 13, height: 18,
+        clip: "polygon(0% 8%, 85% 0%, 100% 85%, 15% 100%)",
+        color: "#5c2a4a", colorLight: "#7c4468" },
+    "The Holy Roman Empire": { left: 39, top: 2, width: 48, height: 16,
+        clip: "polygon(4% 0%, 100% 8%, 94% 100%, 0% 88%)",
+        color: "#a37f28", colorLight: "#c4a24e" },
+    "Archduchy of Austria": { left: 52, top: 18, width: 36, height: 22,
+        clip: "polygon(0% 10%, 90% 0%, 100% 82%, 10% 100%)",
+        color: "#a85a3a", colorLight: "#c47c58" },
+    "Kingdom of Portugal": { left: 3, top: 46, width: 9, height: 46,
+        clip: "polygon(20% 0%, 100% 8%, 85% 100%, 0% 92%)",
+        color: "#2a5c42", colorLight: "#457a5c" },
+    "Crown of Castile": { left: 12, top: 42, width: 20, height: 50,
+        clip: "polygon(8% 0%, 100% 6%, 96% 94%, 10% 100%, 0% 55%)",
+        color: "#9c4726", colorLight: "#bc6842" },
+    "Crown of Aragon": { left: 32, top: 46, width: 9, height: 44,
+        clip: "polygon(10% 0%, 100% 8%, 88% 100%, 0% 90%)",
+        color: "#b5791f", colorLight: "#d29a3f" },
+    "Duchy of Milan": { left: 44, top: 40, width: 19, height: 13,
+        clip: "polygon(8% 0%, 100% 10%, 90% 100%, 0% 88%)",
+        color: "#4f6f92", colorLight: "#6f8fb0" },
+    "Republic of Venice": { left: 63, top: 40, width: 22, height: 13,
+        clip: "polygon(4% 8%, 92% 0%, 100% 92%, 10% 100%)",
+        color: "#6e1f2b", colorLight: "#8f3d48" },
+    "The Medici Bank": { left: 44, top: 53, width: 13, height: 13,
+        clip: "polygon(10% 0%, 100% 8%, 88% 100%, 0% 90%)",
+        color: "#5f6b32", colorLight: "#7f8c4e" },
+    "The Roman Church": { left: 44, top: 66, width: 13, height: 13,
+        clip: "polygon(8% 0%, 100% 10%, 90% 100%, 0% 88%)",
+        color: "#6b5878", colorLight: "#897696" },
+    "Kingdom of Naples": { left: 44, top: 79, width: 15, height: 14,
+        clip: "polygon(10% 0%, 100% 6%, 86% 100%, 0% 92%)",
+        color: "#7a4a24", colorLight: "#9c6a40" },
 };
+
+// A soft, irregular parchment landmass drawn behind every mainland region
+// (and a separate one for England's own island), so the political-map
+// borders above read as one real, contiguous continent — not a scatter of
+// colored tiles floating in open sea, with any hairline rendering seams
+// between adjoining regions showing land, not water, underneath.
+const MAP_LANDMASS_CLIP = "polygon(22% 4%, 40% 1%, 89% 3%, 88% 20%, 85% 42%, 64% 44%, 60% 55%, 59% 68%, 60% 80%, 58% 93%, 44% 95%, 32% 91%, 22% 88%, 12% 91%, 3% 93%, 2% 62%, 3% 46%, 2% 40%, 3% 25%, 17% 22%, 17% 5%)";
+const MAP_ISLAND_CLIP = "polygon(20% 0%, 88% 6%, 100% 45%, 82% 100%, 14% 94%, 0% 42%)";
 
 function showRealms() {
 
@@ -2994,6 +3101,22 @@ function showRealms() {
     const list = document.getElementById("realmList");
 
     list.innerHTML = "";
+
+    // The mainland and England's own island, drawn first so every region
+    // button layers on top of them — see MAP_LANDMASS_CLIP above.
+    const mainland = document.createElement("div");
+    mainland.className = "map-landmass";
+    mainland.style.clipPath = MAP_LANDMASS_CLIP;
+    list.appendChild(mainland);
+
+    const island = document.createElement("div");
+    island.className = "map-landmass";
+    island.style.left = MAP_REGIONS["Kingdom of England"].left + "%";
+    island.style.top = MAP_REGIONS["Kingdom of England"].top + "%";
+    island.style.width = MAP_REGIONS["Kingdom of England"].width + "%";
+    island.style.height = MAP_REGIONS["Kingdom of England"].height + "%";
+    island.style.clipPath = MAP_ISLAND_CLIP;
+    list.appendChild(island);
 
     realmOrder.forEach(realm => {
 
@@ -3007,6 +3130,10 @@ function showRealms() {
             button.style.width = pos.width + "%";
             button.style.height = pos.height + "%";
             if (pos.clip) button.style.clipPath = pos.clip;
+            if (pos.color) {
+                button.style.background = `linear-gradient(155deg, ${pos.colorLight} 0%, ${pos.color} 100%)`;
+                button.style.borderColor = pos.color;
+            }
         }
 
         button.innerHTML = `
