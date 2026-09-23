@@ -2367,6 +2367,22 @@ const RIVAL_CLAIMANTS = {
     Naples: "Aragon",
 };
 
+// A rough, flavorful military-strength ranking for every realm a sovereign
+// player can actually declare war on — not a real economic simulation, just
+// enough of a spread that a small duchy is a realistic early target and a
+// great power like France takes real, sustained investment to bring down.
+// England and Castile are deliberately left out: their succession runs
+// through this game's own fixed historical spine (Wars of the Roses/Tudor,
+// Isabella's own succession war), and open war on either would collide with
+// content that's already scripted to happen regardless of what the player
+// does. Rome is left out too — the Papacy isn't modeled as a conquerable
+// throne here.
+const REALM_MILITARY_STRENGTH = {
+    France: 100, Austria: 75, Aragon: 70, Burgundy: 65,
+    Venice: 55, Naples: 55, Milan: 50, Portugal: 40,
+    Scotland: 35, Brittany: 30, Florence: 20,
+};
+
 // Marrying a sovereign's sibling or cousin (a "Consort"-tier prospect, distinct
 // from the country's own relKey used by its actual ruler/heir) doesn't make
 // your own children next in line ahead of that ruler's own — but if the whole
@@ -3390,6 +3406,7 @@ function startGame(index) {
         pendingChildIndex: null,
         pendingGeneratedMatch: null,
         proceduralRoyalCousins: {},
+        activeWar: null,
         manageChildIndex: null,
 
         pregnancy: null,
@@ -7440,6 +7457,8 @@ function renderRealm(content) {
             </div>
         </div>
 
+        <div class="card" id="warCard"></div>
+
         <div class="card">
             <h3>⚓ Trade</h3>
             <div class="stat">Trade prosperity <strong>${game.tradeProsperity}/100</strong></div>
@@ -7481,6 +7500,207 @@ function renderRealm(content) {
         btn.addEventListener("click", () => sendRealmEnvoy(relKey));
         relationsGrid.appendChild(btn);
     });
+
+    renderWarCard(content.querySelector("#warCard"));
+
+}
+
+// The war meter runs -100 (total defeat) to +100 (total victory) internally,
+// but reads far more naturally as a single bar showing which side is
+// actually winning right now.
+function warScorePercent(warScore) {
+    return Math.round((warScore + 100) / 2);
+}
+
+function renderWarCard(card) {
+
+    const war = game.activeWar;
+
+    if (war) {
+
+        const pct = warScorePercent(war.warScore);
+        const standing = war.warScore > 15 ? "The campaign is going your way." : war.warScore < -15 ? "The campaign is going badly." : "The campaign hangs in the balance.";
+
+        card.innerHTML = `
+            <h3>⚔️ War with ${war.targetCountry}</h3>
+            <p class="muted">${standing} Campaign season ${war.rounds + 1}.</p>
+            <div class="stat">Your position <strong>${pct}/100</strong></div>
+            <div class="meter"><span style="width:${pct}%"></span></div>
+            <div class="grid">
+                <button id="warPressAttack">Press the Attack (−30 gold, −1 land)</button>
+                <button id="warSueForPeace" class="secondary">Sue for Peace</button>
+            </div>
+        `;
+
+        card.querySelector("#warPressAttack").addEventListener("click", pressWarAttack);
+        card.querySelector("#warSueForPeace").addEventListener("click", sueForPeace);
+
+        return;
+
+    }
+
+    const targets = eligibleWarTargets();
+
+    card.innerHTML = `
+        <h3>⚔️ War</h3>
+        <p class="muted">Your standing forces: ${game.realmTroops} men under arms. Declaring war costs standing with that court and some of your own prestige before a single blow is struck.</p>
+        <div class="grid" id="warTargetGrid"></div>
+        ${!targets.length ? `<p class="muted"><em>No realistic target is currently within reach.</em></p>` : ""}
+    `;
+
+    const grid = card.querySelector("#warTargetGrid");
+    targets.forEach(t => {
+        const btn = document.createElement("button");
+        btn.innerHTML = `<strong>Declare War on ${t.country}</strong><br><span class="muted">Their strength: roughly ${t.strength} — yours: ${game.realmTroops}</span>`;
+        btn.addEventListener("click", () => declareWar(t.country));
+        grid.appendChild(btn);
+    });
+
+}
+
+// Every realm this game actually tracks a military strength for (see
+// REALM_MILITARY_STRENGTH) — excluding your own throne, and excluding
+// anything already absorbed, not yet active, or otherwise not a real,
+// currently-reachable target.
+function eligibleWarTargets() {
+    return Object.keys(REALM_MILITARY_STRENGTH)
+        .filter(country => country !== game.rulingRealm)
+        .filter(country => {
+            const d = DYNASTIES[country];
+            return d && d.active && !d.absorbedBy;
+        })
+        .map(country => ({ country, strength: REALM_MILITARY_STRENGTH[country], relKey: DYNASTIES[country].relKey }));
+}
+
+function declareWar(targetCountry) {
+
+    if (game.rulingStatus !== "sovereign" || game.activeWar) return;
+    if (game.realmTroops < 10) {
+        showEvent("No Army to Send", "You cannot credibly declare war with no real standing forces behind the threat — levy troops first.");
+        return;
+    }
+
+    const d = DYNASTIES[targetCountry];
+    if (!d || d.absorbedBy) return;
+
+    game.activeWar = { targetCountry, warScore: 0, rounds: 0 };
+    game.prestige = Math.max(0, game.prestige - 10);
+    game.relationships[d.relKey] = Math.max(0, (game.relationships[d.relKey] || 20) - 20);
+
+    game.chronicle.unshift(`${game.year}: You declare war on ${targetCountry}, committing the crown's own forces to press a claim by the sword rather than the negotiating table.`);
+    showEvent("War Declared", `Heralds carry the news to every court that will listen: you are now at war with ${targetCountry}. There is no clean way back from this but victory, defeat, or a negotiated peace.`);
+
+    render();
+
+}
+
+// One campaign season — funded, fought, and its outcome weighed against the
+// relative strength of both sides. Not a full battle simulation, just
+// enough real risk and cost that pressing the attack again and again
+// actually matters.
+function pressWarAttack() {
+
+    const war = game.activeWar;
+    if (!war) return;
+
+    if (game.wealth < 30 || game.land < 1) {
+        showEvent("Cannot Fund the Campaign", "The treasury or the crown's own free holdings can't currently sustain another season in the field.");
+        return;
+    }
+
+    game.wealth -= 30;
+    game.land -= 1;
+    war.rounds++;
+
+    const theirStrength = REALM_MILITARY_STRENGTH[war.targetCountry] || 50;
+    const strengthRatio = game.realmTroops / theirStrength;
+    const successChance = Math.min(0.85, Math.max(0.15, 0.5 * strengthRatio));
+    const success = Math.random() < successChance;
+
+    if (success) {
+        war.warScore = Math.min(100, war.warScore + 10 + Math.floor(Math.random() * 11));
+        game.realmTroops = Math.max(0, game.realmTroops - (2 + Math.floor(Math.random() * 4)));
+        game.chronicle.unshift(`${game.year}: Your forces press the advantage against ${war.targetCountry} this season, at real but bearable cost.`);
+    } else {
+        war.warScore = Math.max(-100, war.warScore - 10 - Math.floor(Math.random() * 11));
+        game.realmTroops = Math.max(0, game.realmTroops - (5 + Math.floor(Math.random() * 6)));
+        game.chronicle.unshift(`${game.year}: The campaign season against ${war.targetCountry} goes poorly — ground is lost, and so are men.`);
+    }
+
+    if (war.warScore >= 75) {
+        resolveWarVictory();
+    } else if (war.warScore <= -75) {
+        resolveWarDefeat();
+    } else {
+        render();
+    }
+
+}
+
+function resolveWarVictory() {
+
+    const war = game.activeWar;
+    const targetCountry = war.targetCountry;
+    const d = DYNASTIES[targetCountry];
+
+    if (d) {
+        d.active = false;
+        d.absorbedBy = game.rulingRealm;
+    }
+
+    game.land += 3;
+    game.wealth += 40;
+    game.prestige = Math.min(200, game.prestige + 25);
+    game.activeWar = null;
+
+    game.chronicle.unshift(`${game.year}: ${targetCountry} sues for terms and yields — its lands and treasury pass under your own crown. The map itself has changed.`);
+    showEvent("A Realm Conquered", `${targetCountry} is beaten. Its ruling line is set aside, and the realm is folded into your own crown lands — treasury, holdings, and standing all the richer for it.`);
+
+}
+
+function resolveWarDefeat() {
+
+    const war = game.activeWar;
+    const targetCountry = war.targetCountry;
+
+    game.land = Math.max(0, game.land - 2);
+    game.prestige = Math.max(0, game.prestige - 15);
+    game.realmTroops = Math.max(0, game.realmTroops - 15);
+    game.activeWar = null;
+
+    game.chronicle.unshift(`${game.year}: The war with ${targetCountry} ends in defeat — what forces remain limp home, and the crown's own standing suffers for the failure.`);
+    showEvent("Defeat", `${targetCountry} has broken your campaign. You sue for peace on their terms, your own crown weaker for the attempt.`);
+
+}
+
+// Ending a war doesn't have to mean fighting it to a decisive finish — a
+// negotiated peace at any point reflects however the campaign actually
+// stands right now, for better or worse.
+function sueForPeace() {
+
+    const war = game.activeWar;
+    if (!war) return;
+
+    const targetCountry = war.targetCountry;
+
+    if (war.warScore > 20) {
+        game.land += 1;
+        game.wealth += 20;
+        game.prestige = Math.min(200, game.prestige + 10);
+        game.chronicle.unshift(`${game.year}: You sue for peace with ${targetCountry} from a position of real strength — they cede land and gold to see the war end.`);
+        showEvent("A Favorable Peace", `${targetCountry} agrees to real terms rather than risk further losses. You come away from the war with more than you started it with.`);
+    } else if (war.warScore < -20) {
+        game.land = Math.max(0, game.land - 1);
+        game.prestige = Math.max(0, game.prestige - 10);
+        game.chronicle.unshift(`${game.year}: You sue for peace with ${targetCountry} from a position of weakness, ceding ground to end the war before it costs even more.`);
+        showEvent("A Costly Peace", `${targetCountry} presses its advantage at the table. The war ends, but not on your own terms.`);
+    } else {
+        game.chronicle.unshift(`${game.year}: The war with ${targetCountry} ends in a white peace — neither side gained what it fought for.`);
+        showEvent("A White Peace", `The war with ${targetCountry} ends inconclusively. Nothing is gained, but nothing more is lost either.`);
+    }
+
+    game.activeWar = null;
+    render();
 
 }
 
