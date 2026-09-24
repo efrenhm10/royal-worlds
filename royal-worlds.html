@@ -2078,6 +2078,18 @@ const WORLD_TIMELINE = [
       } },
 
     { id: "louis_annexes_burgundy", year: 1477, month: 5,
+      // Only the history-book outcome: Louis XI picks off the duchy from young,
+      // still-unmarried Mary. If your own marriage already diverted the
+      // succession (burgundyAlternateLine — your own child inherited the whole
+      // duchy outright at Charles's death), there is no undefended heiress here
+      // for Louis to prey on. And if some OTHER power (very possibly your own
+      // crown, via the War & Conquest system) already conquered Burgundy
+      // outright in the few months between Charles's death and this beat's own
+      // date, DYNASTIES.Burgundy.absorbedBy is already set to whoever actually
+      // took it — Louis has nothing left here to seize either way. Either way,
+      // this beat simply never happens once its own scripted cast no longer
+      // holds the throne it's written about.
+      eligible: (g) => !g.worldFlags.burgundyAlternateLine && !DYNASTIES.Burgundy.absorbedBy,
       text: `News from Burgundy: with Charles the Bold dead, King Louis XI moves swiftly to seize the Duchy of Burgundy itself for the French crown, leaving young Mary to hold only the Burgundian Netherlands.`,
       apply: (g) => { g.worldFlags.burgundyAnnexed = true; } },
 
@@ -10689,7 +10701,13 @@ const RANDOM_EVENTS = [
     }},
 
     { eligible: (g) => g.location === "Burgundy", build: () => {
-        const dukeName = game.worldFlags.charlesDead ? "Duchess Mary's" : game.worldFlags.charlesIsDuke ? "Duke Charles's" : "Duke Philip's";
+        // "Duchess Mary's" is only accurate in the history-book outcome. If your
+        // own marriage diverted Burgundy's succession (burgundyAlternateLine),
+        // it's your own heir on that throne now — name and title both need to
+        // reflect whoever the scripted cast actually turned out to be.
+        const dukeName = game.worldFlags.burgundyAlternateLine
+            ? `${DYNASTIES.Burgundy.ruler.gender === "F" ? "Duchess" : "Duke"} ${DYNASTIES.Burgundy.ruler.name}'s`
+            : game.worldFlags.charlesDead ? "Duchess Mary's" : game.worldFlags.charlesIsDuke ? "Duke Charles's" : "Duke Philip's";
         return {
             title: "The Burgundian Court's Ceremony",
             text: `The Burgundian court is famous across Christendom for its wealth and ceremony — ${dukeName} feasts are said to be the grandest anywhere, and the standard expected of you here is exacting.`,
