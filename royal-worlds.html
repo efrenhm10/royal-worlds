@@ -1166,6 +1166,75 @@ people: [
 
 },
 
+bohemia: {
+
+name: "The House of Poděbrady",
+
+realm: "Kingdom of Bohemia",
+homeCountry: "Bohemia",
+startStats: { wealth: 48, prestige: 45, influence: 40, land: 3 },
+
+description:
+"The Bohemian royal court under King George of Poděbrady — an elected Hussite king, his crown watched closely by a Church that has never fully forgiven his faith.",
+
+people: [
+
+["A Bohemian nobleman", 26, "Plausible", "M"],
+
+["A Bohemian noblewoman", 23, "Plausible", "F"],
+
+["A Utraquist priest-scholar", 34, "Plausible", "M"]
+
+]
+
+},
+
+wallachia: {
+
+name: "The House of Drăculești",
+
+realm: "Principality of Wallachia",
+homeCountry: "Wallachia",
+startStats: { wealth: 30, prestige: 40, influence: 20, land: 2 },
+
+description:
+"The Wallachian court under Voivode Vlad III — feared by his own boyars as much as by the Ottomans he holds at the border, his methods already the stuff of whispered legend across Christendom.",
+
+people: [
+
+["A Wallachian boyar", 28, "Plausible", "M"],
+
+["A Wallachian noblewoman", 24, "Plausible", "F"],
+
+["A border captain", 33, "Captain", "M"]
+
+]
+
+},
+
+ottoman: {
+
+name: "The House of Osman",
+
+realm: "The Ottoman Empire",
+homeCountry: "Ottoman",
+startStats: { wealth: 90, prestige: 85, influence: 60, land: 8 },
+
+description:
+"The Ottoman court under Sultan Mehmed II, conqueror of Constantinople — the great power of the eastern Mediterranean, and the shadow every court from Venice to Buda watches most closely.",
+
+people: [
+
+["An Ottoman pasha", 40, "Plausible", "M"],
+
+["A lady of the Imperial household", 25, "Plausible", "F"],
+
+["A janissary commander", 36, "Captain", "M"]
+
+]
+
+},
+
 saxony: {
 
 name: "The Electorate of Saxony",
@@ -1645,6 +1714,56 @@ const MARRIAGE_MARKET = {
     merchant: { tierLabel: "Merchant match", relKey: "PolishMerchants", demandGold: 13, demandLand: 0 }
   },
 
+  bohemia: {
+    country: "Bohemia",
+    countryKey: "bohemia",
+    royal: {
+      tierLabel: "Royal match",
+      // George of Poděbrady's own elected crown carries no clear dynastic
+      // heir either — the same real, currently-reachable "marry the ruler
+      // himself" case Hungary already showcases (see
+      // livingDynastyRulerProspect).
+      prospects: {
+        F: [{ id: "podebrady_cousin", name: "Viktorin of Poděbrady, a cousin of the royal house", relKey: "BohemiaConsort", demandGold: 45, demandLand: 1, consortTitle: null, birthYear: 1438 }],
+        M: [{ id: "podebrady_cousin_f", name: "Zdena of Poděbrady, a cousin of the royal house", relKey: "BohemiaConsort", demandGold: 45, demandLand: 1, consortTitle: null, birthYear: 1441 }]
+      }
+    },
+    noble: { tierLabel: "Noble match", relKey: "BohemianNobles", demandGold: 30, demandLand: 1 },
+    merchant: { tierLabel: "Merchant match", relKey: "BohemianMerchants", demandGold: 11, demandLand: 0 }
+  },
+
+  wallachia: {
+    country: "Wallachia",
+    countryKey: "wallachia",
+    royal: {
+      tierLabel: "Royal match",
+      // Vlad III's own real, tangled succession (three separate reigns,
+      // rival cousins pressing their own claims throughout) left him with
+      // no settled heir at game start either — another real showcase for
+      // marrying the ruler directly.
+      prospects: {
+        F: [{ id: "basarab_cousin", name: "Basarab, a cousin of the Drăculești line", relKey: "WallachiaConsort", demandGold: 25, demandLand: 1, consortTitle: null, birthYear: 1435 }],
+        M: [{ id: "basarab_cousin_f", name: "Cneajna of Wallachia, a cousin of the Drăculești line", relKey: "WallachiaConsort", demandGold: 25, demandLand: 1, consortTitle: null, birthYear: 1440 }]
+      }
+    },
+    noble: { tierLabel: "Boyar match", relKey: "WallachianNobles", demandGold: 18, demandLand: 1 },
+    merchant: { tierLabel: "Merchant match", relKey: "WallachianMerchants", demandGold: 8, demandLand: 0 }
+  },
+
+  ottoman: {
+    country: "Ottoman",
+    countryKey: "ottoman",
+    royal: {
+      tierLabel: "Royal match",
+      prospects: {
+        F: [{ id: "bayezid_ottoman", name: "Bayezid, heir to the Ottoman throne", relKey: "Ottoman", demandGold: 85, demandLand: 3, consortTitle: "Queen of the Ottoman Empire" }],
+        M: [{ id: "ottoman_cousin_f", name: "Gülbahar, a cousin of the House of Osman", relKey: "OttomanConsort", demandGold: 70, demandLand: 2, consortTitle: null, birthYear: 1441 }]
+      }
+    },
+    noble: { tierLabel: "Noble match", relKey: "OttomanNobles", demandGold: 50, demandLand: 1 },
+    merchant: { tierLabel: "Merchant match", relKey: "OttomanMerchants", demandGold: 18, demandLand: 0 }
+  },
+
   florence: {
     country: "Florence",
     countryKey: "florence",
@@ -1687,7 +1806,10 @@ const NOBLE_NAME_POOLS = {
   venice: { M: ["Marco","Andrea","Zaccaria","Vettore","Nicolò","Pietro"], F: ["Cassandra","Elena","Marina","Chiara","Paola","Franceschina"], surnames: ["Contarini","Mocenigo","Foscari","Dandolo","Morosini","Barbarigo"] },
   naples: { M: ["Ferrante","Alfonso","Enrico","Federico","Giovanni","Antonello"], F: ["Ippolita","Eleonora","Isabella","Giulia","Beatrice","Sancia"], surnames: ["Caracciolo","Sanseverino","Carafa","del Balzo","Piccolomini","Orsini"] },
   hungary: { M: ["Mátyás","János","László","István","Miklós"], F: ["Erzsébet","Katalin","Borbála","Ilona","Zsófia"], surnames: ["Hunyadi","Szilágyi","Báthory","Zápolya","Perényi"] },
-  poland: { M: ["Kazimierz","Władysław","Jan","Zygmunt","Aleksander"], F: ["Jadwiga","Zofia","Elżbieta","Anna","Barbara"], surnames: ["Jagiellon","Tarnowski","Ossoliński","Firlej","Zborowski"] }
+  poland: { M: ["Kazimierz","Władysław","Jan","Zygmunt","Aleksander"], F: ["Jadwiga","Zofia","Elżbieta","Anna","Barbara"], surnames: ["Jagiellon","Tarnowski","Ossoliński","Firlej","Zborowski"] },
+  bohemia: { M: ["Jiří","Václav","Jan","Vladislav","Oldřich"], F: ["Anna","Kateřina","Ludmila","Markéta","Barbora"], surnames: ["Poděbrady","Rožmberk","Šternberk","Kolowrat","Hasištejnský"] },
+  wallachia: { M: ["Vlad","Radu","Mircea","Basarab","Vladislav"], F: ["Voichița","Maria","Anca","Despina","Cneajna"], surnames: ["Drăculești","Basarab","Craiovescu","Buzescu","Bălăceanu"] },
+  ottoman: { M: ["Mehmed","Bayezid","Cem","Mustafa","Selim"], F: ["Gülbahar","Mükrime","Çiçek","Sitti","Hatice"], surnames: ["Osman","Çandarlı","Evrenosoğlu","Mihaloğlu","Turahanoğlu"] }
 };
 NOBLE_NAME_POOLS.florence = NOBLE_NAME_POOLS.italy;
 NOBLE_NAME_POOLS.rome = NOBLE_NAME_POOLS.italy;
@@ -1710,7 +1832,10 @@ const MERCHANT_SURNAMES = {
   florence: ["Rucellai","Tornabuoni","Strozzi","Pitti"],
   rome: ["Cenci","Colonna","Orsini","Savelli"],
   hungary: ["Thurzó","Fugger","Ernuszt","Szatmári"],
-  poland: ["Boner","Betman","Morsztyn","Wierzynek"]
+  poland: ["Boner","Betman","Morsztyn","Wierzynek"],
+  bohemia: ["Rott","Pflug","Fugger","Schlick"],
+  wallachia: ["Florescu","Cantacuzino","Goleasca","Buzescu"],
+  ottoman: ["Karamanlı","Rumelioğlu","Galatalı","Sarayli"]
 };
 
 function randomFrom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
@@ -1865,7 +1990,7 @@ function childCourtesyTitle(child, isHeir, age) {
     if (child.royalBloodCountry) {
         const royalBase = child.gender === "F" ? "Princess" : "Prince";
         if (isHeir) return `${royalBase} ${child.name}, named heir to the family's holdings`;
-        return `${royalBase} ${child.name} of ${child.royalBloodCountry}`;
+        return `${royalBase} ${child.name} of ${countryDisplayName(child.royalBloodCountry)}`;
     }
 
     // An untitled gentry family's own recognized heir still carries the plain
@@ -2051,6 +2176,33 @@ const COUNTRY_PROFILES = {
       ["Poland", "King Casimir IV of Poland"],
       ["Hungary", "King Matthias Corvinus"],
       ["Austria", "The Habsburg Archduke"],
+    ]
+  },
+
+  Bohemia: {
+    desc: "You are at the Bohemian royal court under King George of Poděbrady — an elected Hussite king, his crown never quite settled in the eyes of Rome or his own restless nobility.",
+    people: [
+      ["Bohemia", "King George of Poděbrady"],
+      ["Poland", "King Casimir IV of Poland"],
+      ["Austria", "The Habsburg Archduke"],
+    ]
+  },
+
+  Wallachia: {
+    desc: "You are at the court of Voivode Vlad III of Wallachia — a small, hard principality on Christendom's own bloody frontier, held by methods that have already made his name a byword for terror on both sides of the border.",
+    people: [
+      ["Wallachia", "Voivode Vlad III"],
+      ["Hungary", "King Matthias Corvinus"],
+      ["Ottoman", "Sultan Mehmed II"],
+    ]
+  },
+
+  Ottoman: {
+    desc: "You are within the Ottoman court under Sultan Mehmed II, conqueror of Constantinople — the great power of the eastern Mediterranean, and the single name every other court in this game watches most closely.",
+    people: [
+      ["Ottoman", "Sultan Mehmed II"],
+      ["Wallachia", "Voivode Vlad III"],
+      ["Venice", "The Doge and the Great Council"],
     ]
   },
 
@@ -2673,6 +2825,26 @@ const DYNASTIES = {
         active: true, activatesOn: null,
         ruler: { name: "Casimir IV Jagiellon", gender: "M", age: 34 }, heir: { name: "Vladislaus Jagiellon", gender: "M", age: 5, married: false }, marriedToPlayer: false },
 
+    // George of Poděbrady's elected crown, like Hungary's Matthias, carries no
+    // clear dynastic heir at game start — the real historical thread this
+    // duplicates: Vladislaus Jagiellon, Casimir IV's own son, actually did
+    // inherit BOTH Bohemia (1471) and Hungary (1490) in real life once each
+    // of these heirless kings died.
+    Bohemia: { relKey: "Bohemia", houseKey: "bohemia", titleM: "King", titleF: "Queen", realmNoun: "Bohemia",
+        active: true, activatesOn: null,
+        ruler: { name: "George of Poděbrady", gender: "M", age: 41 }, heir: null, marriedToPlayer: false },
+
+    // Vlad III's own real succession never settled either — three separate
+    // reigns, contested at every turn by rival cousins — left deliberately
+    // heirless here for the same reason.
+    Wallachia: { relKey: "Wallachia", houseKey: "wallachia", titleM: "Prince", titleF: "Princess", realmNoun: "Wallachia",
+        active: true, activatesOn: null,
+        ruler: { name: "Vlad III", gender: "M", age: 30 }, heir: null, marriedToPlayer: false },
+
+    Ottoman: { relKey: "Ottoman", houseKey: "ottoman", titleM: "King", titleF: "Queen", realmNoun: "the Ottoman Empire",
+        active: true, activatesOn: null,
+        ruler: { name: "Mehmed II", gender: "M", age: 29 }, heir: { name: "Bayezid", gender: "M", age: 14, married: false }, marriedToPlayer: false },
+
 };
 
 function domainNoun(title) {
@@ -2700,6 +2872,13 @@ const RIVAL_CLAIMANTS = {
     // son of Poland's own King Casimir IV. Same real dynastic thread this
     // game's own Poland entry already sets up.
     Hungary: "Poland",
+    // Real history again: Bohemia's own crown passed to the same Vladislaus
+    // Jagiellon in 1471, a full generation before Hungary's did.
+    Bohemia: "Poland",
+    // Wallachia spent much of this era as an Ottoman vassal in fact as much
+    // as in name — the one realm here whose "rival claimant" is also a live,
+    // fully-simulated dynasty of its own, not just a name in this table.
+    Wallachia: "Ottoman",
 };
 
 // A rough, flavorful military-strength ranking for every realm a sovereign
@@ -2713,9 +2892,9 @@ const RIVAL_CLAIMANTS = {
 // does. Rome is left out too — the Papacy isn't modeled as a conquerable
 // throne here.
 const REALM_MILITARY_STRENGTH = {
-    France: 100, Austria: 75, Aragon: 70, Poland: 70, Burgundy: 65,
-    Hungary: 60, Venice: 55, Naples: 55, Milan: 50, Portugal: 40,
-    Scotland: 35, Brittany: 30, Florence: 20,
+    Ottoman: 90, France: 100, Austria: 75, Aragon: 70, Poland: 70, Burgundy: 65,
+    Hungary: 60, Bohemia: 55, Venice: 55, Naples: 55, Milan: 50, Portugal: 40,
+    Scotland: 35, Brittany: 30, Wallachia: 25, Florence: 20,
 };
 
 // Marrying a sovereign's sibling or cousin (a "Consort"-tier prospect, distinct
@@ -2735,6 +2914,9 @@ const CONSORT_RELKEY_COUNTRY = {
     NaplesConsort: "Naples",
     HungaryConsort: "Hungary",
     PolandConsort: "Poland",
+    BohemiaConsort: "Bohemia",
+    WallachiaConsort: "Wallachia",
+    OttomanConsort: "Ottoman",
     AnneBurgundy: "Burgundy",
 };
 // Every country with a royal marriage tier at all also gets a generic
@@ -2766,6 +2948,17 @@ function royalCousinCountryFor(relKey) {
     if (CONSORT_RELKEY_COUNTRY[relKey]) return CONSORT_RELKEY_COUNTRY[relKey];
     if (relKey === "Edward" || relKey === "TudorConsort") return "England";
     return null;
+}
+
+// A country's own short DYNASTIES key ("Naples", "Hungary") already reads
+// naturally as "Princess of Naples" — but a realm whose real name isn't
+// just a place name on its own ("Ottoman" alone reads as a fragment, not
+// "the Ottoman Empire") needs its own realmNoun for a "Prince/Princess of
+// X" style courtesy title to actually read correctly. Falls back to the
+// bare country key for every realm whose short name already works fine
+// standalone, which is every one of them except this kind of edge case.
+function countryDisplayName(country) {
+    return (DYNASTIES[country] && DYNASTIES[country].realmNoun) || country;
 }
 
 // True if a relKey represents a real blood/marriage tie into this specific
@@ -3334,7 +3527,7 @@ function simulateNpcRealmPolitics(recapLines) {
 
 }
 
-const DYNASTY_COUNTRY_FOR_KEY = { Charles: "Burgundy", France: "France", Portugal: "Portugal", Scotland: "Scotland", Austria: "Austria", Aragon: "Aragon", Brittany: "Brittany", Milan: "Milan", Naples: "Naples", Hungary: "Hungary", Poland: "Poland" };
+const DYNASTY_COUNTRY_FOR_KEY = { Charles: "Burgundy", France: "France", Portugal: "Portugal", Scotland: "Scotland", Austria: "Austria", Aragon: "Aragon", Brittany: "Brittany", Milan: "Milan", Naples: "Naples", Hungary: "Hungary", Poland: "Poland", Bohemia: "Bohemia", Wallachia: "Wallachia", Ottoman: "Ottoman" };
 
 function livingLabel(key, defaultLabel) {
 
@@ -3450,6 +3643,21 @@ function livingLabel(key, defaultLabel) {
         return `${d.ruler.gender === "F" ? "Queen" : "King"} ${d.ruler.name} of Poland${d.marriedToPlayer ? " (your own spouse)" : ""}`;
     }
 
+    if (key === "Bohemia") {
+        const d = DYNASTIES.Bohemia;
+        return `${d.ruler.gender === "F" ? "Queen" : "King"} ${d.ruler.name} of Bohemia${d.marriedToPlayer ? " (your own spouse)" : ""}`;
+    }
+
+    if (key === "Wallachia") {
+        const d = DYNASTIES.Wallachia;
+        return `${d.ruler.gender === "F" ? "Princess" : "Voivode"} ${d.ruler.name} of Wallachia${d.marriedToPlayer ? " (your own spouse)" : ""}`;
+    }
+
+    if (key === "Ottoman") {
+        const d = DYNASTIES.Ottoman;
+        return `${d.ruler.gender === "F" ? "Sultana" : "Sultan"} ${d.ruler.name}${d.marriedToPlayer ? " (your own spouse)" : ""}`;
+    }
+
     return defaultLabel;
 }
 
@@ -3521,6 +3729,9 @@ const REALM_DESCRIPTIONS = {
     "Kingdom of Naples": "The whole southern half of the Italian peninsula, ruled by a cadet branch of the House of Aragon over a more traditionally feudal court than the mercantile north.",
     "Kingdom of Hungary": "A warrior kingdom under Matthias Corvinus, its Black Army feared from the Danube to the Adriatic, its court as devoted to Italian learning as to war.",
     "Kingdom of Poland": "A vast eastern realm bound to Lithuania by dynasty and treaty, watching the Teutonic Order and the steppe in equal measure.",
+    "Kingdom of Bohemia": "A restive Hussite kingdom under an elected king, its throne watched closely by the Empire, Hungary, and Poland alike.",
+    "Principality of Wallachia": "A small principality on Christendom's own bloody frontier, its Voivode's own methods of holding the Ottoman advance already the stuff of whispered legend.",
+    "The Ottoman Empire": "The great power looming over the whole eastern Mediterranean, its armies fresh from taking Constantinople and its ambitions nowhere near finished.",
 };
 
 // A stylized, board-game political map of Europe in 1461 — not a precise
@@ -3556,7 +3767,7 @@ const MAP_REGIONS = {
     "The Holy Roman Empire": { left: 39, top: 2, width: 48, height: 16,
         clip: "polygon(4% 0%, 100% 8%, 94% 100%, 0% 88%)",
         color: "#a37f28", colorLight: "#c4a24e" },
-    "Archduchy of Austria": { left: 52, top: 18, width: 36, height: 22,
+    "Archduchy of Austria": { left: 52, top: 18, width: 27, height: 22,
         clip: "polygon(0% 10%, 90% 0%, 100% 82%, 10% 100%)",
         color: "#a85a3a", colorLight: "#c47c58" },
     "Kingdom of Portugal": { left: 3, top: 46, width: 9, height: 46,
@@ -3589,6 +3800,15 @@ const MAP_REGIONS = {
     "Kingdom of Hungary": { left: 87, top: 21, width: 13, height: 19,
         clip: "polygon(0% 6%, 90% 0%, 100% 92%, 8% 100%)",
         color: "#2f6b3f", colorLight: "#4f8c5f" },
+    "Kingdom of Bohemia": { left: 79, top: 18, width: 9, height: 22,
+        clip: "polygon(6% 0%, 100% 8%, 94% 96%, 0% 100%)",
+        color: "#5a3f7a", colorLight: "#7a5f9c" },
+    "Principality of Wallachia": { left: 85, top: 40, width: 15, height: 13,
+        clip: "polygon(4% 4%, 96% 0%, 100% 90%, 6% 100%)",
+        color: "#6b2f2f", colorLight: "#8c4f4f" },
+    "The Ottoman Empire": { left: 59, top: 53, width: 33, height: 40,
+        clip: "polygon(3% 6%, 96% 0%, 100% 90%, 6% 100%)",
+        color: "#3a6b52", colorLight: "#5a8c72" },
 };
 
 // A soft, irregular parchment landmass drawn behind every mainland region
@@ -3596,7 +3816,7 @@ const MAP_REGIONS = {
 // borders above read as one real, contiguous continent — not a scatter of
 // colored tiles floating in open sea, with any hairline rendering seams
 // between adjoining regions showing land, not water, underneath.
-const MAP_LANDMASS_CLIP = "polygon(22% 4%, 40% 1%, 99% 1%, 99% 22%, 96% 42%, 64% 44%, 60% 55%, 59% 68%, 60% 80%, 58% 93%, 44% 95%, 32% 91%, 22% 88%, 12% 91%, 3% 93%, 2% 62%, 3% 46%, 2% 40%, 3% 25%, 17% 22%, 17% 5%)";
+const MAP_LANDMASS_CLIP = "polygon(22% 4%, 40% 1%, 99% 1%, 99% 22%, 96% 42%, 97% 53%, 97% 75%, 95% 93%, 58% 95%, 44% 95%, 32% 91%, 22% 88%, 12% 91%, 3% 93%, 2% 62%, 3% 46%, 2% 40%, 3% 25%, 17% 22%, 17% 5%)";
 const MAP_ISLAND_CLIP = "polygon(20% 0%, 88% 6%, 100% 45%, 82% 100%, 14% 94%, 0% 42%)";
 
 // A short list of the real duchies/counties/provinces each realm was
@@ -3621,6 +3841,9 @@ const COUNTRY_SUBREGIONS = {
     Naples: ["Calabria", "Apulia", "Abruzzo"],
     Hungary: ["Transylvania", "Croatia", "Slavonia"],
     Poland: ["Mazovia", "Lesser Poland", "Greater Poland"],
+    Bohemia: ["Bohemia Proper", "Moravia", "Silesia"],
+    Wallachia: ["Oltenia", "Muntenia", "the Bărăgan"],
+    Ottoman: ["Rumelia", "Anatolia", "Thrace"],
 };
 
 // The world map's own base color for whatever realm a given short country
@@ -4944,7 +5167,7 @@ function homeCrownRelKey() {
     const map = {
         England: "Edward", France: "France", Burgundy: "Charles", Scotland: "Scotland",
         Castile: "Castile", Portugal: "Portugal", Brittany: "Brittany", Aragon: "Aragon", Austria: "Austria",
-        Hungary: "Hungary", Poland: "Poland"
+        Hungary: "Hungary", Poland: "Poland", Bohemia: "Bohemia", Wallachia: "Wallachia", Ottoman: "Ottoman"
     };
     return map[game.homeCountry] || null;
 }
@@ -5918,7 +6141,7 @@ function showStationNotice(kind, gapSize, prospectName) {
 // after a generational turnover included — so the Marriage tab keeps
 // reflecting that dynasty's actual, ongoing life instead of falling
 // permanently silent once its original cast of named figures runs out.
-const HEIR_TIED_PROSPECT_HEIR_NAME = { ferdinand_aragon: "Ferdinand of Aragon", maximilian_habsburg: "Maximilian", galeazzo_maria: "Galeazzo Maria Sforza", alfonso_calabria: "Alfonso, Duke of Calabria" };
+const HEIR_TIED_PROSPECT_HEIR_NAME = { ferdinand_aragon: "Ferdinand of Aragon", maximilian_habsburg: "Maximilian", galeazzo_maria: "Galeazzo Maria Sforza", alfonso_calabria: "Alfonso, Duke of Calabria", bayezid_ottoman: "Bayezid" };
 function livingDynastyHeirProspect(marketCountryName, fixedProspectsStillCoveringIt) {
 
     const d = DYNASTIES[marketCountryName];
@@ -6726,7 +6949,7 @@ function finalizeMarriage({ subject, childIndex, name, countryId, relKey, consor
             child.nobleTitle = nobleTitle;
         } else if (!consortTitle && !marryingHeirNotYetRuling) {
             const royalCousinCountry = royalCousinCountryFor(relKey);
-            if (royalCousinCountry) child.nobleTitle = `${child.gender === "F" ? "Princess" : "Prince"} of ${royalCousinCountry}`;
+            if (royalCousinCountry) child.nobleTitle = `${child.gender === "F" ? "Princess" : "Prince"} of ${countryDisplayName(royalCousinCountry)}`;
         }
 
         const relocationNote = relocates
@@ -6842,7 +7065,7 @@ function finalizeMarriage({ subject, childIndex, name, countryId, relKey, consor
     // PARENT with no title at all while their own children get one purely
     // by birth was a real, unfair inconsistency.
     const royalCousinCountry = (!consortTitle && !marryingHeirNotYetRuling && !nobleTitleGranted) ? royalCousinCountryFor(relKey) : null;
-    const royalCousinTitle = royalCousinCountry ? `${game.gender === "F" ? "Princess" : "Prince"} of ${royalCousinCountry}` : null;
+    const royalCousinTitle = royalCousinCountry ? `${game.gender === "F" ? "Princess" : "Prince"} of ${countryDisplayName(royalCousinCountry)}` : null;
     const royalCousinTitleGranted = !!(royalCousinTitle && !alreadySovereign && stationRankIndex(royalCousinTitle) <= stationRankIndex(game.role));
 
     if (consortTitle && !alreadySovereign && !marryingHeirNotYetRuling) {
