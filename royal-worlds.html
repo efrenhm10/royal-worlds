@@ -6960,6 +6960,25 @@ function succeedToHeir(reason) {
         ? heir.rulingAbroad
         : null;
 
+    // The heir may also already hold a real, recognized foreign crown of
+    // their OWN through an ordinary marriage into that realm's actual
+    // ruling line — not the dynasty-adaptation system above, but the
+    // consort-elevation system (see finalizeMarriage's child branch and
+    // the WORLD_TIMELINE entries that resolve it once that foreign ruler
+    // actually dies), which had already resolved into a real title while
+    // this heir was still just your own child. That crown is exactly as
+    // real as an ordinary domestic inheritance — it doesn't just evaporate
+    // the moment they themselves become the player. Previously nothing
+    // here ever checked this at all: a child married into, say, the
+    // Neapolitan crown could become the new player and simply keep
+    // whatever bare domestic title the DYING PARENT happened to hold
+    // instead — the entire foreign throne silently vanishing from a
+    // succession that, in the world's own eyes, had already granted it.
+    const consortRealm = heir.consortTitle && heir.consortRealm
+        && DYNASTIES[heir.consortRealm] && !DYNASTIES[heir.consortRealm].absorbedBy
+        ? heir.consortRealm
+        : null;
+
     if (rulingAbroadRealm) {
 
         const d = DYNASTIES[rulingAbroadRealm];
@@ -6973,6 +6992,15 @@ function succeedToHeir(reason) {
         d.heir = null;
         d.active = true;
         d.marriedToPlayer = false;
+
+    } else if (consortRealm) {
+
+        game.rulingRealm = consortRealm;
+        game.rulingStatus = "consort";
+        game.role = heir.consortTitle;
+        game.location = consortRealm;
+        game.arrivedYear = game.year;
+        game.arrivedMonth = game.month;
 
     } else if (inheritable && oldRulingRealm && (oldRulingStatus === "sovereign" || oldRulingStatus === "dowager" || dynastyRecognizesHeir)) {
         game.rulingRealm = oldRulingRealm;
@@ -7021,12 +7049,17 @@ function succeedToHeir(reason) {
     game.spouseCountry = heir.spouseCountry || null;
     game.spouseAge = game.married ? Math.max(14, heirAge + Math.round((Math.random() * 16) - 8)) : null;
     game.spouseRelKey = heir.spouseRelKey || null;
-    // Any deferred consort elevation belonged to the parent's own marriage, not
-    // this heir's — it does not carry forward (a real elevation from the heir's
-    // own marriage into a not-yet-ruling heir elsewhere is a narrow enough case
-    // that it simply resolves the normal way if and when that succession
-    // actually happens, rather than being reconstructed here from scratch).
-    game.pendingConsortElevation = null;
+    // The DYING PARENT's own pendingConsortElevation (from THEIR marriage)
+    // has nothing to do with this heir and correctly never carries over —
+    // but the HEIR's own marriage may carry exactly this same kind of not-
+    // yet-resolved claim (they married a foreign heir who hasn't actually
+    // succeeded yet), and that real, still-pending claim is now genuinely
+    // theirs. Without carrying it forward, the still-living foreign ruler's
+    // eventual death (the WORLD_TIMELINE beat that actually resolves it)
+    // would find nothing to elevate — this heir's own real claim to that
+    // throne silently evaporating the moment they became the player,
+    // rather than resolving later exactly as it should.
+    game.pendingConsortElevation = (!consortRealm && heir.pendingConsortElevation) ? heir.pendingConsortElevation : null;
     game.negotiation = null;
     game.pendingCountry = null;
     game.pendingSubject = null;
@@ -7048,8 +7081,29 @@ function succeedToHeir(reason) {
         .map(c => ({ child: c, oldLoyalty: (game.family.find(f => f.name === c.name) || {}).loyalty }));
 
     game.pregnancy = null;
-    game.children = [];
-    game.heir = null;
+
+    // The heir taking over may already have had children of their own,
+    // narrated all along by the grandchild-birth system in advanceTime
+    // (see child.ownChildren) — a real, ongoing life, not one that started
+    // the moment they became the player. Without this, every one of those
+    // already-announced grandchildren simply vanished the instant their
+    // parent actually became the new player character.
+    game.children = (heir.ownChildren || []).map(gc => ({
+        name: gc.name,
+        gender: gc.gender,
+        birthYear: gc.birthYear,
+        location: heir.location || game.location,
+        schooling: null,
+        married: false,
+        spouseName: null,
+        spouseCountry: null,
+        royalBloodCountry: null,
+        appearance: generateAppearance(game.house, null),
+        trait: generateTrait(game.house, null),
+        cohortNote: historicalCohortNote(gc.birthYear, game.homeCountry),
+    }));
+    game.children.forEach(c => game.family.push({ name: c.name, relation: "Your child", loyalty: 70 }));
+    game.heir = game.children.length ? primogenitureHeir(game.children) : null;
     game.heirManuallySet = false;
 
     Object.keys(game.relationships).forEach(k => {
@@ -7090,6 +7144,7 @@ function succeedToHeir(reason) {
 
         game.chronicle.unshift(`${game.year}: ${heir.name}, only ${heirAge}, remains at ${oldLocation} in ${survivingParentName}'s care — one parent's death doesn't uproot a child who still has the other.`);
         render();
+        showEvent("💀 A Death in the Family", `${reason} ${heir.name}, only ${heirAge}, remains at ${oldLocation} in ${survivingParentName}'s care — one parent's death doesn't uproot a child who still has the other.`);
         return;
 
     }
@@ -7103,6 +7158,8 @@ function succeedToHeir(reason) {
 
         document.getElementById("event").innerHTML = `
             <div class="card event">
+                <h2>💀 ${oldName} Has Died</h2>
+                <p>${reason}</p>
                 <h2>👑 A New Generation — And a Question</h2>
                 <p>${heir.name}, only ${heirAge} years old, inherits what remains of ${oldName}'s fortune and standing${domestic ? "" : ` at the ${oldLocation} court`}.${schoolingNote}</p>
                 <p>Too young to rule alone, ${heir.name}'s guardians face a real choice: ${domestic
@@ -7154,6 +7211,8 @@ function succeedToHeir(reason) {
 
         document.getElementById("event").innerHTML = `
             <div class="card event">
+                <h2>💀 ${oldName} Has Died</h2>
+                <p>${reason}</p>
                 <h2>🏰 A Throne, and a Journey</h2>
                 <p>${heir.name} now holds the title of ${game.role} — the seat of that power is ${newRealm}, but the household is still settled at ${priorLocation}.${schoolingNote}</p>
                 <p>Do you return to ${newRealm} in person to take up the throne there, or govern it from afar for now?</p>
@@ -7187,6 +7246,8 @@ function succeedToHeir(reason) {
 
     document.getElementById("event").innerHTML = `
         <div class="card event">
+            <h2>💀 ${oldName} Has Died</h2>
+            <p>${reason}</p>
             <h2>👑 A New Generation</h2>
             <p>${heir.name}${heirAge < 16 ? `, only ${heirAge} years old,` : ""} inherits what remains of ${oldName}'s fortune and standing.${schoolingNote} The story continues.</p>
             <button id="continueEvent">Continue</button>
