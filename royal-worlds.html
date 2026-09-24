@@ -2579,6 +2579,102 @@ function findCollateralClaimant(country) {
 
 }
 
+// A consort's own hold on a crown was always contingent on their spouse's own
+// reign — when that spouse (the realm's actual sitting sovereign, not the
+// player) dies of natural old age, the throne is a real succession there,
+// exactly like any other, not a private grief the player just "remains
+// through in their own right." Called the moment such a death is detected
+// (see the general spousal-mortality check), before the spouse's own game
+// fields are cleared — so DYNASTIES[realm] never keeps aging or re-rolling
+// mortality for someone already dead, and the couple's own child actually
+// inherits instead of the succession just silently going nowhere. Milan and
+// Burgundy already handle this same moment through their own scripted
+// WORLD_TIMELINE death beats; every OTHER realm the player can marry
+// directly into (Aragon, Austria, Naples once Ferrante's own scripted death
+// has passed, Brittany, France, Portugal, Scotland) only ever loses its
+// ruler-spouse through this general, unscripted path, so this is the one
+// place that adaptation has to live for all of them.
+function resolveConsortSpouseSuccession(realm, recapLines) {
+
+    const d = DYNASTIES[realm];
+    const heir = game.heir;
+
+    if (heir) {
+
+        const heirAge = Math.max(0, game.year - (heir.birthYear || game.year));
+        const newTitle = heir.gender === "F" ? (d ? d.titleF : "Queen") : (d ? d.titleM : "King");
+
+        if (d) {
+            d.ruler = { name: heir.name, gender: heir.gender, age: heirAge, fromPlayer: true };
+            d.heir = null;
+            d.marriedToPlayer = false;
+        }
+        heir.rulingAbroad = realm;
+
+        if (heirAge < 16) {
+            const regentStyle = game.gender === "F" ? (d ? d.titleF : "Queen") : (d ? d.titleM : "King");
+            game.role = `${regentStyle} Regent of ${realm}`;
+            game.rulingRealm = realm;
+            game.rulingStatus = "regent";
+            recapLines.push(`The crown passes to your own child ${heir.name}, only ${heirAge} — far too young to rule alone. You remain at court as Regent, governing ${realm} in the young ${newTitle}'s name until they come of age.`);
+        } else {
+            game.role = game.gender === "F" ? "Lady" : "Lord";
+            game.rulingRealm = null;
+            game.rulingStatus = null;
+            recapLines.push(`The crown passes cleanly to your own child ${heir.name}, already of age — recognized outright as the new ${newTitle} of ${realm}.`);
+        }
+
+        return;
+
+    }
+
+    // No heir of your own survives to inherit — the crown moves on exactly as
+    // it would for any other extinguished line the wider dynasty simulation
+    // tracks: a genuine collateral claim first, then a stronger neighbor
+    // pressing its own claim, and only then an invented collateral relative.
+    game.role = game.gender === "F" ? "Lady" : "Lord";
+    game.rulingRealm = null;
+    game.rulingStatus = null;
+
+    if (!d) return;
+
+    d.marriedToPlayer = false;
+    const oldRulerName = d.ruler.name;
+    const collateral = findCollateralClaimant(realm);
+
+    if (collateral) {
+
+        const { claimant, viaSelf } = collateral;
+        claimant.rulingAbroad = realm;
+        claimant.location = realm;
+        d.ruler = { name: claimant.name, gender: claimant.gender, age: Math.max(0, game.year - claimant.birthYear), fromPlayer: true };
+        d.heir = null;
+
+        const claimNote = viaSelf
+            ? `your own child ${claimant.name} — nephew or niece to the old ruler —`
+            : `your own child ${claimant.name}, already married into this house,`;
+
+        recapLines.push(`With no direct heir of your own, ${claimNote} presses a real claim and is recognized as the new ${claimant.gender === "F" ? d.titleF : d.titleM} of ${realm}.`);
+
+    } else if (RIVAL_CLAIMANTS[realm] && Math.random() < 0.4) {
+
+        const absorber = RIVAL_CLAIMANTS[realm];
+        d.active = false;
+        d.absorbedBy = absorber;
+        recapLines.push(`With no heir of your own left to inherit, ${absorber} presses its own claim and formally absorbs ${realm} into its own crown lands.`);
+
+    } else {
+
+        const newGender = Math.random() < 0.5 ? "M" : "F";
+        const pool = NOBLE_NAME_POOLS[d.houseKey] || NOBLE_NAME_POOLS.england;
+        const newName = generatePeriodName(d.houseKey, newGender, pool.surnames || MERCHANT_SURNAMES.england);
+        d.ruler = { name: newName, gender: newGender, age: 20 + Math.floor(Math.random() * 15) };
+        recapLines.push(`With no heir of your own, ${oldRulerName}'s throne passes, after a tense interval, to a collateral relative, ${newName} — though not every neighboring court is satisfied with the claim.`);
+
+    }
+
+}
+
 // Builds a proper game-side descendant record (matching the shape of an entry in
 // game.children / game.heir) for a grandchild who was only ever tracked inside a
 // foreign dynasty's own simulated birth — so they can actually become your heir.
@@ -6768,7 +6864,20 @@ function resolveBirth(withPhysician) {
         } else {
 
             const survivalNote = survives ? `, though the child, ${childName}, survives` : "";
-            widowedThisTime = { name: game.spouseName, context: `${game.spouseName} did not survive the birth${survivalNote}.` };
+
+            // If the mother who just died in childbirth was the realm's own
+            // actual sovereign (you held that crown only as consort), her
+            // death is a real succession there too — resolved now, exactly as
+            // the general spousal-mortality check does, so the crown actually
+            // passes to your own heir instead of freezing on a dead ruler.
+            let consortNote = "";
+            if (game.rulingRealm && game.rulingStatus === "consort") {
+                const successionLines = [];
+                resolveConsortSpouseSuccession(game.rulingRealm, successionLines);
+                consortNote = successionLines.length ? " " + successionLines.join(" ") : "";
+            }
+
+            widowedThisTime = { name: game.spouseName, context: `${game.spouseName} did not survive the birth${survivalNote}.${consortNote}` };
             game.married = false;
             game.spouseName = null;
             game.spouseCountry = null;
@@ -6819,6 +6928,20 @@ function widowedDecision(deceasedName, contextLine) {
         const text = contextLine || `${deceasedName} has died.`;
         game.chronicle.unshift(`${game.year}: ${text} Your own throne is not in question — this is a private grief, not a political one.`);
         showEvent("A Private Grief", `${text} Whatever else changes, your own rule here does not.`);
+        return;
+    }
+
+    // A consort whose spouse WAS a realm's own actual sovereign already had
+    // that crown's succession fully resolved the moment they died (see
+    // resolveConsortSpouseSuccession) — game.role/rulingStatus already reflect
+    // the real outcome. If their own child was still a minor, that's a
+    // regency, not a further remain/remarry/go-home choice to offer — the
+    // generic dialog below would otherwise downgrade a working regency to a
+    // bare "Dowager" and lose the realm entirely.
+    if (game.rulingStatus === "regent") {
+        const text = contextLine || `${deceasedName} has died.`;
+        game.chronicle.unshift(`${game.year}: ${text} ${game.role}.`);
+        showEvent("👑 A Regency Begins", `${text} With the crown passing to your own child, still too young to rule alone, you remain at court as ${game.role} — governing in their name until they come of age.`);
         return;
     }
 
@@ -9473,6 +9596,16 @@ function advanceTime(months) {
                 Object.values(DYNASTIES).forEach(dd => {
                     if (dd.heir && dd.heir.name === deceased) dd.heir = null;
                 });
+
+                // If your late spouse was the realm's own actual sovereign (you
+                // held that crown only as consort), their death is a real
+                // succession there — resolved now, before rulingRealm/rulingStatus
+                // are read below, so the crown actually passes to your own heir
+                // (or a regency, if they're still a minor) instead of silently
+                // freezing on a dead ruler.
+                if (game.rulingRealm && game.rulingStatus === "consort") {
+                    resolveConsortSpouseSuccession(game.rulingRealm, recapLines);
+                }
 
                 game.married = false;
                 game.spouseName = null;
