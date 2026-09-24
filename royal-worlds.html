@@ -5607,6 +5607,42 @@ function livingDynastyHeirProspect(marketCountryName, fixedProspectsStillCoverin
 
 }
 
+// The reigning monarch themselves, not just their heir — a real, and
+// previously entirely missing, option. Every royal-tier match before this
+// was either a "Consort" cousin/sibling (a real tie, but never the crown
+// itself) or the dynasty's own heir-in-waiting — the actual sitting ruler,
+// when they happen to have no heir on record yet (a young ruler early in
+// their reign, or a line that never produced one), was never offered at
+// all, no matter how long they stayed single. A ruler WITH an heir already
+// on record is assumed to already be married (off-screen, historically) —
+// this game doesn't otherwise track an NPC ruler's own marital history, so
+// "no heir yet" is the honest signal of "still eligible" it actually has.
+function livingDynastyRulerProspect(marketCountryName, fixedProspectsStillCoveringIt) {
+
+    const d = DYNASTIES[marketCountryName];
+    if (!d || d.elective || !d.active || d.absorbedBy || d.marriedToPlayer) return null;
+    if (d.heir) return null;
+
+    const ruler = d.ruler;
+    if (!ruler || ruler.fromPlayer) return null;
+    if (Math.max(0, ruler.age) < 12) return null;
+    if (fixedProspectsStillCoveringIt.includes(ruler.name)) return null;
+
+    const subjectGender = ruler.gender === "M" ? "F" : "M";
+    const rulerTitle = ruler.gender === "F" ? d.titleF : d.titleM;
+
+    return {
+        id: `dynasty_ruler_${marketCountryName}`,
+        name: `${ruler.name}, ${rulerTitle} of ${d.realmNoun}`,
+        relKey: d.relKey,
+        demandGold: 70,
+        demandLand: 3,
+        consortTitle: `${subjectGender === "F" ? d.titleF : d.titleM} of ${d.realmNoun}`,
+        forGender: subjectGender,
+    };
+
+}
+
 // Shared between the player-initiated marriage screen and incoming foreign
 // offers, so both always see exactly the same real, currently-available
 // prospects — a dead or already-married figure can't show up in either.
@@ -5656,6 +5692,16 @@ function getEligibleRoyalProspects(market, subjectGender) {
     const dynamicHeir = livingDynastyHeirProspect(market.country, namesAlreadyCovered);
     if (dynamicHeir && dynamicHeir.forGender === subjectGender) {
         return [...staticList, dynamicHeir];
+    }
+
+    // No heir on record at all — the reigning monarch themselves is offered
+    // instead, when they're not already spoken for (see
+    // livingDynastyRulerProspect). Mutually exclusive with the heir case
+    // above by construction (that helper refuses to fire while a heir
+    // exists), so this never doubles up on the same country/generation.
+    const dynamicRuler = livingDynastyRulerProspect(market.country, namesAlreadyCovered);
+    if (dynamicRuler && dynamicRuler.forGender === subjectGender) {
+        return [...staticList, dynamicRuler];
     }
 
     if (staticList.length) return staticList;
