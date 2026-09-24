@@ -442,6 +442,38 @@ button.secondary.active,
     min-width: 64px;
 }
 
+/* A "zoomed in" texture for whatever country you're currently in — a row of
+   named duchy/county-style tiles, the same irregular-silhouette language as
+   the world map (see MAP_REGIONS) at a smaller scale, so a single realm
+   reads as a real, subdivided territory rather than one flat color, without
+   building a full clickable province map underneath it. Purely decorative —
+   no travel or interaction lives here, just texture. */
+.subregion-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 10px 0 2px;
+}
+
+.subregion-tile {
+    flex: 1 1 90px;
+    min-width: 90px;
+    padding: 14px 8px 10px;
+    text-align: center;
+    color: #fdf6e6;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.75);
+    font-weight: 700;
+    font-size: 12.5px;
+    letter-spacing: 0.02em;
+    border: 1.5px solid rgba(20,14,8,0.5);
+    box-shadow: 0 2px 6px rgba(10,20,50,0.3), 0 0 0 1px rgba(255,255,255,0.1) inset;
+}
+
+.subregion-tile:nth-child(1) { clip-path: polygon(8% 0%, 100% 10%, 92% 100%, 0% 88%); }
+.subregion-tile:nth-child(2) { clip-path: polygon(0% 8%, 90% 0%, 100% 90%, 10% 100%); }
+.subregion-tile:nth-child(3) { clip-path: polygon(10% 0%, 100% 6%, 88% 100%, 0% 94%); }
+.subregion-tile:nth-child(4) { clip-path: polygon(4% 4%, 96% 0%, 100% 94%, 6% 100%); }
+
 .stat {
     display: flex;
     justify-content: space-between;
@@ -3462,6 +3494,59 @@ const MAP_REGIONS = {
 const MAP_LANDMASS_CLIP = "polygon(22% 4%, 40% 1%, 99% 1%, 99% 22%, 96% 42%, 64% 44%, 60% 55%, 59% 68%, 60% 80%, 58% 93%, 44% 95%, 32% 91%, 22% 88%, 12% 91%, 3% 93%, 2% 62%, 3% 46%, 2% 40%, 3% 25%, 17% 22%, 17% 5%)";
 const MAP_ISLAND_CLIP = "polygon(20% 0%, 88% 6%, 100% 45%, 82% 100%, 14% 94%, 0% 42%)";
 
+// A short list of the real duchies/counties/provinces each realm was
+// actually made of — not a clickable province map (see the map-scope
+// decision this was scoped down from), just enough real internal geography
+// that a single flat-colored country on the world map still reads as a
+// real, subdivided territory once you're actually standing in it.
+const COUNTRY_SUBREGIONS = {
+    England: ["Kent", "Wessex", "Mercia", "Northumbria"],
+    Scotland: ["Lothian", "Fife", "Argyll", "the Highlands"],
+    France: ["Île-de-France", "Normandy", "Anjou", "Provence"],
+    Burgundy: ["Flanders", "Artois", "Franche-Comté"],
+    Brittany: ["Rennes", "Nantes", "Vannes"],
+    Castile: ["Old Castile", "New Castile", "Andalusia"],
+    Aragon: ["Catalonia", "Valencia", "Aragon Proper"],
+    Portugal: ["Minho", "Beira", "Algarve"],
+    Austria: ["Tyrol", "Styria", "Carinthia"],
+    Milan: ["Pavia", "Como", "Cremona"],
+    Venice: ["Terraferma", "Friuli", "Dalmatia"],
+    Florence: ["Pisa", "Arezzo", "Prato"],
+    Rome: ["Latium", "Umbria", "Campagna"],
+    Naples: ["Calabria", "Apulia", "Abruzzo"],
+    Hungary: ["Transylvania", "Croatia", "Slavonia"],
+    Poland: ["Mazovia", "Lesser Poland", "Greater Poland"],
+};
+
+// The world map's own base color for whatever realm a given short country
+// name (game.location's own value) actually belongs to, so this smaller
+// per-country texture reads as the same political color as the world map,
+// not an arbitrary new palette.
+function mapColorForCountry(country) {
+    const house = Object.values(HOUSES).find(h => h.homeCountry === country);
+    const region = house && MAP_REGIONS[house.realm];
+    return region ? { color: region.color, colorLight: region.colorLight } : { color: "#5c4a32", colorLight: "#7c6a4e" };
+}
+
+// Renders the small "zoomed in" duchy/county texture strip for whatever
+// country name is passed in — empty string for a country with no real
+// internal subdivisions on file (a bare list, not the whole map, so a
+// missing entry is a quiet no-op rather than an error).
+function renderCountrySubregions(country) {
+    const names = COUNTRY_SUBREGIONS[country];
+    if (!names || !names.length) return "";
+    const { color, colorLight } = mapColorForCountry(country);
+    return `
+        <div class="subregion-strip">
+            ${names.map(name => `
+                <div class="subregion-tile" style="background:linear-gradient(155deg, ${colorLight} 0%, ${color} 100%); border-color:${color};">
+                    ${name}
+                </div>
+            `).join("")}
+        </div>
+    `;
+}
+
 function showRealms() {
 
     const realmOrder = [];
@@ -4162,6 +4247,8 @@ function renderOverview(content) {
                     ? `<p class="muted">You've been here ${monthsSinceArrival()} month${monthsSinceArrival() === 1 ? "" : "s"} — still finding your footing at this court.</p>`
                     : ""
             }
+
+            ${renderCountrySubregions(game.location)}
 
         </div>
 
