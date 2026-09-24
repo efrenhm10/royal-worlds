@@ -363,6 +363,85 @@ button.secondary.active,
     font-size: 14.5px;
 }
 
+/* The Domain panel's portrait row (you, spouse, heir) and stat-tile strip —
+   a CK3-style at-a-glance header: who you are, who stands beside you, and
+   what your position actually adds up to, before any of the detail tabs. */
+.domain-portraits {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px;
+    align-items: flex-start;
+}
+
+.portrait-chip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    min-width: 88px;
+}
+
+.portrait-chip .portrait-chip-name {
+    font-weight: 700;
+    font-size: 13.5px;
+    text-align: center;
+    line-height: 1.2;
+}
+
+.portrait-chip .portrait-chip-sub {
+    font-size: 11.5px;
+    color: var(--ink-soft);
+    text-align: center;
+    line-height: 1.2;
+}
+
+.stat-tiles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 12px 0;
+}
+
+.stat-tile {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(180deg, #f7ecc9 0%, #ecd9a2 100%);
+    border: 1px solid var(--gilt);
+    border-radius: 8px;
+    padding: 7px 12px;
+    box-shadow: 0 1px 3px rgba(90,60,20,0.15);
+    font-size: 13px;
+}
+
+.stat-tile .stat-tile-icon {
+    font-size: 17px;
+}
+
+.stat-tile strong {
+    font-size: 15px;
+}
+
+.stat-tile span.stat-tile-label {
+    display: block;
+    font-size: 10.5px;
+    color: var(--ink-soft);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.family-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-top: 6px;
+}
+
+.family-strip .portrait-chip {
+    min-width: 64px;
+}
+
 .stat {
     display: flex;
     justify-content: space-between;
@@ -3817,45 +3896,123 @@ function render() {
    OVERVIEW
 ========================================================= */
 
+// A CK3-style at-a-glance header: your own portrait beside whoever actually
+// stands with you (spouse, heir), then a strip of stat tiles, before any of
+// the detail tabs. Everything here is read straight from data the game
+// already tracks — no new mechanic, just presented the way CK3 presents it.
+function renderDomainHeader() {
+
+    const playerPortrait = renderPortraitSVG(game.appearance, game.gender, {
+        size: 78, seed: game.person, crown: crownTierForRole(game.role), ringColor: "var(--azure)",
+    });
+
+    const spouseGender = game.gender === "F" ? "M" : "F";
+    const spouseCrown = game.rulingStatus === "consort" ? crownTierForRole(game.role) : null;
+    const spouseChip = game.married ? `
+        <div class="portrait-chip">
+            ${renderPortraitSVG(appearanceFor(game.spouseName, spouseGender), spouseGender, {
+                size: 58, seed: game.spouseName, crown: spouseCrown, ringColor: "var(--gilt)",
+            })}
+            <div class="portrait-chip-name">${game.spouseName}</div>
+            <div class="portrait-chip-sub">Spouse</div>
+        </div>
+    ` : "";
+
+    const heir = game.heir;
+    const heirAge = heir ? Math.max(0, game.year - (heir.birthYear || game.year)) : null;
+    const heirChip = heir ? `
+        <div class="portrait-chip">
+            ${renderPortraitSVG(heir.appearance, heir.gender, {
+                size: 58, seed: heir.name, crown: null, ringColor: "var(--gilt)",
+            })}
+            <div class="portrait-chip-name">${heir.name}</div>
+            <div class="portrait-chip-sub">Heir, age ${heirAge}</div>
+        </div>
+    ` : "";
+
+    return `
+        <div class="card">
+            <div class="domain-portraits">
+                <div class="portrait-chip">
+                    ${playerPortrait}
+                    <div class="portrait-chip-name">${game.person}</div>
+                    <div class="portrait-chip-sub">${displayRole()}</div>
+                </div>
+                ${spouseChip}
+                ${heirChip}
+            </div>
+            <div class="stat-tiles">
+                <div class="stat-tile"><span class="stat-tile-icon">💰</span><div><span class="stat-tile-label">Wealth</span><strong>${game.wealth}</strong></div></div>
+                <div class="stat-tile"><span class="stat-tile-icon">👑</span><div><span class="stat-tile-label">Prestige</span><strong>${game.prestige}</strong></div></div>
+                <div class="stat-tile"><span class="stat-tile-icon">🤝</span><div><span class="stat-tile-label">Influence</span><strong>${game.influence}</strong></div></div>
+                <div class="stat-tile"><span class="stat-tile-icon">🏰</span><div><span class="stat-tile-label">Holdings</span><strong>${game.land}</strong></div></div>
+                <div class="stat-tile"><span class="stat-tile-icon">⛪</span><div><span class="stat-tile-label">Piety</span><strong>${game.piety}</strong></div></div>
+                <div class="stat-tile"><span class="stat-tile-icon">❤️</span><div><span class="stat-tile-label">Health</span><strong>${game.health}</strong></div></div>
+            </div>
+        </div>
+    `;
+
+}
+
 function renderOverview(content) {
+
+    const livingChildren = game.children;
+    const familyStrip = livingChildren.length ? `
+        <div class="card">
+            <h2>👨‍👩‍👧 Family</h2>
+            <div class="family-strip">
+                ${livingChildren.map(c => {
+                    const age = Math.max(0, game.year - (c.birthYear || game.year));
+                    const isHeir = game.heir === c;
+                    return `
+                        <div class="portrait-chip">
+                            ${renderPortraitSVG(c.appearance, c.gender, { size: 46, seed: c.name, crown: null, ringColor: isHeir ? "var(--gilt)" : "var(--azure)" })}
+                            <div class="portrait-chip-name">${c.name}</div>
+                            <div class="portrait-chip-sub">${isHeir ? "Heir, " : ""}age ${age}</div>
+                        </div>
+                    `;
+                }).join("")}
+            </div>
+        </div>
+    ` : "";
 
     content.innerHTML = `
 
+        ${renderDomainHeader()}
+
         <div class="card">
 
-            <h2>Your Position</h2>
+            <h2>🏰 Domain</h2>
 
             <div class="stat">
-                💰 Wealth
-                <strong>${game.wealth}</strong>
+                Title
+                <strong>${displayRole()}</strong>
             </div>
 
             <div class="stat">
-                👑 Prestige
-                <strong>${game.prestige}</strong>
+                Seat
+                <strong>${game.location}</strong>
             </div>
 
             <div class="stat">
-                🤝 Political Influence
-                <strong>${game.influence}</strong>
+                House
+                <strong>${HOUSES[game.house].name}</strong>
             </div>
 
             <div class="stat">
-                🏰 Holdings
-                <strong>${game.land}</strong>
-            </div>
-
-            <div class="stat">
-                ❤️ Health
-                <strong>${game.health}</strong>
-            </div>
-
-            <div class="stat">
-                👶 Heir
-                <strong>${game.heir ? game.heir.name : "None yet"}</strong>
+                Governing
+                <strong>${
+                    !game.rulingRealm ? "No realm of your own"
+                    : game.rulingStatus === "sovereign" ? `${game.rulingRealm}, in your own right`
+                    : game.rulingStatus === "consort" ? `${game.rulingRealm}, as consort`
+                    : game.rulingStatus === "regent" ? `${game.rulingRealm}, as regent`
+                    : `${game.rulingRealm}, as dowager`
+                }</strong>
             </div>
 
         </div>
+
+        ${familyStrip}
 
         <div class="card">
 
@@ -4296,9 +4453,82 @@ function renderSiblingTreeCard(container, member, index) {
 
 }
 
+// A compact, at-a-glance family tree — you and your spouse on one row, your
+// children below them, your siblings off to the side — the way CK3 shows a
+// whole generation in one glance instead of a long stack of detail cards.
+// The detailed cards below still carry the deeper info (title, location,
+// loyalty); this is purely the visual shape of the family, built from the
+// exact same data.
+function renderFamilyTree() {
+
+    const spouseGender = game.gender === "F" ? "M" : "F";
+
+    const coupleRow = `
+        <div class="family-strip" style="justify-content:center;">
+            <div class="portrait-chip">
+                ${renderPortraitSVG(game.appearance, game.gender, { size: 60, seed: game.person, crown: crownTierForRole(game.role), ringColor: "var(--azure)" })}
+                <div class="portrait-chip-name">${game.person}</div>
+                <div class="portrait-chip-sub">${displayRole()}</div>
+            </div>
+            ${game.married ? `
+                <div class="portrait-chip">
+                    <span style="font-size:18px;">💍</span>
+                    ${renderPortraitSVG(appearanceFor(game.spouseName, spouseGender), spouseGender, { size: 60, seed: game.spouseName, crown: game.rulingStatus === "consort" ? crownTierForRole(game.role) : null, ringColor: "var(--gilt)" })}
+                    <div class="portrait-chip-name">${game.spouseName}</div>
+                    <div class="portrait-chip-sub">Spouse</div>
+                </div>
+            ` : ""}
+        </div>
+    `;
+
+    const childrenRow = game.children.length ? `
+        <div class="family-strip" style="justify-content:center;border-top:1px dashed rgba(179,134,31,0.4);padding-top:12px;margin-top:12px;">
+            ${game.children.map(c => {
+                const age = Math.max(0, game.year - (c.birthYear || game.year));
+                const isHeir = game.heir === c;
+                return `
+                    <div class="portrait-chip">
+                        ${renderPortraitSVG(c.appearance, c.gender, { size: 46, seed: c.name, crown: null, ringColor: isHeir ? "var(--gilt)" : "var(--azure)" })}
+                        <div class="portrait-chip-name">${c.name}</div>
+                        <div class="portrait-chip-sub">${isHeir ? "Heir, " : ""}age ${age}</div>
+                    </div>
+                `;
+            }).join("")}
+        </div>
+    ` : "";
+
+    const siblings = game.family.filter(f => f.isSibling);
+    const siblingsRow = siblings.length ? `
+        <div class="family-strip" style="justify-content:center;border-top:1px dashed rgba(179,134,31,0.4);padding-top:12px;margin-top:12px;">
+            ${siblings.map(s => {
+                const gender = s.gender || "M";
+                return `
+                    <div class="portrait-chip">
+                        ${renderPortraitSVG(appearanceFor(s.name, gender), gender, { size: 46, seed: s.name, crown: null, ringColor: "var(--azure)" })}
+                        <div class="portrait-chip-name">${s.name}</div>
+                        <div class="portrait-chip-sub">Sibling</div>
+                    </div>
+                `;
+            }).join("")}
+        </div>
+    ` : "";
+
+    return `
+        <div class="card">
+            <h2>🌳 Family Tree</h2>
+            ${coupleRow}
+            ${childrenRow}
+            ${siblingsRow}
+        </div>
+    `;
+
+}
+
 function renderFamily(content) {
 
     content.innerHTML = `
+
+        ${renderFamilyTree()}
 
         <div class="card">
 
