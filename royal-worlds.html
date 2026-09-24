@@ -1088,6 +1088,52 @@ people: [
 
 },
 
+hungary: {
+
+name: "The House of Hunyadi",
+
+realm: "Kingdom of Hungary",
+homeCountry: "Hungary",
+startStats: { wealth: 55, prestige: 55, influence: 35, land: 4 },
+
+description:
+"The Hungarian royal court under King Matthias Corvinus — a warrior-scholar's household, its Black Army feared across the Danube and its library the envy of Italy.",
+
+people: [
+
+["A Hungarian nobleman", 26, "Plausible", "M"],
+
+["A Hungarian noblewoman", 23, "Plausible", "F"],
+
+["A captain of the Black Army", 32, "Captain", "M"]
+
+]
+
+},
+
+poland: {
+
+name: "The House of Jagiellon",
+
+realm: "Kingdom of Poland",
+homeCountry: "Poland",
+startStats: { wealth: 58, prestige: 50, influence: 38, land: 5 },
+
+description:
+"The Polish-Lithuanian court under King Casimir IV — a vast eastern realm bound together as much by marriage and treaty as by force of arms.",
+
+people: [
+
+["A Polish nobleman", 27, "Plausible", "M"],
+
+["A Polish noblewoman", 24, "Plausible", "F"],
+
+["A Lithuanian boyar", 30, "Plausible", "M"]
+
+]
+
+},
+
 saxony: {
 
 name: "The Electorate of Saxony",
@@ -1536,6 +1582,37 @@ const MARRIAGE_MARKET = {
     merchant: { tierLabel: "Merchant match", relKey: "NeapolitanMerchants", demandGold: 12, demandLand: 0 }
   },
 
+  hungary: {
+    country: "Hungary",
+    countryKey: "hungary",
+    royal: {
+      tierLabel: "Royal match",
+      // Matthias Corvinus himself has no heir on record — his own hand in
+      // marriage, not just a cousin's, is the real prize here (see
+      // livingDynastyRulerProspect).
+      prospects: {
+        F: [{ id: "hunyadi_cousin", name: "Miklós Corvinus, a cousin of the Hunyadi line", relKey: "HungaryConsort", demandGold: 45, demandLand: 1, consortTitle: null, birthYear: 1438 }],
+        M: [{ id: "hunyadi_cousin_f", name: "Erzsébet Hunyadi, a cousin of the Hunyadi line", relKey: "HungaryConsort", demandGold: 45, demandLand: 1, consortTitle: null, birthYear: 1441 }]
+      }
+    },
+    noble: { tierLabel: "Noble match", relKey: "HungarianNobles", demandGold: 32, demandLand: 1 },
+    merchant: { tierLabel: "Merchant match", relKey: "HungarianMerchants", demandGold: 12, demandLand: 0 }
+  },
+
+  poland: {
+    country: "Poland",
+    countryKey: "poland",
+    royal: {
+      tierLabel: "Royal match",
+      prospects: {
+        F: [{ id: "jagiellon_cousin", name: "Fryderyk Jagiellon, a cousin of the royal house", relKey: "PolandConsort", demandGold: 55, demandLand: 2, consortTitle: null, birthYear: 1436 }],
+        M: [{ id: "jagiellon_cousin_f", name: "Jadwiga Jagiellon, a cousin of the royal house", relKey: "PolandConsort", demandGold: 55, demandLand: 2, consortTitle: null, birthYear: 1440 }]
+      }
+    },
+    noble: { tierLabel: "Noble match", relKey: "PolishNobles", demandGold: 35, demandLand: 1 },
+    merchant: { tierLabel: "Merchant match", relKey: "PolishMerchants", demandGold: 13, demandLand: 0 }
+  },
+
   florence: {
     country: "Florence",
     countryKey: "florence",
@@ -1576,7 +1653,9 @@ const NOBLE_NAME_POOLS = {
   italy: { M: ["Lorenzo","Cosimo","Giovanni","Piero","Niccolò","Filippo"], F: ["Lucrezia","Caterina","Bianca","Contessina","Maddalena","Clarice"], surnames: ["Ridolfi","Pazzi","Strozzi","Tornabuoni","Salviati","Albizzi"] },
   milan: { M: ["Galeazzo","Ludovico","Ercole","Gian","Ascanio","Bianco"], F: ["Bianca","Ippolita","Beatrice","Caterina","Chiara","Camilla"], surnames: ["Trivulzio","Borromeo","Landriani","Pallavicino","Rossi","Visconti"] },
   venice: { M: ["Marco","Andrea","Zaccaria","Vettore","Nicolò","Pietro"], F: ["Cassandra","Elena","Marina","Chiara","Paola","Franceschina"], surnames: ["Contarini","Mocenigo","Foscari","Dandolo","Morosini","Barbarigo"] },
-  naples: { M: ["Ferrante","Alfonso","Enrico","Federico","Giovanni","Antonello"], F: ["Ippolita","Eleonora","Isabella","Giulia","Beatrice","Sancia"], surnames: ["Caracciolo","Sanseverino","Carafa","del Balzo","Piccolomini","Orsini"] }
+  naples: { M: ["Ferrante","Alfonso","Enrico","Federico","Giovanni","Antonello"], F: ["Ippolita","Eleonora","Isabella","Giulia","Beatrice","Sancia"], surnames: ["Caracciolo","Sanseverino","Carafa","del Balzo","Piccolomini","Orsini"] },
+  hungary: { M: ["Mátyás","János","László","István","Miklós"], F: ["Erzsébet","Katalin","Borbála","Ilona","Zsófia"], surnames: ["Hunyadi","Szilágyi","Báthory","Zápolya","Perényi"] },
+  poland: { M: ["Kazimierz","Władysław","Jan","Zygmunt","Aleksander"], F: ["Jadwiga","Zofia","Elżbieta","Anna","Barbara"], surnames: ["Jagiellon","Tarnowski","Ossoliński","Firlej","Zborowski"] }
 };
 NOBLE_NAME_POOLS.florence = NOBLE_NAME_POOLS.italy;
 NOBLE_NAME_POOLS.rome = NOBLE_NAME_POOLS.italy;
@@ -1597,7 +1676,9 @@ const MERCHANT_SURNAMES = {
   venice: ["Bembo","Zorzi","Priuli","Gritti"],
   naples: ["Caracciolo","Carafa","Piccolomini","Origlia"],
   florence: ["Rucellai","Tornabuoni","Strozzi","Pitti"],
-  rome: ["Cenci","Colonna","Orsini","Savelli"]
+  rome: ["Cenci","Colonna","Orsini","Savelli"],
+  hungary: ["Thurzó","Fugger","Ernuszt","Szatmári"],
+  poland: ["Boner","Betman","Morsztyn","Wierzynek"]
 };
 
 function randomFrom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
@@ -1920,6 +2001,24 @@ const COUNTRY_PROFILES = {
       ["Naples", "King Ferdinand I of Naples"],
       ["Aragon", "The Crown of Aragon"],
       ["Milan", "Duke Francesco Sforza"],
+    ]
+  },
+
+  Hungary: {
+    desc: "You are at the Hungarian royal court under King Matthias Corvinus — soldier, scholar, and patron of the arts in equal measure, holding the eastern marches of Christendom against the Ottoman advance.",
+    people: [
+      ["Hungary", "King Matthias Corvinus"],
+      ["Austria", "The Habsburg Archduke"],
+      ["Poland", "King Casimir IV of Poland"],
+    ]
+  },
+
+  Poland: {
+    desc: "You are at the Polish-Lithuanian court under King Casimir IV Jagiellon — a vast realm held together as much by marriage and treaty as by the sword, watching the Teutonic Order to the north and the steppe to the east.",
+    people: [
+      ["Poland", "King Casimir IV of Poland"],
+      ["Hungary", "King Matthias Corvinus"],
+      ["Austria", "The Habsburg Archduke"],
     ]
   },
 
@@ -2529,6 +2628,19 @@ const DYNASTIES = {
         active: true, activatesOn: null, elective: true, electorBody: "College of Cardinals",
         ruler: { name: "Pius II", gender: "M", age: 56 }, heir: null, marriedToPlayer: false },
 
+    // Matthias Corvinus never produced a legitimate heir in real life — left as
+    // heir: null here so that real historical dead end plays out honestly:
+    // a real, currently-reachable marriage prospect (see
+    // livingDynastyRulerProspect) instead of an invented heir standing in for
+    // a succession crisis that was, in fact, exactly the point.
+    Hungary: { relKey: "Hungary", houseKey: "hungary", titleM: "King", titleF: "Queen", realmNoun: "Hungary",
+        active: true, activatesOn: null,
+        ruler: { name: "Matthias Corvinus", gender: "M", age: 18 }, heir: null, marriedToPlayer: false },
+
+    Poland: { relKey: "Poland", houseKey: "poland", titleM: "King", titleF: "Queen", realmNoun: "Poland",
+        active: true, activatesOn: null,
+        ruler: { name: "Casimir IV Jagiellon", gender: "M", age: 34 }, heir: { name: "Vladislaus Jagiellon", gender: "M", age: 5, married: false }, marriedToPlayer: false },
+
 };
 
 function domainNoun(title) {
@@ -2551,6 +2663,11 @@ const RIVAL_CLAIMANTS = {
     Austria: "Hungary",
     Milan: "France",
     Naples: "Aragon",
+    // Matthias Corvinus really did die without a legitimate heir in 1490 —
+    // the Hungarian throne then passed, in fact, to Vladislaus Jagiellon,
+    // son of Poland's own King Casimir IV. Same real dynastic thread this
+    // game's own Poland entry already sets up.
+    Hungary: "Poland",
 };
 
 // A rough, flavorful military-strength ranking for every realm a sovereign
@@ -2564,8 +2681,8 @@ const RIVAL_CLAIMANTS = {
 // does. Rome is left out too — the Papacy isn't modeled as a conquerable
 // throne here.
 const REALM_MILITARY_STRENGTH = {
-    France: 100, Austria: 75, Aragon: 70, Burgundy: 65,
-    Venice: 55, Naples: 55, Milan: 50, Portugal: 40,
+    France: 100, Austria: 75, Aragon: 70, Poland: 70, Burgundy: 65,
+    Hungary: 60, Venice: 55, Naples: 55, Milan: 50, Portugal: 40,
     Scotland: 35, Brittany: 30, Florence: 20,
 };
 
@@ -2584,6 +2701,8 @@ const CONSORT_RELKEY_COUNTRY = {
     AustriaConsort: "Austria",
     MilanConsort: "Milan",
     NaplesConsort: "Naples",
+    HungaryConsort: "Hungary",
+    PolandConsort: "Poland",
     AnneBurgundy: "Burgundy",
 };
 // Every country with a royal marriage tier at all also gets a generic
@@ -3078,7 +3197,7 @@ function simulateDynasties(recapLines) {
 
 }
 
-const DYNASTY_COUNTRY_FOR_KEY = { Charles: "Burgundy", France: "France", Portugal: "Portugal", Scotland: "Scotland", Austria: "Austria", Aragon: "Aragon", Brittany: "Brittany", Milan: "Milan", Naples: "Naples" };
+const DYNASTY_COUNTRY_FOR_KEY = { Charles: "Burgundy", France: "France", Portugal: "Portugal", Scotland: "Scotland", Austria: "Austria", Aragon: "Aragon", Brittany: "Brittany", Milan: "Milan", Naples: "Naples", Hungary: "Hungary", Poland: "Poland" };
 
 function livingLabel(key, defaultLabel) {
 
@@ -3184,6 +3303,16 @@ function livingLabel(key, defaultLabel) {
         return `${d.ruler.name}, effective ruler of Florence${d.marriedToPlayer ? " (your own spouse)" : ""}`;
     }
 
+    if (key === "Hungary") {
+        const d = DYNASTIES.Hungary;
+        return `${d.ruler.gender === "F" ? "Queen" : "King"} ${d.ruler.name} of Hungary${d.marriedToPlayer ? " (your own spouse)" : ""}`;
+    }
+
+    if (key === "Poland") {
+        const d = DYNASTIES.Poland;
+        return `${d.ruler.gender === "F" ? "Queen" : "King"} ${d.ruler.name} of Poland${d.marriedToPlayer ? " (your own spouse)" : ""}`;
+    }
+
     return defaultLabel;
 }
 
@@ -3253,6 +3382,8 @@ const REALM_DESCRIPTIONS = {
     "Duchy of Milan": "A fierce military powerhouse controlled by the Sforza family, who seized power right as England's own wars were brewing.",
     "Republic of Venice": "An economic superpower with a massive naval fleet, dominant trading routes, and a stable merchant-controlled government — its Doge elected for life, never born to the office.",
     "Kingdom of Naples": "The whole southern half of the Italian peninsula, ruled by a cadet branch of the House of Aragon over a more traditionally feudal court than the mercantile north.",
+    "Kingdom of Hungary": "A warrior kingdom under Matthias Corvinus, its Black Army feared from the Danube to the Adriatic, its court as devoted to Italian learning as to war.",
+    "Kingdom of Poland": "A vast eastern realm bound to Lithuania by dynasty and treaty, watching the Teutonic Order and the steppe in equal measure.",
 };
 
 // A stylized, board-game political map of Europe in 1461 — not a precise
@@ -3315,6 +3446,12 @@ const MAP_REGIONS = {
     "Kingdom of Naples": { left: 44, top: 79, width: 15, height: 14,
         clip: "polygon(10% 0%, 100% 6%, 86% 100%, 0% 92%)",
         color: "#7a4a24", colorLight: "#9c6a40" },
+    "Kingdom of Poland": { left: 87, top: 2, width: 13, height: 19,
+        clip: "polygon(6% 0%, 100% 10%, 92% 100%, 0% 88%)",
+        color: "#7d1f2e", colorLight: "#9c3d4a" },
+    "Kingdom of Hungary": { left: 87, top: 21, width: 13, height: 19,
+        clip: "polygon(0% 6%, 90% 0%, 100% 92%, 8% 100%)",
+        color: "#2f6b3f", colorLight: "#4f8c5f" },
 };
 
 // A soft, irregular parchment landmass drawn behind every mainland region
@@ -3322,7 +3459,7 @@ const MAP_REGIONS = {
 // borders above read as one real, contiguous continent — not a scatter of
 // colored tiles floating in open sea, with any hairline rendering seams
 // between adjoining regions showing land, not water, underneath.
-const MAP_LANDMASS_CLIP = "polygon(22% 4%, 40% 1%, 89% 3%, 88% 20%, 85% 42%, 64% 44%, 60% 55%, 59% 68%, 60% 80%, 58% 93%, 44% 95%, 32% 91%, 22% 88%, 12% 91%, 3% 93%, 2% 62%, 3% 46%, 2% 40%, 3% 25%, 17% 22%, 17% 5%)";
+const MAP_LANDMASS_CLIP = "polygon(22% 4%, 40% 1%, 99% 1%, 99% 22%, 96% 42%, 64% 44%, 60% 55%, 59% 68%, 60% 80%, 58% 93%, 44% 95%, 32% 91%, 22% 88%, 12% 91%, 3% 93%, 2% 62%, 3% 46%, 2% 40%, 3% 25%, 17% 22%, 17% 5%)";
 const MAP_ISLAND_CLIP = "polygon(20% 0%, 88% 6%, 100% 45%, 82% 100%, 14% 94%, 0% 42%)";
 
 function showRealms() {
