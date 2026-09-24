@@ -2514,6 +2514,18 @@ Object.values(MARRIAGE_MARKET).forEach(m => {
 // since its succession is the game's fixed historical spine).
 const ROYAL_BLOOD_RELKEYS = new Set([...Object.keys(CONSORT_RELKEY_COUNTRY), "Edward", "TudorConsort"]);
 
+// Which country a "mere cousin" royal-blood relKey actually ties to — the
+// same lookup childCourtesyTitle's own royalBloodCountry branch already
+// uses to style a child of exactly this kind of marriage as Prince/
+// Princess of that country. Used below to give the MARRYING PARENT that
+// same recognition, not just their children.
+function royalCousinCountryFor(relKey) {
+    if (!relKey) return null;
+    if (CONSORT_RELKEY_COUNTRY[relKey]) return CONSORT_RELKEY_COUNTRY[relKey];
+    if (relKey === "Edward" || relKey === "TudorConsort") return "England";
+    return null;
+}
+
 // True if a relKey represents a real blood/marriage tie into this specific
 // country's own ruling house — either a collateral cousin's relKey (see
 // CONSORT_RELKEY_COUNTRY) or the dynasty's own direct relKey (marrying its
@@ -5519,15 +5531,19 @@ function buildIncomingMarriageOffer() {
                     game.chronicle.unshift(`${game.year}: ${market.country} proposes a marriage for ${childName} to ${prospect.name}, and you accept.${relocationNote}`);
                     return { msg: `You accept the match on ${childName}'s behalf. Terms are agreed and the marriage is sealed before witnesses.` };
                 }
-                const { relocated, titleGrantedNow, titleDeferred, nobleTitleGranted } = finalizeMarriage({
+                const { relocated, titleGrantedNow, titleDeferred, nobleTitleGranted, royalCousinTitleGranted, royalCousinTitle } = finalizeMarriage({
                     subject: "self", name: prospect.name, countryId: market.country,
                     relKey: prospect.relKey, consortTitle: prospect.consortTitle,
                     prospectId: tier === "royal" ? prospect.id : null,
                     birthYear: prospect.birthYear || null,
                     nobleTitle: prospect.nobleTitle || null
                 });
-                game.chronicle.unshift(`${game.year}: ${market.country} proposes a marriage to you, and you accept${titleGrantedNow ? `, becoming ${prospect.consortTitle}` : nobleTitleGranted ? `, becoming ${prospect.nobleTitle} ${game.person}` : ""}.${relocated ? ` Your household moves to ${market.country}.` : ""}`);
-                return { msg: `You accept the match. Terms are agreed and the marriage is sealed before witnesses.${titleGrantedNow ? ` You are now ${prospect.consortTitle}.` : ""}${titleDeferred ? ` ${prospect.name} is still only heir, not yet ruling — the title of ${prospect.consortTitle} will be yours in truth the moment that changes.` : ""}${nobleTitleGranted ? ` You are now styled ${prospect.nobleTitle} ${game.person}.` : ""}` };
+                const acceptTitleClause = titleGrantedNow ? `, becoming ${prospect.consortTitle}`
+                    : nobleTitleGranted ? `, becoming ${prospect.nobleTitle} ${game.person}`
+                    : royalCousinTitleGranted ? `, recognized as ${royalCousinTitle}`
+                    : "";
+                game.chronicle.unshift(`${game.year}: ${market.country} proposes a marriage to you, and you accept${acceptTitleClause}.${relocated ? ` Your household moves to ${market.country}.` : ""}`);
+                return { msg: `You accept the match. Terms are agreed and the marriage is sealed before witnesses.${titleGrantedNow ? ` You are now ${prospect.consortTitle}.` : ""}${titleDeferred ? ` ${prospect.name} is still only heir, not yet ruling — the title of ${prospect.consortTitle} will be yours in truth the moment that changes.` : ""}${nobleTitleGranted ? ` You are now styled ${prospect.nobleTitle} ${game.person}.` : ""}${royalCousinTitleGranted ? ` The match is recognized as a real tie to that bloodline — you are now styled ${royalCousinTitle}.` : ""}` };
             }},
             { label: "Decline politely", effect: () => {
                 game.relationships[prospect.relKey] = Math.max(0, (game.relationships[prospect.relKey] || 20) - 5);
@@ -5982,8 +5998,16 @@ function finalizeMarriage({ subject, childIndex, name, countryId, relKey, consor
         // A plain noble-rank match (no real throne involved) still confers
         // its own title on the child directly, the same way it would on the
         // player's own marriage — just tracked on the child rather than
-        // folded into game.role.
-        if (nobleTitle && !consortTitle) child.nobleTitle = nobleTitle;
+        // folded into game.role. Marrying a "mere cousin" of a real royal
+        // bloodline gets the same courtesy Prince/Princess style their own
+        // children would already receive (see royalCousinCountryFor above),
+        // for exactly the same fairness reason as the player's own marriage.
+        if (nobleTitle && !consortTitle) {
+            child.nobleTitle = nobleTitle;
+        } else if (!consortTitle && !marryingHeirNotYetRuling) {
+            const royalCousinCountry = royalCousinCountryFor(relKey);
+            if (royalCousinCountry) child.nobleTitle = `${child.gender === "F" ? "Princess" : "Prince"} of ${royalCousinCountry}`;
+        }
 
         const relocationNote = relocates
             ? ` ${child.name} relocates to ${countryId} to join ${name}'s household${marryingIntoRealTitle ? `, taking up the title of ${consortTitle} there` : ""}.`
@@ -6088,6 +6112,19 @@ function finalizeMarriage({ subject, childIndex, name, countryId, relKey, consor
 
     const nobleTitleGranted = !!(nobleTitle && !consortTitle && !alreadySovereign && stationRankIndex(nobleTitle) <= stationRankIndex(game.role));
 
+    // A "mere cousin" of a foreign royal or archducal house (consortTitle
+    // null, but relKey ties to a real royal bloodline — Sigismund of
+    // Habsburg, Bona of Savoy, Marguerite of Burgundy, the like) brings no
+    // crown of their own, but marrying one is still a real, recognized tie
+    // to that bloodline — the SAME tie that already makes any child of
+    // this exact marriage a recognized Prince/Princess of that country
+    // (see ROYAL_BLOOD_RELKEYS/childCourtesyTitle). Leaving the marrying
+    // PARENT with no title at all while their own children get one purely
+    // by birth was a real, unfair inconsistency.
+    const royalCousinCountry = (!consortTitle && !marryingHeirNotYetRuling && !nobleTitleGranted) ? royalCousinCountryFor(relKey) : null;
+    const royalCousinTitle = royalCousinCountry ? `${game.gender === "F" ? "Princess" : "Prince"} of ${royalCousinCountry}` : null;
+    const royalCousinTitleGranted = !!(royalCousinTitle && !alreadySovereign && stationRankIndex(royalCousinTitle) <= stationRankIndex(game.role));
+
     if (consortTitle && !alreadySovereign && !marryingHeirNotYetRuling) {
         game.role = consortTitle;
         game.rulingRealm = countryId;
@@ -6100,6 +6137,8 @@ function finalizeMarriage({ subject, childIndex, name, countryId, relKey, consor
         // rulingRealm/rulingStatus claim, just the title itself. Marrying
         // "down" doesn't strip an existing higher title you already hold.
         game.role = nobleTitle;
+    } else if (royalCousinTitleGranted) {
+        game.role = royalCousinTitle;
     }
 
     if (relocated) {
@@ -6118,7 +6157,9 @@ function finalizeMarriage({ subject, childIndex, name, countryId, relKey, consor
         titleGrantedNow: !!(consortTitle && !alreadySovereign && !marryingHeirNotYetRuling),
         titleDeferred: marryingHeirNotYetRuling && !!consortTitle,
         nobleTitleGranted,
-        nobleTitle: nobleTitleGranted ? nobleTitle : null
+        nobleTitle: nobleTitleGranted ? nobleTitle : null,
+        royalCousinTitleGranted,
+        royalCousinTitle: royalCousinTitleGranted ? royalCousinTitle : null
     };
 
 }
@@ -6183,14 +6224,17 @@ function resolveNegotiationRound() {
 
         } else {
 
-            const { relocated, titleGrantedNow, titleDeferred, nobleTitleGranted } = finalizeMarriage({
+            const { relocated, titleGrantedNow, titleDeferred, nobleTitleGranted, royalCousinTitleGranted, royalCousinTitle } = finalizeMarriage({
                 subject: "self", name: neg.name, countryId: neg.countryId,
                 relKey: neg.relKey, consortTitle: neg.consortTitle,
                 prospectId: neg.tier === "royal" ? neg.prospectId : null,
                 birthYear: neg.birthYear, nobleTitle: neg.nobleTitle
             });
 
-            const titleClause = titleGrantedNow ? `, becoming ${neg.consortTitle}` : (nobleTitleGranted ? `, becoming ${neg.nobleTitle} ${game.person}` : "");
+            const titleClause = titleGrantedNow ? `, becoming ${neg.consortTitle}`
+                : nobleTitleGranted ? `, becoming ${neg.nobleTitle} ${game.person}`
+                : royalCousinTitleGranted ? `, recognized as ${royalCousinTitle}`
+                : "";
 
             if (relocated) {
                 game.chronicle.unshift(`${game.year}: You marry ${neg.name}${titleClause} and relocate your household to ${neg.countryId}. Everything here — the language, the customs, the faces — will take time to learn.${shameClause}`);
@@ -6205,7 +6249,7 @@ function resolveNegotiationRound() {
 
             showEvent(
                 "A Marriage Is Sealed",
-                `Terms are agreed and the marriage is sealed before witnesses.${titleGrantedNow ? ` You are now ${neg.consortTitle}.` : ""}${titleDeferred ? ` ${neg.name} is still only heir, not yet ruling — the title of ${neg.consortTitle} will be yours in truth the moment that changes.` : ""}${nobleTitleGranted ? ` You are now styled ${neg.nobleTitle} ${game.person}.` : ""}${relocated ? ` Your household now moves to ${neg.countryId}.` : ""}${shameClause}`
+                `Terms are agreed and the marriage is sealed before witnesses.${titleGrantedNow ? ` You are now ${neg.consortTitle}.` : ""}${titleDeferred ? ` ${neg.name} is still only heir, not yet ruling — the title of ${neg.consortTitle} will be yours in truth the moment that changes.` : ""}${nobleTitleGranted ? ` You are now styled ${neg.nobleTitle} ${game.person}.` : ""}${royalCousinTitleGranted ? ` The match is recognized as a real tie to that bloodline — you are now styled ${royalCousinTitle}.` : ""}${relocated ? ` Your household now moves to ${neg.countryId}.` : ""}${shameClause}`
             );
 
         }
