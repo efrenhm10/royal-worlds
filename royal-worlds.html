@@ -3229,6 +3229,111 @@ function simulateDynasties(recapLines) {
 
 }
 
+/* =========================================================
+   NPC REALM POLITICS — the wider world doesn't sit still just
+   because the player isn't the one moving it. Other realms wage
+   their own wars, strike their own alliances, and occasionally
+   break them, entirely on their own initiative, every year this
+   simulation ticks. Deliberately abstracted (a single resolved
+   campaign, not a multi-season siege like the player's own War &
+   Conquest system) — this is ambient world-liveliness, not a
+   system the player plays through directly.
+========================================================= */
+
+// Realms that can act in their own right here: an active, currently
+// independent (not absorbed) realm with a real military rating, that isn't
+// the realm the player themselves currently holds in any capacity — the
+// player's own realm's foreign policy is the player's own choices, handled
+// entirely by the War & Conquest system instead, never something the world
+// can do to them behind their back.
+function eligibleNpcActors() {
+    return Object.keys(REALM_MILITARY_STRENGTH).filter(country => {
+        const d = DYNASTIES[country];
+        if (!d || !d.active || d.absorbedBy) return false;
+        if (game.rulingRealm === country) return false;
+        return true;
+    });
+}
+
+function realmsAreAllied(a, b) {
+    return game.realmAlliances.some(pair => (pair.a === a && pair.b === b) || (pair.a === b && pair.b === a));
+}
+
+// One abstracted campaign between two NPC realms, resolved immediately
+// rather than tracked season to season — weighted by REALM_MILITARY_STRENGTH,
+// the same rating the player's own War & Conquest system already uses.
+// Win doesn't always mean conquest outright; more often it's just a bloodied
+// neighbor, the way most real campaigns of this era never actually redrew
+// the map.
+function resolveNpcWar(attackerCountry, defenderCountry, recapLines) {
+
+    const attacker = DYNASTIES[attackerCountry];
+    const defender = DYNASTIES[defenderCountry];
+    if (!attacker || !defender || attacker.absorbedBy || defender.absorbedBy) return;
+
+    const attackerStrength = REALM_MILITARY_STRENGTH[attackerCountry] || 50;
+    const defenderStrength = REALM_MILITARY_STRENGTH[defenderCountry] || 50;
+    const attackerWins = Math.random() < attackerStrength / (attackerStrength + defenderStrength);
+
+    if (attackerWins && Math.random() < 0.35) {
+        defender.active = false;
+        defender.absorbedBy = attackerCountry;
+        recapLines.push(`News from abroad: ${attacker.realmNoun} presses a claim against ${defender.realmNoun} and wins outright — ${defender.realmNoun} is absorbed into ${attacker.realmNoun}'s own crown lands. The map itself has changed.`);
+    } else if (attackerWins) {
+        recapLines.push(`News from abroad: ${attacker.realmNoun} presses a claim against ${defender.realmNoun} and comes away with the better of it, though ${defender.realmNoun} remains its own master for now.`);
+    } else {
+        recapLines.push(`News from abroad: ${attacker.realmNoun}'s campaign against ${defender.realmNoun} ends in failure, its own standing weakened for the attempt.`);
+    }
+
+}
+
+function simulateNpcRealmPolitics(recapLines) {
+
+    const actors = eligibleNpcActors();
+    if (actors.length < 2) return;
+
+    // Alliances: a small yearly chance for two currently-unallied realms to
+    // formalize a defensive pact, considered once per pair.
+    for (let i = 0; i < actors.length; i++) {
+        for (let j = i + 1; j < actors.length; j++) {
+            const a = actors[i], b = actors[j];
+            if (realmsAreAllied(a, b)) continue;
+            if (Math.random() < 0.03) {
+                game.realmAlliances.push({ a, b });
+                recapLines.push(`News from abroad: ${DYNASTIES[a].realmNoun} and ${DYNASTIES[b].realmNoun} formalize an alliance, each pledging support should the other be attacked.`);
+            }
+        }
+    }
+
+    // Wars: a small yearly chance for a realm to press a claim against some
+    // OTHER realm it isn't currently allied with.
+    actors.forEach(attackerCountry => {
+        const attacker = DYNASTIES[attackerCountry];
+        if (!attacker || attacker.absorbedBy) return; // may have just been absorbed above this tick
+        if (Math.random() >= 0.02) return;
+        const targets = actors.filter(t => t !== attackerCountry && !realmsAreAllied(attackerCountry, t) && DYNASTIES[t] && !DYNASTIES[t].absorbedBy);
+        if (!targets.length) return;
+        resolveNpcWar(attackerCountry, randomFrom(targets), recapLines);
+    });
+
+    // Betrayal: a small yearly chance an existing alliance breaks outright —
+    // one side turns and presses an old claim against the other rather than
+    // honoring the pact.
+    for (let i = game.realmAlliances.length - 1; i >= 0; i--) {
+        const pair = game.realmAlliances[i];
+        const dA = DYNASTIES[pair.a], dB = DYNASTIES[pair.b];
+        if (!dA || !dB || dA.absorbedBy || dB.absorbedBy) { game.realmAlliances.splice(i, 1); continue; }
+        if (Math.random() < 0.015) {
+            const betrayer = Math.random() < 0.5 ? pair.a : pair.b;
+            const victim = betrayer === pair.a ? pair.b : pair.a;
+            game.realmAlliances.splice(i, 1);
+            recapLines.push(`News from abroad: ${DYNASTIES[betrayer].realmNoun} breaks its alliance with ${DYNASTIES[victim].realmNoun} outright, pressing an old claim now that the pact no longer serves it.`);
+            resolveNpcWar(betrayer, victim, recapLines);
+        }
+    }
+
+}
+
 const DYNASTY_COUNTRY_FOR_KEY = { Charles: "Burgundy", France: "France", Portugal: "Portugal", Scotland: "Scotland", Austria: "Austria", Aragon: "Aragon", Brittany: "Brittany", Milan: "Milan", Naples: "Naples", Hungary: "Hungary", Poland: "Poland" };
 
 function livingLabel(key, defaultLabel) {
@@ -3902,6 +4007,12 @@ function startGame(index) {
         firedWorldEvents: [],
         diplomacyCountry: null,
         heirManuallySet: false,
+
+        // NPC realms wage their own wars and strike (and break) their own
+        // alliances, whether or not the player is the one moving anything —
+        // see simulateNpcRealmPolitics. Tracked as a plain list of {a, b}
+        // country pairs; order within a pair doesn't matter.
+        realmAlliances: [],
 
         wealth: house.startStats.wealth,
 
@@ -4832,7 +4943,8 @@ function effectiveRealm() {
 function homeCrownRelKey() {
     const map = {
         England: "Edward", France: "France", Burgundy: "Charles", Scotland: "Scotland",
-        Castile: "Castile", Portugal: "Portugal", Brittany: "Brittany", Aragon: "Aragon", Austria: "Austria"
+        Castile: "Castile", Portugal: "Portugal", Brittany: "Brittany", Aragon: "Aragon", Austria: "Austria",
+        Hungary: "Hungary", Poland: "Poland"
     };
     return map[game.homeCountry] || null;
 }
@@ -9877,6 +9989,11 @@ function advanceTime(months) {
             // The wider world's dynasties keep living, dying, and marrying whether or
             // not their hand-scripted history has run out yet.
             simulateDynasties(recapLines);
+
+            // Nor does the wider world wait for the player to be the one moving
+            // it — other realms wage their own wars and strike (and break) their
+            // own alliances entirely on their own initiative.
+            simulateNpcRealmPolitics(recapLines);
 
             // Named marriage prospects who aren't already tracked as a living
             // dynasty heir have their own real lifespan too — see the comment
