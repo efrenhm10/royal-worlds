@@ -5163,26 +5163,45 @@ function nobleRankTitleForGender(rankId, gender, countryKey) {
 // already walks, reduced to a single comparable number — 0 is a crown, 8 is
 // bare untitled gentry — so a marriage can be judged as reaching up, down,
 // or roughly level with the family's own actual standing.
+// Checked against the role's own FIRST WORD only, never as a substring
+// match anywhere in the string — the same precaution inheritableTitleWord
+// already takes, and one this function itself was missing. A loose
+// substring test wrongly read phrases like "King's Daughter" (not
+// remotely the same as actually holding the crown) as rank 0, and never
+// recognized "Sir"/"Dame" (the real granted style for marrying into a
+// Knight-rank family) as rank 7 at all, since neither word is literally
+// "Knight". Both of those misreadings alone could make ordinary matches
+// look like reaching wildly above or below a family's real standing.
 function stationRankIndex(role) {
     const cleaned = (role || "").replace(/^(Dowager|Deposed)\s+/, "");
-    if (/King|Queen/.test(cleaned)) return 0;
-    if (/Prince|Princess/.test(cleaned)) return 1;
-    if (/Archduke|Archduchess|Duke|Duchess/.test(cleaned)) return 2;
-    if (/Marquess|Marchioness/.test(cleaned)) return 3;
-    if (/Earl|Countess|Count\b/.test(cleaned)) return 4;
-    if (/Viscount|Viscountess/.test(cleaned)) return 5;
-    if (/Baron|Baroness/.test(cleaned)) return 6;
-    if (/Knight|^Dame\b/.test(cleaned)) return 7;
+    const firstWord = cleaned.split(/\s+/)[0] || "";
+    if (/^(King|Queen)$/.test(firstWord)) return 0;
+    if (/^(Prince|Princess)$/.test(firstWord)) return 1;
+    if (/^(Archduke|Archduchess|Duke|Duchess)$/.test(firstWord)) return 2;
+    if (/^(Marquess|Marchioness)$/.test(firstWord)) return 3;
+    if (/^(Earl|Count|Countess)$/.test(firstWord)) return 4;
+    if (/^(Viscount|Viscountess)$/.test(firstWord)) return 5;
+    if (/^(Baron|Baroness)$/.test(firstWord)) return 6;
+    if (/^(Knight|Sir|Dame)$/.test(firstWord)) return 7;
     return 8;
 }
 
-// A royal-tier prospect is always a real prince/princess of their own house
-// (a King's sibling or cousin, or a dynasty's own heir) regardless of
-// whether their eventual title is granted right away or deferred — see
-// marryingIntoNotYetRulingHeir. A noble-tier prospect's station is whichever
-// rank was actually chosen; merchant wealth carries no rank of its own at all.
-function prospectStationIndex(tier, rankId) {
-    if (tier === "royal") return 1;
+// A royal-tier prospect who actually carries a real consort title (a
+// dynasty's own heir — Ferdinand of Aragon, Maximilian, Charles the Bold,
+// a living dynasty heir prospect...) is genuinely crown-adjacent, rank 1,
+// regardless of whether that title is granted right away or deferred —
+// see marryingIntoNotYetRulingHeir. But NOT every royal-tier prospect is
+// that: several (Bona of Savoy, a Habsburg cousin, a generated "cousin of
+// the ruling house"...) are explicitly just a monarch's own wider kin,
+// with no real claim of their own — treating every one of them as
+// equally crown-level meant almost nobody outside an actual
+// prince/princess could ever have a "lateral," no-charge royal match; a
+// mere royal cousin sits several rungs down instead, matching how
+// childCourtesyTitle and this same ladder already treat everyone else. A
+// noble-tier prospect's station is whichever rank was actually chosen;
+// merchant wealth carries no rank of its own at all.
+function prospectStationIndex(tier, rankId, isRealHeirTitle) {
+    if (tier === "royal") return isRealHeirTitle ? 1 : 3;
     if (tier === "merchant") return 9;
     const rank = NOBLE_RANK_TIERS.find(r => r.id === rankId);
     return rank ? rank.stationIndex : 7;
@@ -5706,7 +5725,7 @@ function startNegotiation(market, prospect) {
     const subjectStationIdx = subject === "child" && game.heir !== game.children[childIndex]
         ? Math.min(8, baseStationIdx + 1)
         : baseStationIdx;
-    const prospectStationIdx = prospectStationIndex(market.tier, game.pendingNobleRank);
+    const prospectStationIdx = prospectStationIndex(market.tier, game.pendingNobleRank, !!prospect.consortTitle);
     const stationGap = prospectStationIdx - subjectStationIdx;
 
     // The age actually shown during negotiation — a fixed named royal
