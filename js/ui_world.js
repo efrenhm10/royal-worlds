@@ -296,6 +296,32 @@ function renderPlayView() {
         });
         view.appendChild(claimsCard);
 
+        const warCard = makeCard("War");
+        if (gameState.war) {
+            const warRealm = getRealm(gameState.war.targetRealmKey);
+            const yearsAtWar = gameState.year - gameState.war.startYear;
+            warCard.appendChild(el("p", null, `At war with <strong>${warRealm.name}</strong> — ${yearsAtWar} year${yearsAtWar === 1 ? "" : "s"} in.`));
+            warCard.appendChild(el("p", "muted", `War score: ${gameState.war.warScore} (settles at +60 victory, -60 defeat, or white peace after 7 years)`));
+        } else {
+            const pressableClaims = (gameState.claims || []).filter(c => c.realmKey !== gameState.realmKey);
+            if (pressableClaims.length) {
+                pressableClaims.forEach(c => {
+                    const claimRealm = getRealm(c.realmKey);
+                    const row = el("div", "stat", `<span>${claimRealm.name} (${c.type} claim)</span>`);
+                    const btn = makeChoiceButton("Declare war", () => {
+                        declareWar(gameState, c.realmKey);
+                        saveGame();
+                        renderPlay();
+                    }, !canDeclareWar(gameState));
+                    row.appendChild(btn);
+                    warCard.appendChild(row);
+                });
+            } else {
+                warCard.appendChild(el("p", "muted", "No claims to press into a war yet."));
+            }
+        }
+        view.appendChild(warCard);
+
         const underminCard = makeCard("Undermine a rival realm", '<p class="muted">Sown unrest weakens a rival\'s stability — and, later, their ability to resist you.</p>');
         otherRealms.forEach(realm => {
             const stability = effectiveStability(gameState, realm.key);

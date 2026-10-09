@@ -56,6 +56,7 @@ function startNewGame(eraKey, realmKey, character) {
     callHookIfPresent("setupChurch", gameState);
     callHookIfPresent("setupCouncil", gameState);
     callHookIfPresent("setupIntrigue", gameState);
+    callHookIfPresent("setupWartime", gameState);
 
     return gameState;
 }

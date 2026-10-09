@@ -35,7 +35,7 @@ function fabricateClaim(gameState, realmKey) {
     const success = Math.random() < schemeSuccessChance(gameState, "intrigue", 8);
     const realm = getRealm(realmKey);
     if (success) {
-        gameState.claims.push({ realmKey, grantedYear: gameState.year });
+        gameState.claims.push({ realmKey, grantedYear: gameState.year, type: "fabricated" });
         logEvent(`${gameState.player.name} has fabricated a claim on ${realm.name}.`);
     } else {
         gameState.player.prestige = Math.max(0, gameState.player.prestige - 5);

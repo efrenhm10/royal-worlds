@@ -278,5 +278,18 @@ function marryPlayerTo(gameState, candidate) {
     registerPerson(gameState, candidate);
     player.spouseId = candidate.id;
     logEvent(`${player.name} has married ${candidate.name}.`);
+
+    // A spouse from elsewhere brings a collateral claim on their homeland
+    // with them — one of the three ways wartime.js recognizes a claim
+    // (the others: fabricated via intrigue.js, or simply inherited, since
+    // claims live on gameState and already carry through succession).
+    if (candidate.sourceRealmKey && candidate.sourceRealmKey !== gameState.realmKey) {
+        gameState.claims = gameState.claims || [];
+        const already = gameState.claims.some(c => c.realmKey === candidate.sourceRealmKey);
+        if (!already) {
+            gameState.claims.push({ realmKey: candidate.sourceRealmKey, grantedYear: gameState.year, type: "marriage" });
+            logEvent(`Through this marriage, ${player.name} presses a collateral claim on ${getRealm(candidate.sourceRealmKey).name}.`);
+        }
+    }
     return candidate;
 }
