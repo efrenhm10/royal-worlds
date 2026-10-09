@@ -35,7 +35,8 @@ Each bookmark needs its own realm roster, starting rulers, and starting Crown Au
 
 ## 2. What's IN (the CK3-shaped core)
 
-- **Your character, your dynasty, your line.** Birth, appearance, traits, marriage, children, death, and then you BECOME your heir — the engine this game already does well, kept and deepened, not demoted to a side system.
+- **Your character, your dynasty, your line — tracked as a real extended family, not just parent/spouse/children.** Today's game barely tracks siblings and loses track of cousins, aunts, and uncles entirely once a generation passes. The rebuild makes the full family tree a first-class data structure: siblings, their own spouses and children (your nieces and nephews), aunts, uncles, and cousins all persist and age for real across the whole playthrough, not just the direct line. This is what actually makes a Church-career character (see below) meaningful: a childless Cardinal or Pope isn't sidelined from the dynasty game — he's a real, present uncle who can use his position to help a sibling's children directly.
+- **The Church as a full playable life path, not just something your children can do.** You can choose a Church career for your OWN character: no legitimate marriage or heir of your own, but real, rising political power (priest → bishop → cardinal → Pope), and — because the family tree above is real — a direct, mechanical way to help your actual relatives: securing a niece's advantageous marriage, smoothing a nephew's succession dispute, protecting a sibling's realm from excommunication, legitimizing a brother's bastard. Your own "line" in a Church career isn't your children — it's how much you did for the family you were born into.
 - **Titles and rank as the real progression ladder.** Untitled gentry → knighted/landed → Baron → Count/Earl → Duke/Archduke → King/Queen → (rare) Emperor-recognition (Austria's Holy Roman Emperor mechanic already exists and is the right model). Every rank unlocks more: more land, more vassals, more council seats, more war options.
 - **Vassals.** If you hold enough land, other nobles hold title FROM you — they have opinion of you, pay you, owe you levies, and can be content, resentful, or ready to join a faction against you. This is new and is the single most "CK3" system missing today.
 - **Your own demesne — land you govern directly**, distinct from vassal land you've granted out. Build and upgrade holdings (a keep for defense and levies, a town for tax income, a temple for piety/Church favor), choose how much of your title's land you keep in-hand versus grant to a vassal (more in-hand land = more direct income and control, but a vassal-less realm also means fewer levies to call on and nobody else absorbing the administrative load), and watch your capital's own development rise over a reign. This is the actual hands-on "governing my lands" loop — closer to CK3's holdings/buildings system than to today's Estates tab, and a real, separate system from vassal MANAGEMENT (which is about other people's land, not yours).
@@ -77,7 +78,8 @@ js/
   intrigue.js                     — schemes: fabricate claim, foment unrest, assassinate, seduce
   factions.js                      — depose/revoke/independence/claimant factions against the player (or an NPC)
   wartime.js                        — claims, justified war, war score, sieges (ported concept, rewritten)
-  dynasty.js                         — marriage, succession, titles, widowhood (ported concept, rewritten)
+  dynasty.js                         — marriage, succession, titles, widowhood, and the FULL extended family tree (siblings, nieces/nephews, aunts/uncles, cousins — not just the direct line)
+  church_career.js                    — the player's own Church-career life path: priest/bishop/cardinal/Pope, and the concrete ways that office helps named relatives
   succession_laws.js                  — primogeniture/partition/elective/seniority choice + consequences
   church.js                            — piety, Church careers, dispensations, excommunication, Rome's own standing toward you
   reform.js                             — the spreading religious-movement pressure (suppress/tolerate/embrace, schism risk)
@@ -92,10 +94,10 @@ js/
 
 No build step, no server — open `index.html` in a browser, same as today.
 
-## 5. Still open — need your answer on these before I write code
+## 5. Confirmed — plan is approved, build starting
 
-1. **Bookmark years** — does the §1a list (1200 / 1337 / 1444 / 1517 / 1648 / 1740s) look right, or do you want different/fewer/more? And do you agree with shipping 1444 first (reusing the already-tested dynasty/succession engine and the 19-realm roster) before building out the other eras?
-2. **Church as a playable path?** Today's game already lets a CHILD rise to Pope. In this rebuild, should the PLAYER be able to live a Church-career life themselves (vows, no legitimate heir, but real political power as a prince-bishop or eventually Pope) — or is Church strictly a thing your *children* can do, and the player is always a landed/noble track?
-3. **Build order** — once I start, what should work FIRST? My instinct, in CK3-priority order: (a) titles/rank ladder + vassals, since everything else hangs off "what do you actually hold," then (b) succession/dynasty (the system most already proven in today's game, lowest risk to re-prove), then (c) council + intrigue, then (d) claims/wartime, then (e) the Church/reform/Crown-Authority pressure systems, then (f) the 1444 canon timeline specifically, with the other bookmarks' own content built after the systems and the first bookmark are both solid. Agree, or reorder?
+1. **Bookmark years** — confirmed: 1200 / 1337 / 1444 / 1517 / 1648 / 1740s, shipping 1444 first.
+2. **Church as a playable path** — confirmed: the player can live a full Church-career life, specifically so it can be used to help siblings, nieces, and nephews — which is why §2's family-tree tracking and the Church-career system are now built together, not separately.
+3. **Build order** — proceeding in the order above, revised to put the real extended-family-tree data model early (inside dynasty.js) since the Church-career path depends on it directly: (a) core engine + character creation + titles/rank ladder, (b) the real extended family tree + vassals, (c) succession/dynasty (marriage, widowhood, inheritance), (d) Church career + the Church-as-power-center system, (e) council + intrigue, (f) claims/wartime, (g) reform/Crown-Authority pressure, (h) the 1444 canon timeline content.
 
-Once you confirm, I start building — module by module, each tested in isolation before the next, same disciplined pattern as this whole session.
+Building now — module by module, each tested in isolation before the next, same disciplined pattern as this whole session. `royal-worlds.html` stays in place and untouched until the new build is genuinely playable; it is not deleted as part of this work.
