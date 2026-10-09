@@ -53,6 +53,7 @@ function startNewGame(eraKey, realmKey, character) {
     // these.
     callHookIfPresent("setupDynasty", gameState);
     callHookIfPresent("setupVassals", gameState);
+    callHookIfPresent("setupChurch", gameState);
 
     return gameState;
 }
@@ -121,6 +122,7 @@ function advanceYear() {
     callHookIfPresent("tickVassals", gameState);
     callHookIfPresent("tickDynasty", gameState);
     callHookIfPresent("tickChurch", gameState);
+    callHookIfPresent("tickChurchCareer", gameState);
     callHookIfPresent("tickCouncil", gameState);
     callHookIfPresent("tickIntrigue", gameState);
     callHookIfPresent("tickFactions", gameState);

@@ -76,7 +76,7 @@ let _playViewTab = "chronicle";
 function renderPlay() {
     const realm = getRealm(gameState.realmKey);
     const player = gameState.player;
-    const title = titleName(player.tier, player.gender, realm.key);
+    const title = player.churchTier != null ? churchRankName(player.churchTier) : titleName(player.tier, player.gender, realm.key);
 
     const hud = document.getElementById("hud");
     clearEl(hud);
@@ -102,6 +102,7 @@ function renderPlay() {
     dock.appendChild(makeChoiceButton("Chronicle", () => { _playViewTab = "chronicle"; renderPlay(); }));
     dock.appendChild(makeChoiceButton("Family", () => { _playViewTab = "family"; renderPlay(); }));
     dock.appendChild(makeChoiceButton("Court", () => { _playViewTab = "court"; renderPlay(); }));
+    dock.appendChild(makeChoiceButton("Church", () => { _playViewTab = "church"; renderPlay(); }));
 
     renderPlayView();
 }
@@ -154,7 +155,7 @@ function renderPlayView() {
         cousins.forEach(c => card.appendChild(el("div", null, personLine(c, "cousin"))));
         view.appendChild(card);
 
-        if (!gameState.gameOver && isAvailableToMarry(gameState, player.id)) {
+        if (!gameState.gameOver && player.churchTier == null && isAvailableToMarry(gameState, player.id)) {
             const marriageCard = makeCard("Propose a marriage", "");
             generateMarriageCandidates(gameState, 3).forEach(candidate => {
                 const candidateRealm = getRealm(candidate.sourceRealmKey);
@@ -199,6 +200,64 @@ function renderPlayView() {
         }
         view.appendChild(lawCard);
         view.appendChild(card);
+        return;
+    }
+
+    if (_playViewTab === "church") {
+        if (player.churchTier == null) {
+            const canEnter = canEnterChurch(gameState);
+            const reasons = [];
+            if (player.age < 16) reasons.push("too young to take orders");
+            const spouse = getSpouse(gameState, player.id);
+            if (spouse && spouse.alive) reasons.push("married — the Church asks celibacy of its clergy");
+            const body = `<p class="muted">Renounce marriage and any secular inheritance of your own, and climb from priest to bishop to cardinal — and, rarely, to the Papacy itself. A churchman's real power is what it lets you do for your family: blessings, petitions, and papal favor for the relatives who still carry the family's secular fortunes.</p>${reasons.length ? `<p class="muted">Not available: ${reasons.join("; ")}.</p>` : ""}`;
+            const card = makeCard("Take Holy Orders", body);
+            if (!gameState.gameOver) {
+                card.appendChild(makeChoiceButton("Take Holy Orders", () => {
+                    enterChurch(gameState);
+                    saveGame();
+                    renderPlay();
+                }, !canEnter));
+            }
+            view.appendChild(card);
+            return;
+        }
+
+        const rankCard = makeCard(churchRankName(player.churchTier), `<p class="muted">Church piety: ${player.churchPiety || 0}</p>`);
+        view.appendChild(rankCard);
+
+        const relatives = [
+            ...getChildren(gameState, player.id),
+            ...getSiblings(gameState, player.id),
+            ...getNiecesNephews(gameState, player.id),
+            ...getCousins(gameState, player.id),
+            ...getAuntsUncles(gameState, player.id),
+        ].filter(p => p.alive);
+
+        availableChurchActions(gameState).forEach(action => {
+            const actionCard = makeCard(action.name, `<p class="muted">${action.desc} (costs ${action.pietyCost} piety)</p>`);
+            if (action.key === "shield") {
+                actionCard.appendChild(makeChoiceButton(action.name, () => {
+                    performChurchAction(gameState, action.key, null);
+                    saveGame();
+                    renderPlay();
+                }, !!gameState.gameOver));
+            } else if (relatives.length) {
+                relatives.forEach(relative => {
+                    const row = el("div", "stat", `<span>${relative.name}</span>`);
+                    const btn = makeChoiceButton(`Use on ${relative.name}`, () => {
+                        performChurchAction(gameState, action.key, relative.id);
+                        saveGame();
+                        renderPlay();
+                    }, !!gameState.gameOver);
+                    row.appendChild(btn);
+                    actionCard.appendChild(row);
+                });
+            } else {
+                actionCard.appendChild(el("p", "muted", "No living relative to use this on right now."));
+            }
+            view.appendChild(actionCard);
+        });
         return;
     }
 }
