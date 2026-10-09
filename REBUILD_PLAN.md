@@ -33,9 +33,11 @@ Everything below is built around that sentence. The Star Wars game's *underlying
 - **Succession law as a real choice**, not a fixed rule: primogeniture vs. partition vs. elective vs. seniority, each with real tradeoffs (partition splits your realm among heirs — classic CK3 tension between a big single heir and a fractured dynasty). Builds directly on the succession engine already deeply tested in the current game.
 - **Canon characters with real memory** — same as v1, kept: Edward IV, Richard III, Warwick, Louis XI, Charles the Bold, Isabella and Ferdinand, Matthias Corvinus, Vlad III, Mehmed II and the rest, each with opinions that remember specific things you did.
 - **Realm attributes** (Wealth, Stability, Military strength, Strategic vulnerability, Cultural/religious identity) — kept from v1, replacing today's thin `REALM_MILITARY_STRENGTH`-only model, now also driving vassal opinion and faction risk.
-- **The Church**, kept but demoted from a full playable "role" (v1) to a real system any character interacts with: piety, a child's Church career (already exists today), dispensations/annulments tied to marriage, excommunication as a real political weapon used against you or by you.
+- **The Church as a real power pressing on you, not just a personal stat.** Rome has its own interests, independent of any one king: it wants tithes, orthodoxy, and deference. A ruler who defies the Pope risks excommunication — a real, heavy penalty (vassals released from their oath of loyalty, a legitimate pretext for rivals to invade, your own faction risk spiking) — while a ruler who stays in Rome's good graces gets real benefits (marriage dispensations, legitimizing a bastard, support against a rebellious vassal). This is the Catholic Church as a genuine check on crown power, the way it actually was.
+- **Religious movements as a spreading, divisive pressure** — the printing-press/"Winds of Reform" thread already present in today's game, made into a real system rather than a background flag: as the era advances (especially once the timeline reaches the early 1500s, Luther's era), reformist ideas spread through your realm whether you want them to or not. You choose to suppress it (costs stability, pleases Rome, angers any vassals who've already converted) or tolerate/embrace it (pleases a growing faction, risks Rome's censure or outright a crusade/holy war called against you). A long enough playthrough can end with your own realm genuinely split, or a full break with Rome — a dynastic and religious stake at once, not a flavor event.
+- **Crown Authority as the "constitutional monarchy" pressure, modeled the way CK3 actually models it — not as a parliament.** Every realm has a Crown Authority level: how much a king can do without his vassals' consent. Raising it is a real, resisted act — vassal opinion drops, faction risk rises, and in realms with a real tradition of chartered rights (England's own Magna Carta lineage is the obvious one) your nobility can force you into a charter that permanently caps how far you can push, exactly the historical seed of constitutional monarchy. Lower Crown Authority realms (France trending more absolutist, Naples ruling by near-decree) feel different to rule than high-pressure ones. This is the full answer to "the pressures of ruling" without resurrecting a bill-passing legislature.
 - **A real record of your life and your dynasty**, CK3-style: *cause of death, reign length, titles held, wars won and lost, a dynasty prestige score that carries from ruler to ruler.*
-- **NPC realm politics** (built this session) carries forward conceptually, rebuilt on the same vassal/faction/claim machinery the player uses — other rulers losing their own vassals to a faction, pressing their own claims — not a separate abstracted system.
+- **NPC realm politics** (built this session) carries forward conceptually, rebuilt on the same vassal/faction/claim machinery the player uses — other rulers losing their own vassals to a faction, pressing their own claims, facing their own Church and Crown Authority pressure — not a separate abstracted system.
 
 ## 3. What's OUT (cut from v1, not just demoted)
 
@@ -54,17 +56,18 @@ js/
   engine.js                — core game-state object, the tick loop, save/load
   attributes.js             — character creation: background, appearance, traits
   realms.js                  — the 19 realms' own attributes + title hierarchy
-  titles.js                   — the rank ladder (county/duchy/kingdom/empire), who holds what
+  titles.js                   — the rank ladder (county/duchy/kingdom/empire), who holds what, Crown Authority per realm
   domain.js                    — your own demesne: holdings, buildings, development, in-hand vs. granted land
-  vassals.js                    — liege/vassal relationships, opinion, levies, taxes
+  vassals.js                    — liege/vassal relationships, opinion, levies, taxes, Crown Authority pressure/charters
   council.js                     — Chancellor/Steward/Marshal/Spymaster/Chaplain
   intrigue.js                     — schemes: fabricate claim, foment unrest, assassinate, seduce
   factions.js                      — depose/revoke/independence/claimant factions against the player (or an NPC)
   wartime.js                        — claims, justified war, war score, sieges (ported concept, rewritten)
   dynasty.js                         — marriage, succession, titles, widowhood (ported concept, rewritten)
   succession_laws.js                  — primogeniture/partition/elective/seniority choice + consequences
-  church.js                            — piety, Church careers, dispensations, excommunication
-  personal.js                           — the player's own life: age, health, family, career/death
+  church.js                            — piety, Church careers, dispensations, excommunication, Rome's own standing toward you
+  reform.js                             — the spreading religious-movement pressure (suppress/tolerate/embrace, schism risk)
+  personal.js                            — the player's own life: age, health, family, career/death
   canon.js / canon_events.js             — the scripted historical backbone (from WORLD_TIMELINE)
   timeline.js                             — adaptive branching logic keyed off player/world state
   events.js                                — the general random-event pool
