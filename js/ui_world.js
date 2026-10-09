@@ -103,6 +103,7 @@ function renderPlay() {
     dock.appendChild(makeChoiceButton("Family", () => { _playViewTab = "family"; renderPlay(); }));
     dock.appendChild(makeChoiceButton("Court", () => { _playViewTab = "court"; renderPlay(); }));
     dock.appendChild(makeChoiceButton("Church", () => { _playViewTab = "church"; renderPlay(); }));
+    dock.appendChild(makeChoiceButton("Intrigue", () => { _playViewTab = "intrigue"; renderPlay(); }));
 
     renderPlayView();
 }
@@ -174,6 +175,23 @@ function renderPlayView() {
     }
 
     if (_playViewTab === "court") {
+        const council = getCouncil(gameState);
+        const roleKeys = Object.keys(council);
+        const councilCard = makeCard("Your council", roleKeys.length ? "" : '<p class="muted">No formal council yet — that comes with a landed title.</p>');
+        roleKeys.forEach(roleKey => {
+            const advisor = council[roleKey];
+            const role = COUNCIL_ROLES.find(r => r.key === roleKey);
+            const row = el("div", "stat", `<span>${role.name}: ${advisor.name}</span><span>Skill ${advisor.skill} · Opinion ${Math.round(advisor.opinion)}</span>`);
+            const btn = makeChoiceButton("Replace", () => {
+                replaceAdvisor(gameState, roleKey);
+                saveGame();
+                renderPlay();
+            }, !!gameState.gameOver);
+            row.appendChild(btn);
+            councilCard.appendChild(row);
+        });
+        view.appendChild(councilCard);
+
         const vassals = getVassals(gameState);
         const card = makeCard("Your court", vassals.length ? "" : '<p class="muted">You command no vassals of your own yet — a higher title will bring them.</p>');
         vassals.forEach(v => {
@@ -258,6 +276,62 @@ function renderPlayView() {
             }
             view.appendChild(actionCard);
         });
+        return;
+    }
+
+    if (_playViewTab === "intrigue") {
+        const otherRealms = listRealms().filter(r => r.key !== gameState.realmKey);
+
+        const claimsCard = makeCard("Fabricate a claim", '<p class="muted">A fabricated claim is what makes a future war justified, rather than naked conquest.</p>');
+        otherRealms.forEach(realm => {
+            const already = hasClaim(gameState, realm.key);
+            const row = el("div", "stat", `<span>${realm.name}${already ? " — claim already held" : ""}</span>`);
+            const btn = makeChoiceButton("Fabricate claim", () => {
+                fabricateClaim(gameState, realm.key);
+                saveGame();
+                renderPlay();
+            }, already || !!gameState.gameOver);
+            row.appendChild(btn);
+            claimsCard.appendChild(row);
+        });
+        view.appendChild(claimsCard);
+
+        const underminCard = makeCard("Undermine a rival realm", '<p class="muted">Sown unrest weakens a rival\'s stability — and, later, their ability to resist you.</p>');
+        otherRealms.forEach(realm => {
+            const stability = effectiveStability(gameState, realm.key);
+            const row = el("div", "stat", `<span>${realm.name} — stability ${stability}</span>`);
+            const btn = makeChoiceButton("Undermine", () => {
+                undermineRivalStability(gameState, realm.key);
+                saveGame();
+                renderPlay();
+            }, !!gameState.gameOver);
+            row.appendChild(btn);
+            underminCard.appendChild(row);
+        });
+        view.appendChild(underminCard);
+
+        const targets = [
+            ...getSiblings(gameState, player.id),
+            ...getNiecesNephews(gameState, player.id),
+            ...getCousins(gameState, player.id),
+            ...getAuntsUncles(gameState, player.id),
+        ].filter(p => p.alive);
+        const deathCard = makeCard("Arrange a convenient death", '<p class="muted">Dangerous, and not easily undone if it goes wrong.</p>');
+        if (targets.length) {
+            targets.forEach(t => {
+                const row = el("div", "stat", `<span>${t.name}, age ${t.age}</span>`);
+                const btn = makeChoiceButton("Arrange", () => {
+                    arrangeConvenientDeath(gameState, t.id);
+                    saveGame();
+                    renderPlay();
+                }, !!gameState.gameOver);
+                row.appendChild(btn);
+                deathCard.appendChild(row);
+            });
+        } else {
+            deathCard.appendChild(el("p", "muted", "No one in reach right now."));
+        }
+        view.appendChild(deathCard);
         return;
     }
 }
