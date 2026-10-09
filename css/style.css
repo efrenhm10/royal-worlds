@@ -178,3 +178,131 @@ select {
     border-radius: 10px;
     transition: width .5s ease;
 }
+
+/* Dashboard HUD: sticky, with a stat-tile row instead of a plain list. */
+#hud {
+    position: sticky;
+    top: 10px;
+    z-index: 5;
+}
+
+.hud-stats {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+}
+
+.hs {
+    background: var(--parchment);
+    border: 1px solid var(--parchment-deep);
+    border-radius: 8px;
+    padding: 6px 12px;
+    min-width: 84px;
+}
+
+.hs span {
+    display: block;
+    font-size: 10.5px;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.hs b {
+    font-family: "Cinzel", serif;
+    font-size: 19px;
+}
+
+.hs .meter {
+    margin-top: 4px;
+    width: 64px;
+}
+
+/* Icon dock: a row of tabs instead of a plain button grid, with badges
+   for things needing attention. */
+#dock {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding: 10px 0;
+}
+
+.dock-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--parchment-panel);
+    border: 1px solid var(--parchment-deep);
+    color: var(--ink);
+    box-shadow: none;
+    position: relative;
+}
+
+.dock-btn.active {
+    background: linear-gradient(180deg, var(--azure-bright) 0%, var(--azure) 100%);
+    border-color: var(--azure);
+    color: #fdf6e6;
+}
+
+.dock-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    background: var(--gules-bright);
+    color: #fff;
+    border-radius: 9px;
+    font-size: 10.5px;
+    font-weight: 700;
+    padding: 1px 5px;
+    line-height: 1.4;
+}
+
+/* Two-column dashboard layout for the main play views. */
+.cols {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 14px;
+    align-items: start;
+}
+
+@media (max-width: 760px) {
+    .cols {
+        grid-template-columns: 1fr;
+    }
+}
+
+.col-main, .col-side {
+    min-width: 0;
+}
+
+/* Toast notifications: so anything that happens is visible no matter
+   which tab is open, not just Chronicle. */
+#toasts {
+    position: fixed;
+    bottom: 16px;
+    right: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 100;
+    max-width: 320px;
+}
+
+.toast {
+    background: var(--parchment-panel);
+    border: 1px solid var(--gilt);
+    border-left: 4px solid var(--gilt-bright);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 14px;
+    box-shadow: 0 4px 16px rgba(60,38,12,0.3);
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity .35s ease, transform .35s ease;
+}
+
+.toast.show {
+    opacity: 1;
+    transform: translateY(0);
+}

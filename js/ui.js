@@ -64,3 +64,20 @@ function avatarSvg(person, size) {
 function avatarRow(person, labelHtml) {
     return `<div style="display:flex;align-items:center;gap:10px;">${avatarSvg(person, 40)}<div>${labelHtml}</div></div>`;
 }
+
+// Toasts: engine.js's logEvent calls this (once toasts are enabled, past
+// initial game setup) so anything that happens — a death, a birth, a
+// vassal's opinion crisis, a year advancing — is visible no matter which
+// tab is open, not just when the player happens to be on Chronicle.
+function showToast(text) {
+    const container = document.getElementById("toasts");
+    if (!container) return;
+    const toast = el("div", "toast", text);
+    container.appendChild(toast);
+    const raf = typeof requestAnimationFrame === "function" ? requestAnimationFrame : (fn) => setTimeout(fn, 16);
+    raf(() => toast.classList.add("show"));
+    setTimeout(() => {
+        toast.classList.remove("show");
+        setTimeout(() => toast.remove(), 400);
+    }, 5000);
+}

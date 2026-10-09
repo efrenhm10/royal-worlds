@@ -4,6 +4,61 @@
 
 let _selectedEraKey = null;
 let _selectedRealmKey = null;
+let _marriageRealmKey = null;
+let _marriageCategory = null; // "royal" | "noble"
+
+// Propose a marriage: pick a realm, then its royal family or its noble
+// line, then a specific match — with the real cost of marrying above or
+// beneath your own station shown before you commit, not after.
+function renderMarriageSection(view, gameState) {
+    const player = gameState.player;
+
+    if (!_marriageRealmKey) {
+        const card = makeCard("Propose a marriage", '<p class="muted">Choose a realm to seek a match in.</p>');
+        listRealms().forEach(realm => {
+            const row = el("div", "stat", `<span>${realm.name}</span>`);
+            row.appendChild(makeChoiceButton("Choose", () => { _marriageRealmKey = realm.key; renderPlay(); }));
+            card.appendChild(row);
+        });
+        view.appendChild(card);
+        return;
+    }
+
+    const realm = getRealm(_marriageRealmKey);
+
+    if (!_marriageCategory) {
+        const card = makeCard(`A match in ${realm.name}`, '<p class="muted">The royal house itself, or the wider noble line?</p>');
+        card.appendChild(makeChoiceButton("← Choose a different realm", () => { _marriageRealmKey = null; renderPlay(); }));
+        card.appendChild(makeChoiceButton("Royal family", () => { _marriageCategory = "royal"; renderPlay(); }));
+        card.appendChild(makeChoiceButton("Noble line", () => { _marriageCategory = "noble"; renderPlay(); }));
+        view.appendChild(card);
+        return;
+    }
+
+    const card = makeCard(`${_marriageCategory === "royal" ? "Royal family" : "Noble line"} of ${realm.name}`, "");
+    card.appendChild(makeChoiceButton("← Choose a different kind of match", () => { _marriageCategory = null; renderPlay(); }));
+    const candidates = generateMarriageCandidatesForRealm(gameState, _marriageRealmKey, _marriageCategory);
+    candidates.forEach(candidate => {
+        const title = titleName(candidate.tier, candidate.gender, _marriageRealmKey);
+        const cost = marriageCost(player.tier, candidate.tier);
+        const shame = marriageShame(player.tier, candidate.tier);
+        let note = "A fitting match for your own station.";
+        if (cost > 0) note = `Marrying above your station — costs ${cost} gold in dowry and land concessions.`;
+        else if (shame > 0) note = `Marrying beneath your station — costs ${shame} prestige at court.`;
+        const row = el("div", "stat", avatarRow(candidate, `<strong>${title} ${candidate.name}</strong>, age ${candidate.age}<br><span class="muted">${note}</span>`));
+        const btn = makeChoiceButton("Marry", () => {
+            if (marryPlayerTo(gameState, candidate)) {
+                _marriageRealmKey = null;
+                _marriageCategory = null;
+            }
+            saveGame();
+            renderPlay();
+        }, cost > 0 && player.gold < cost);
+        row.appendChild(btn);
+        card.appendChild(row);
+    });
+    view.appendChild(card);
+}
 
 function renderEraSelect() {
     const list = document.getElementById("eraList");
@@ -64,6 +119,25 @@ function renderCharacterCreate(eraKey, realmKey) {
     });
 }
 
+function candidateCard(eraKey, realmKey, candidate) {
+    const title = titleName(candidate.tier, candidate.gender, realmKey);
+    const skillsLine = SKILL_KEYS.map(k => `${k[0].toUpperCase()}${k.slice(1)} ${candidate.skills[k]}`).join(" · ");
+    const traitsLine = candidate.traits.join(", ");
+    const body = avatarRow(candidate, `
+        <p><strong>${title} ${candidate.name}</strong>, age ${candidate.age}</p>
+        <p class="muted">${skillsLine}</p>
+        <p class="muted">Traits: ${traitsLine}</p>
+    `) + `<p class="muted">${candidate.blurb}</p>`;
+    const card = makeCard(candidate.name, body);
+    const btn = makeChoiceButton("Begin this life", () => {
+        startNewGame(eraKey, realmKey, candidate);
+        renderPlay();
+        showScreen("play");
+    });
+    card.appendChild(btn);
+    return card;
+}
+
 function renderCandidatesForTier(eraKey, realmKey, tier) {
     const realm = getRealm(realmKey);
     document.getElementById("characterCreateIntro").textContent =
@@ -78,28 +152,58 @@ function renderCandidatesForTier(eraKey, realmKey, tier) {
     }));
     list.appendChild(backCard);
 
+    // At the crown itself, offer to play the realm's actual ruler or a
+    // real relative of theirs (sibling/child) instead of only generated
+    // nobles — realms.js's historical figures are playable, not just
+    // flavor text on the realm-select screen.
+    if (tier === 5) {
+        list.appendChild(candidateCard(eraKey, realmKey, createRulerCharacter(realmKey)));
+        list.appendChild(candidateCard(eraKey, realmKey, createRulerRelativeCandidate(realmKey, "sibling")));
+        list.appendChild(candidateCard(eraKey, realmKey, createRulerRelativeCandidate(realmKey, "child")));
+    }
+
     const candidates = generateCandidatesForTier(realmKey, tier, 4);
-    candidates.forEach(candidate => {
-        const title = titleName(candidate.tier, candidate.gender, realmKey);
-        const skillsLine = SKILL_KEYS.map(k => `${k[0].toUpperCase()}${k.slice(1)} ${candidate.skills[k]}`).join(" · ");
-        const traitsLine = candidate.traits.join(", ");
-        const body = avatarRow(candidate, `
-            <p><strong>${title} ${candidate.name}</strong>, age ${candidate.age}</p>
-            <p class="muted">${skillsLine}</p>
-            <p class="muted">Traits: ${traitsLine}</p>
-        `) + `<p class="muted">${candidate.blurb}</p>`;
-        const card = makeCard(candidate.name, body);
-        const btn = makeChoiceButton("Begin this life", () => {
-            startNewGame(eraKey, realmKey, candidate);
-            renderPlay();
-            showScreen("play");
-        });
-        card.appendChild(btn);
-        list.appendChild(card);
-    });
+    candidates.forEach(candidate => list.appendChild(candidateCard(eraKey, realmKey, candidate)));
 }
 
 let _playViewTab = "chronicle";
+
+// Court standing isn't tracked as its own number — it's what vassals and
+// councillors actually think of you, averaged, the same "respect" a real
+// court would gossip about.
+function courtStanding(gameState) {
+    const people = [...getVassals(gameState), ...Object.values(getCouncil(gameState))];
+    if (!people.length) return null;
+    return Math.round(people.reduce((s, p) => s + p.opinion, 0) / people.length);
+}
+
+function safetyStatus(gameState) {
+    if (gameState.war) return { label: "At War", bad: true };
+    if (gameState.faction) return { label: "Revolt", bad: true };
+    if (isExcommunicationRisk(gameState, gameState.realmKey)) return { label: "Excommunication risk", bad: true };
+    const standing = courtStanding(gameState);
+    if (standing != null && standing < 35) return { label: "Court unrest", bad: true };
+    return { label: "Safe", bad: false };
+}
+
+const DOCK_VIEWS = [
+    { key: "chronicle", name: "Chronicle", icon: "📜" },
+    { key: "domain", name: "Domain", icon: "🏰" },
+    { key: "military", name: "Military", icon: "⚔️" },
+    { key: "family", name: "Family", icon: "👪" },
+    { key: "court", name: "Court", icon: "🏛️" },
+    { key: "church", name: "Church", icon: "⛪" },
+    { key: "intrigue", name: "Intrigue", icon: "🗡️" },
+];
+
+function dockBadge(gameState, key) {
+    if (key === "court" && gameState.faction) return "!";
+    if (key === "church" && isExcommunicationRisk(gameState, gameState.realmKey)) return "!";
+    if (key === "intrigue" && gameState.war) return "⚔";
+    if (key === "military" && standingUpkeep(gameState) > (gameState.player.gold || 0) && standingUpkeep(gameState) > 0) return "!";
+    if (key === "family" && canTryForChild(gameState)) return "♥";
+    return null;
+}
 
 function renderPlay() {
     const realm = getRealm(gameState.realmKey);
@@ -110,12 +214,9 @@ function renderPlay() {
     clearEl(hud);
     hud.appendChild(el("div", null, `<div style="display:flex;align-items:center;gap:14px;">${avatarSvg(player, 64)}<div>
         <h2 style="margin:0;">${title} ${player.name}</h2>
-        <p class="muted" style="margin:2px 0 0;">${realm.name} — ${gameState.year} — age ${player.age}</p>
+        <p class="muted" style="margin:2px 0 0;">${realm.name} — ${gameState.year} — age ${player.age}${player.traits && player.traits.length ? ` · ${player.traits.join(", ")}` : ""}</p>
+        <p class="muted" style="margin:2px 0 0;"><em>${sceneDescription(gameState)}</em></p>
     </div></div>`));
-    hud.appendChild(el("p", "muted", `<em>${sceneDescription(gameState)}</em>`));
-    if (player.traits && player.traits.length) {
-        hud.appendChild(el("p", "muted", `Known to be ${player.traits.join(" and ")}.`));
-    }
     if (gameState.war) {
         const warRealm = getRealm(gameState.war.targetRealmKey);
         const yearsAtWar = gameState.year - gameState.war.startYear;
@@ -127,26 +228,38 @@ function renderPlay() {
     if (gameState.gameOver) {
         hud.appendChild(el("p", null, `<strong>${gameState.gameOverReason}</strong>`));
     }
-    const stats = el("div", "grid");
-    stats.appendChild(el("div", "stat", `<span>Health</span><span>${player.health}</span>`));
-    stats.appendChild(el("div", "stat", `<span>Gold</span><span>${player.gold}</span>`));
-    stats.appendChild(el("div", "stat", `<span>Prestige</span><span>${player.prestige}</span>`));
-    stats.appendChild(el("div", "stat", `<span>Piety</span><span>${player.piety}</span>`));
+
+    const standing = courtStanding(gameState);
+    const safety = safetyStatus(gameState);
+    const power = playerMilitaryPower(gameState);
+    const stats = el("div", "hud-stats");
+    const tile = (label, value, meterPct, extraClass) => `<div class="hs ${extraClass || ""}"><span>${label}</span><b>${value}</b>${meterPct != null ? `<div class="meter"><span style="width:${Math.max(0, Math.min(100, meterPct))}%"></span></div>` : ""}</div>`;
+    stats.innerHTML =
+        tile("Health", player.health, player.health) +
+        tile("Wealth", player.gold) +
+        tile("Prestige", player.prestige) +
+        tile("Piety", player.piety) +
+        tile("Power", power.toLocaleString()) +
+        tile("Standing", standing != null ? `${standing}%` : "—", standing) +
+        tile("Safety", safety.label);
     hud.appendChild(stats);
 
     const dock = document.getElementById("dock");
     clearEl(dock);
-    dock.appendChild(makeChoiceButton("Advance a year", () => {
+    const advanceBtn = el("button", "dock-btn", "⏭ <span>Advance a year</span>");
+    advanceBtn.disabled = !player.alive || gameState.gameOver;
+    advanceBtn.addEventListener("click", () => {
         advanceYear();
         saveGame();
         renderPlay();
-    }, !player.alive || gameState.gameOver));
-    dock.appendChild(makeChoiceButton("Chronicle", () => { _playViewTab = "chronicle"; renderPlay(); }));
-    dock.appendChild(makeChoiceButton("Domain", () => { _playViewTab = "domain"; renderPlay(); }));
-    dock.appendChild(makeChoiceButton("Family", () => { _playViewTab = "family"; renderPlay(); }));
-    dock.appendChild(makeChoiceButton("Court", () => { _playViewTab = "court"; renderPlay(); }));
-    dock.appendChild(makeChoiceButton("Church", () => { _playViewTab = "church"; renderPlay(); }));
-    dock.appendChild(makeChoiceButton("Intrigue", () => { _playViewTab = "intrigue"; renderPlay(); }));
+    });
+    dock.appendChild(advanceBtn);
+    DOCK_VIEWS.forEach(v => {
+        const badge = dockBadge(gameState, v.key);
+        const btn = el("button", `dock-btn${_playViewTab === v.key ? " active" : ""}`, `${v.icon} <span>${v.name}</span>${badge ? `<em class="dock-badge">${badge}</em>` : ""}`);
+        btn.addEventListener("click", () => { _playViewTab = v.key; renderPlay(); });
+        dock.appendChild(btn);
+    });
 
     renderPlayView();
 }
@@ -240,6 +353,62 @@ function renderPlayView() {
         return;
     }
 
+    if (_playViewTab === "military") {
+        const summary = makeCard("Your forces", `
+            <div class="stat"><span>Vassal levies</span><span>${totalLevies(gameState).toLocaleString()}</span></div>
+            <div class="stat"><span>Personal levies (from in-hand keeps)</span><span>${(player.personalLevies || 0).toLocaleString()}</span></div>
+            <div class="stat"><span>Standing army + mercenaries</span><span>${standingPower(gameState).toLocaleString()}</span></div>
+            <div class="stat"><span><strong>Total military power</strong></span><span><strong>${playerMilitaryPower(gameState).toLocaleString()}</strong></span></div>
+            <div class="stat"><span>Upkeep (standing army + mercenaries, per year)</span><span>${standingUpkeep(gameState)} gold</span></div>
+        `);
+        view.appendChild(summary);
+
+        TROOP_TYPES.forEach(type => {
+            const count = getTroopCount(gameState, type.key);
+            const card = makeCard(`${type.name} — ${count.toLocaleString()}`, `<p class="muted">${type.desc} Quality ${type.quality} · ${type.upkeep} gold upkeep each per year.</p>`);
+            if (!gameState.gameOver) {
+                [10, 50, 200].forEach(amount => {
+                    const cost = recruitTroopCost(gameState, type.key, amount);
+                    card.appendChild(makeChoiceButton(`Recruit ${amount} (${cost} gold)`, () => {
+                        recruitTroops(gameState, type.key, amount);
+                        saveGame();
+                        renderPlay();
+                    }, player.gold < cost));
+                });
+                if (count > 0) {
+                    card.appendChild(makeChoiceButton(`Disband ${Math.min(50, count)}`, () => {
+                        disbandTroops(gameState, type.key, Math.min(50, count));
+                        saveGame();
+                        renderPlay();
+                    }));
+                }
+            }
+            view.appendChild(card);
+        });
+
+        const mercCard = makeCard("Mercenary companies", '<p class="muted">Expensive, loyal only to gold, and ready now — a burst of strength no muster can match on short notice.</p>');
+        if (!gameState.gameOver) {
+            mercCard.appendChild(makeChoiceButton("Hire a mercenary company", () => {
+                hireMercenaries(gameState);
+                saveGame();
+                renderPlay();
+            }));
+        }
+        (gameState.military.mercenaries || []).forEach((m, i) => {
+            const row = el("div", "stat", `<span>${m.name} — ${m.count.toLocaleString()} troops, quality ${m.quality}</span><span>${m.costPerYear} gold/yr</span>`);
+            if (!gameState.gameOver) {
+                row.appendChild(makeChoiceButton("Dismiss", () => {
+                    dismissMercenaries(gameState, i);
+                    saveGame();
+                    renderPlay();
+                }));
+            }
+            mercCard.appendChild(row);
+        });
+        view.appendChild(mercCard);
+        return;
+    }
+
     if (_playViewTab === "family") {
         const card = makeCard("Your family", "");
         const spouse = getSpouse(gameState, player.id);
@@ -279,19 +448,7 @@ function renderPlayView() {
         view.appendChild(card);
 
         if (!gameState.gameOver && player.churchTier == null && isAvailableToMarry(gameState, player.id)) {
-            const marriageCard = makeCard("Propose a marriage", "");
-            generateMarriageCandidates(gameState, 3).forEach(candidate => {
-                const candidateRealm = getRealm(candidate.sourceRealmKey);
-                const row = el("div", "stat", `<span>${candidate.name}, age ${candidate.age} (${candidateRealm.name})</span>`);
-                const btn = makeChoiceButton("Marry", () => {
-                    marryPlayerTo(gameState, candidate);
-                    saveGame();
-                    renderPlay();
-                });
-                row.appendChild(btn);
-                marriageCard.appendChild(row);
-            });
-            view.appendChild(marriageCard);
+            renderMarriageSection(view, gameState);
         }
         return;
     }

@@ -118,3 +118,61 @@ function generateCandidates(realmKey, count) {
         return c;
     });
 }
+
+// Play as the realm's actual ruling monarch (realms.js's 1461 figure),
+// not a generic royal — their real name, age, and historically-grounded
+// traits. dynasty.js's setupDynasty generates an ordinary family around
+// them, same as any other starting character.
+function createRulerCharacter(realmKey) {
+    const realm = getRealm(realmKey);
+    const ruler = realm.ruler;
+    const c = createCharacter({ realmKey, tier: 5, gender: ruler.gender, age: ruler.age, name: ruler.name });
+    if (ruler.traits) c.traits = ruler.traits.slice();
+    c.sourceRealmKey = realmKey;
+    c.blurb = `${ruler.name} in the flesh — the actual ${titleName(5, ruler.gender, realmKey)} of ${realm.name} this year.`;
+    return c;
+}
+
+// A sibling or child of the realm's actual ruler — royal blood, real
+// standing, but not the crown itself. _rulerLink is read by
+// dynasty.js's setupDynasty (character creation) to graft the real
+// ruler into the new family tree as the right relation, and by
+// marriage flows the same way when this is used as a marriage prospect.
+function createRulerRelativeCandidate(realmKey, relation, forcedGender) {
+    const realm = getRealm(realmKey);
+    const ruler = realm.ruler;
+    let age, tier;
+    if (relation === "sibling") {
+        age = Math.max(16, ruler.age + randInt(-15, 15));
+        tier = 4;
+    } else { // child
+        const maxGap = Math.min(40, Math.max(19, ruler.age - 16));
+        age = Math.max(16, ruler.age - randInt(18, maxGap));
+        tier = 3;
+    }
+    const gender = forcedGender || (Math.random() < 0.5 ? "M" : "F");
+    const c = createCharacter({ realmKey, tier, gender, age });
+    c._rulerLink = { type: relation, ruler: { name: ruler.name, gender: ruler.gender, age: ruler.age, traits: ruler.traits } };
+    c.sourceRealmKey = realmKey;
+    c.blurb = relation === "sibling"
+        ? `A sibling of ${ruler.name}, ${titleName(5, ruler.gender, realmKey)} of ${realm.name} — royal blood, with a great appanage of your own, but not the crown itself.`
+        : `A child of ${ruler.name}, ${titleName(5, ruler.gender, realmKey)} of ${realm.name} — raised at court, with land of your own, but the throne isn't yours yet.`;
+    return c;
+}
+
+// Marriage prospects from a realm's noble line (not its royal house) —
+// a spread of tiers below the crown, used by dynasty.js's marriage flow
+// once the player has picked which realm and which kind of match to seek.
+function generateNobleMarriageCandidates(realmKey, count, forcedGender) {
+    const n = count || 4;
+    const tiers = [0, 1, 2, 3];
+    const candidates = [];
+    for (let i = 0; i < n; i++) {
+        const tier = tiers[i % tiers.length];
+        const gender = forcedGender || (Math.random() < 0.5 ? "M" : "F");
+        const c = createCharacter({ realmKey, tier, gender, age: randInt(16, 45) });
+        c.sourceRealmKey = realmKey;
+        candidates.push(c);
+    }
+    return candidates;
+}

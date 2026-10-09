@@ -172,19 +172,42 @@ function generateParentSiblingWithFamily(gameState, realmKey, parent) {
 // relatives — parents, siblings (with their own spouses/children), and
 // both sides' aunts/uncles (with their own spouses/children, i.e. the
 // player's cousins).
+// Builds a full character object pinned to an actual realms.js ruler's
+// real name/gender/age/traits — used to graft the real monarch into a
+// new family tree as a parent or sibling when the player chose to play
+// as their child or sibling (attributes.js's _rulerLink).
+function buildRulerLinkCharacter(realmKey, rulerData) {
+    const c = createCharacter({ realmKey, tier: 5, gender: rulerData.gender, age: rulerData.age, name: rulerData.name });
+    if (rulerData.traits) c.traits = rulerData.traits.slice();
+    c.bloodline = true;
+    c.alive = true;
+    return c;
+}
+
 function setupDynasty(gameState) {
     gameState.family = gameState.family || {};
     const player = gameState.player;
     registerPerson(gameState, player);
     const realmKey = gameState.realmKey;
+    const link = player._rulerLink || null;
 
     player.bloodline = true;
-    const father = makeRelative(realmKey, "M", player.age + randInt(20, 36));
-    const mother = makeRelative(realmKey, "F", player.age + randInt(16, 32));
-    father.bloodline = true;
-    mother.bloodline = true;
-    father.alive = Math.random() < stillAliveChance(father.age);
-    mother.alive = Math.random() < stillAliveChance(mother.age);
+    let father, mother;
+    if (link && link.type === "child") {
+        const rulerChar = buildRulerLinkCharacter(realmKey, link.ruler);
+        const otherParent = makeRelative(realmKey, rulerChar.gender === "M" ? "F" : "M", rulerChar.age + randInt(-8, 8));
+        otherParent.bloodline = true;
+        otherParent.alive = Math.random() < stillAliveChance(otherParent.age);
+        father = rulerChar.gender === "M" ? rulerChar : otherParent;
+        mother = rulerChar.gender === "F" ? rulerChar : otherParent;
+    } else {
+        father = makeRelative(realmKey, "M", player.age + randInt(20, 36));
+        mother = makeRelative(realmKey, "F", player.age + randInt(16, 32));
+        father.bloodline = true;
+        mother.bloodline = true;
+        father.alive = Math.random() < stillAliveChance(father.age);
+        mother.alive = Math.random() < stillAliveChance(mother.age);
+    }
     father.spouseId = mother.id;
     mother.spouseId = father.id;
     registerPerson(gameState, father);
@@ -193,9 +216,22 @@ function setupDynasty(gameState) {
     player.fatherId = father.id;
 
     const siblingCount = Math.max(0, Math.round((randInt(0, 4) + randInt(0, 4)) / 2) - 1);
+    let rulerSiblingInjected = false;
+    const injectRulerSibling = () => {
+        const rulerChar = buildRulerLinkCharacter(realmKey, link.ruler);
+        rulerChar.motherId = player.motherId;
+        rulerChar.fatherId = player.fatherId;
+        registerPerson(gameState, rulerChar);
+        rulerSiblingInjected = true;
+    };
     for (let i = 0; i < siblingCount; i++) {
-        generateSiblingWithFamily(gameState, realmKey, player);
+        if (link && link.type === "sibling" && !rulerSiblingInjected) {
+            injectRulerSibling();
+        } else {
+            generateSiblingWithFamily(gameState, realmKey, player);
+        }
     }
+    if (link && link.type === "sibling" && !rulerSiblingInjected) injectRulerSibling();
 
     // Aunts/uncles are generated relative to each parent's age whether or
     // not that parent is still alive themselves — a dead father can still
@@ -305,14 +341,63 @@ function generateMarriageCandidates(gameState, count) {
     return candidates;
 }
 
+// Royal family prospects (the ruler, their siblings, their children) from
+// a chosen realm, or a spread of that realm's noble line — the two
+// categories the Family tab's marriage picker offers once a realm is
+// chosen. Always of the opposite gender from the player.
+function generateMarriageCandidatesForRealm(gameState, realmKey, category) {
+    const player = gameState.player;
+    const forcedGender = player.gender === "M" ? "F" : "M";
+    if (category === "royal") {
+        const realm = getRealm(realmKey);
+        const candidates = [];
+        if (realm.ruler.gender === forcedGender) candidates.push(createRulerCharacter(realmKey));
+        candidates.push(createRulerRelativeCandidate(realmKey, "sibling", forcedGender));
+        candidates.push(createRulerRelativeCandidate(realmKey, "sibling", forcedGender));
+        candidates.push(createRulerRelativeCandidate(realmKey, "child", forcedGender));
+        return candidates;
+    }
+    return generateNobleMarriageCandidates(realmKey, 4, forcedGender);
+}
+
+// Marrying outside your own rank is a real social and financial fact, not
+// just flavor: securing a match above your station costs a dowry scaled
+// to the gap (gold, paid up front); marrying beneath it costs standing at
+// court instead (a prestige hit, scaled the same way).
+function marriageCost(playerTier, candidateTier) {
+    const gap = candidateTier - playerTier;
+    return gap > 0 ? gap * 300 : 0;
+}
+
+function marriageShame(playerTier, candidateTier) {
+    const gap = playerTier - candidateTier;
+    return gap > 0 ? gap * 10 : 0;
+}
+
 function marryPlayerTo(gameState, candidate) {
     const player = gameState.player;
     if (!isAvailableToMarry(gameState, player.id)) return null;
+
+    const cost = marriageCost(player.tier, candidate.tier);
+    if (cost > 0 && (player.gold || 0) < cost) return null;
+
     candidate.bloodline = false;
     candidate.spouseId = player.id;
     registerPerson(gameState, candidate);
     player.spouseId = candidate.id;
-    logEvent(`${player.name} has married ${candidate.name}.`);
+
+    if (cost > 0) {
+        player.gold -= cost;
+        logEvent(`${player.name} has married ${candidate.name} — a match above their station, secured with ${cost} gold in dowry and land concessions.`);
+    } else {
+        const shame = marriageShame(player.tier, candidate.tier);
+        if (shame > 0) {
+            player.prestige = Math.max(0, (player.prestige || 0) - shame);
+            logEvent(`${player.name} has married ${candidate.name} — marrying beneath their station, and the court has taken notice (-${shame} prestige).`);
+        } else {
+            logEvent(`${player.name} has married ${candidate.name}.`);
+        }
+    }
 
     // A spouse from elsewhere brings a collateral claim on their homeland
     // with them — one of the three ways wartime.js recognizes a claim

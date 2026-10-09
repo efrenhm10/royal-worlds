@@ -61,6 +61,12 @@ function startNewGame(eraKey, realmKey, character) {
     callHookIfPresent("setupFactions", gameState);
     callHookIfPresent("setupReform", gameState);
     callHookIfPresent("setupCanon", gameState);
+    callHookIfPresent("setupMilitary", gameState);
+
+    // Setup itself shouldn't flood the player with toasts the moment the
+    // game starts — only events from here on (advanceYear's ticks, the
+    // player's own actions) do.
+    gameState._toastsEnabled = true;
 
     return gameState;
 }
@@ -68,6 +74,7 @@ function startNewGame(eraKey, realmKey, character) {
 function logEvent(text) {
     if (!gameState) return;
     gameState.log.push({ year: gameState.year, text });
+    if (gameState._toastsEnabled && typeof showToast === "function") showToast(text);
 }
 
 // Rough, deliberately simple mortality curve for this phase: baseline risk
@@ -126,6 +133,7 @@ function advanceYear() {
     // children normally this same year, rather than being skipped as "the
     // player" before they've actually taken that role.
     callHookIfPresent("tickDomain", gameState);
+    callHookIfPresent("tickMilitary", gameState);
     callHookIfPresent("tickVassals", gameState);
     callHookIfPresent("tickDynasty", gameState);
     callHookIfPresent("tickChurch", gameState);
