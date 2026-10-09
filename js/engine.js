@@ -51,6 +51,7 @@ function startNewGame(eraKey, realmKey, character) {
     // One-time setup hooks — each module seeds its own starting state once
     // the base gameState exists. No-op until dynasty.js/vassals.js define
     // these.
+    callHookIfPresent("setupDomain", gameState);
     callHookIfPresent("setupDynasty", gameState);
     callHookIfPresent("setupVassals", gameState);
     callHookIfPresent("setupChurch", gameState);

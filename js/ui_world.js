@@ -101,6 +101,7 @@ function renderPlay() {
         renderPlay();
     }, !player.alive || gameState.gameOver));
     dock.appendChild(makeChoiceButton("Chronicle", () => { _playViewTab = "chronicle"; renderPlay(); }));
+    dock.appendChild(makeChoiceButton("Domain", () => { _playViewTab = "domain"; renderPlay(); }));
     dock.appendChild(makeChoiceButton("Family", () => { _playViewTab = "family"; renderPlay(); }));
     dock.appendChild(makeChoiceButton("Court", () => { _playViewTab = "court"; renderPlay(); }));
     dock.appendChild(makeChoiceButton("Church", () => { _playViewTab = "church"; renderPlay(); }));
@@ -124,6 +125,46 @@ function renderPlayView() {
         const entries = gameState.log.slice(-10).reverse();
         entries.forEach(e => logCard.appendChild(el("p", "muted", `${e.year} — ${e.text}`)));
         view.appendChild(logCard);
+        return;
+    }
+
+    if (_playViewTab === "domain") {
+        const holdings = getDomain(gameState);
+        if (!holdings.length) {
+            view.appendChild(makeCard("Your demesne", '<p class="muted">No holdings of your own yet — that comes with a landed title.</p>'));
+            return;
+        }
+        const vassals = getVassals(gameState);
+        holdings.forEach(holding => {
+            const typeInfo = HOLDING_TYPES.find(t => t.key === holding.type);
+            const vassal = holding.grantedToVassalId ? vassals.find(v => v.id === holding.grantedToVassalId) : null;
+            const status = vassal ? `granted to ${vassal.name}` : "in hand";
+            const card = makeCard(`${typeInfo.name} (level ${holding.level}) — ${status}`, `<p class="muted">${typeInfo.desc}</p>`);
+            if (!gameState.gameOver) {
+                if (vassal) {
+                    card.appendChild(makeChoiceButton("Revoke", () => {
+                        revokeHolding(gameState, holding.id);
+                        saveGame();
+                        renderPlay();
+                    }, !crownAuthorityInfo(gameState.crownAuthority[gameState.realmKey] || 0).canRevokeTitlesFreely));
+                } else {
+                    card.appendChild(makeChoiceButton(`Develop (${holding.level * 40} gold)`, () => {
+                        developHolding(gameState, holding.id);
+                        saveGame();
+                        renderPlay();
+                    }, player.gold < holding.level * 40));
+                    vassals.forEach(v => {
+                        const btn = makeChoiceButton(`Grant to ${v.name}`, () => {
+                            grantHolding(gameState, holding.id, v.id);
+                            saveGame();
+                            renderPlay();
+                        });
+                        card.appendChild(btn);
+                    });
+                }
+            }
+            view.appendChild(card);
+        });
         return;
     }
 
