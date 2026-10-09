@@ -80,13 +80,34 @@ function createCharacter({ realmKey, tier, gender, age, name }) {
 }
 
 // Flavor blurbs per tier, used on the character-creation screen so a blank
-// stat block doesn't have to carry the whole pitch.
+// stat block doesn't have to carry the whole pitch. Every tier on the
+// ladder is a real starting option — gentry through king — so a player
+// who wants to rule outright from the first year can.
 const TIER_BLURBS = {
     0: "No land, no title — a name people still recognize, and not much else. Everything you build, you build from here.",
     1: "Knighted, or holding a single manor outright. A toehold on the ladder, easily lost.",
     2: "A baron in your own right: tenants, a hall, and a liege lord who expects your service.",
+    3: "A county or earldom of your own: lesser lords answer to you, and you answer to a duke or king above.",
+    4: "A duchy — counts and barons defer to you, and only a crown stands above.",
+    5: "A crown. The realm is yours to rule, with vassals, a council, and a court all your own from the first year.",
 };
 
+// One starting candidate per tier isn't enough variety to choose from, so
+// each tier offers a few differently-skilled lives rather than a single
+// fixed character.
+function generateCandidatesForTier(realmKey, tier, count) {
+    const n = count || 4;
+    const candidates = [];
+    for (let i = 0; i < n; i++) {
+        const c = createCharacter({ realmKey, tier });
+        c.blurb = TIER_BLURBS[tier];
+        candidates.push(c);
+    }
+    return candidates;
+}
+
+// Kept for anything still calling the old signature: a mixed-tier spread
+// weighted toward the low end, same as the original character creation.
 function generateCandidates(realmKey, count) {
     const n = count || 4;
     const tiers = [0, 1, 1, 2].slice(0, n);

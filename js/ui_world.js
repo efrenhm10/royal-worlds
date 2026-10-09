@@ -29,9 +29,11 @@ function renderRealmSelect(eraKey) {
     const list = document.getElementById("realmList");
     clearEl(list);
     listRealms().forEach(realm => {
-        const rulerLine = `${realm.ruler.name}, ${realm.titleM === realm.titleF ? realm.titleM : (realm.ruler.gender === "F" ? realm.titleF : realm.titleM)} of ${realm.name} (age ${realm.ruler.age})`;
+        const rulerTitle = realm.titleM === realm.titleF ? realm.titleM : (realm.ruler.gender === "F" ? realm.titleF : realm.titleM);
+        const rulerLine = `${realm.ruler.name}, ${rulerTitle} of ${realm.name} (age ${realm.ruler.age})`;
+        const attitudeLine = realm.ruler.traits ? `<p class="muted">Known to be ${realm.ruler.traits.join(" and ")}.</p>` : "";
         const note = realm.note ? `<p class="muted">${realm.note}</p>` : "";
-        const card = makeCard(realm.name, `<p class="muted">${rulerLine}</p>${note}`);
+        const card = makeCard(realm.name, avatarRow(realm.ruler, `<p class="muted">${rulerLine}</p>${attitudeLine}${note}`));
         const btn = makeChoiceButton(realm.startable ? "Choose this realm" : "Not a starting dynasty", () => {
             _selectedRealmKey = realm.key;
             renderCharacterCreate(eraKey, realm.key);
@@ -45,21 +47,47 @@ function renderRealmSelect(eraKey) {
 function renderCharacterCreate(eraKey, realmKey) {
     const realm = getRealm(realmKey);
     document.getElementById("characterCreateIntro").textContent =
-        `Four lives in ${realm.name}, any of which could be yours. Pick one to begin.`;
+        `Choose your rank in ${realm.name} — gentry through the crown itself — then pick which life to live.`;
 
     const list = document.getElementById("characterList");
     clearEl(list);
-    const candidates = generateCandidates(realmKey, 4);
+    TITLE_LADDER.filter(t => t.tier <= 5).forEach(tierInfo => {
+        const name = titleName(tierInfo.tier, "M", realmKey);
+        const nameF = titleName(tierInfo.tier, "F", realmKey);
+        const label = name === nameF ? name : `${name} / ${nameF}`;
+        const card = makeCard(label, `<p class="muted">${TIER_BLURBS[tierInfo.tier]}</p>`);
+        const btn = makeChoiceButton(`Play a ${label}`, () => {
+            renderCandidatesForTier(eraKey, realmKey, tierInfo.tier);
+        });
+        card.appendChild(btn);
+        list.appendChild(card);
+    });
+}
+
+function renderCandidatesForTier(eraKey, realmKey, tier) {
+    const realm = getRealm(realmKey);
+    document.getElementById("characterCreateIntro").textContent =
+        `Four lives at this rank in ${realm.name}, any of which could be yours. Pick one to begin.`;
+
+    const list = document.getElementById("characterList");
+    clearEl(list);
+
+    const backCard = makeCard("", "");
+    backCard.appendChild(makeChoiceButton("← Choose a different rank", () => {
+        renderCharacterCreate(eraKey, realmKey);
+    }));
+    list.appendChild(backCard);
+
+    const candidates = generateCandidatesForTier(realmKey, tier, 4);
     candidates.forEach(candidate => {
         const title = titleName(candidate.tier, candidate.gender, realmKey);
         const skillsLine = SKILL_KEYS.map(k => `${k[0].toUpperCase()}${k.slice(1)} ${candidate.skills[k]}`).join(" · ");
         const traitsLine = candidate.traits.join(", ");
-        const body = `
-            <p class="muted">${candidate.blurb}</p>
+        const body = avatarRow(candidate, `
             <p><strong>${title} ${candidate.name}</strong>, age ${candidate.age}</p>
             <p class="muted">${skillsLine}</p>
             <p class="muted">Traits: ${traitsLine}</p>
-        `;
+        `) + `<p class="muted">${candidate.blurb}</p>`;
         const card = makeCard(candidate.name, body);
         const btn = makeChoiceButton("Begin this life", () => {
             startNewGame(eraKey, realmKey, candidate);
@@ -80,9 +108,22 @@ function renderPlay() {
 
     const hud = document.getElementById("hud");
     clearEl(hud);
-    hud.appendChild(el("h2", null, `${title} ${player.name}`));
-    hud.appendChild(el("p", "muted", `${realm.name} — ${gameState.year} — age ${player.age}`));
+    hud.appendChild(el("div", null, `<div style="display:flex;align-items:center;gap:14px;">${avatarSvg(player, 64)}<div>
+        <h2 style="margin:0;">${title} ${player.name}</h2>
+        <p class="muted" style="margin:2px 0 0;">${realm.name} — ${gameState.year} — age ${player.age}</p>
+    </div></div>`));
     hud.appendChild(el("p", "muted", `<em>${sceneDescription(gameState)}</em>`));
+    if (player.traits && player.traits.length) {
+        hud.appendChild(el("p", "muted", `Known to be ${player.traits.join(" and ")}.`));
+    }
+    if (gameState.war) {
+        const warRealm = getRealm(gameState.war.targetRealmKey);
+        const yearsAtWar = gameState.year - gameState.war.startYear;
+        hud.appendChild(el("p", null, `⚔ <strong>At war with ${warRealm.name}</strong> — ${yearsAtWar} year${yearsAtWar === 1 ? "" : "s"} in, war score ${gameState.war.warScore}.`));
+    }
+    if (gameState.faction) {
+        hud.appendChild(el("p", null, `⚠ <strong>A faction of vassals is in open revolt</strong>, demanding ${gameState.faction.type === "depose" ? "your abdication" : "independence"}.`));
+    }
     if (gameState.gameOver) {
         hud.appendChild(el("p", null, `<strong>${gameState.gameOverReason}</strong>`));
     }
@@ -112,7 +153,8 @@ function renderPlay() {
 
 function personLine(person, relation) {
     const alive = person.alive ? `age ${person.age}` : `died at ${person.age}`;
-    return `<p><strong>${person.name}</strong> — ${relation}, ${alive}</p>`;
+    const traitsLine = person.traits && person.traits.length ? ` <span class="muted">(${person.traits.join(", ")})</span>` : "";
+    return avatarRow(person, `<strong>${person.name}</strong> — ${relation}, ${alive}${traitsLine}`);
 }
 
 function renderPlayView() {
@@ -130,11 +172,12 @@ function renderPlayView() {
 
     if (_playViewTab === "domain") {
         const holdings = getDomain(gameState);
+        const vassals = getVassals(gameState);
+
         if (!holdings.length) {
             view.appendChild(makeCard("Your demesne", '<p class="muted">No holdings of your own yet — that comes with a landed title.</p>'));
-            return;
         }
-        const vassals = getVassals(gameState);
+
         holdings.forEach(holding => {
             const typeInfo = HOLDING_TYPES.find(t => t.key === holding.type);
             const vassal = holding.grantedToVassalId ? vassals.find(v => v.id === holding.grantedToVassalId) : null;
@@ -153,18 +196,47 @@ function renderPlayView() {
                         saveGame();
                         renderPlay();
                     }, player.gold < holding.level * 40));
-                    vassals.forEach(v => {
-                        const btn = makeChoiceButton(`Grant to ${v.name}`, () => {
-                            grantHolding(gameState, holding.id, v.id);
+                    if (vassals.length) {
+                        const grantRow = el("div", null, "");
+                        grantRow.style.display = "flex";
+                        grantRow.style.gap = "8px";
+                        grantRow.style.alignItems = "center";
+                        grantRow.style.marginTop = "6px";
+                        const select = document.createElement("select");
+                        vassals.forEach(v => {
+                            const opt = document.createElement("option");
+                            opt.value = v.id;
+                            opt.textContent = v.name;
+                            select.appendChild(opt);
+                        });
+                        grantRow.appendChild(select);
+                        grantRow.appendChild(makeChoiceButton("Grant", () => {
+                            grantHolding(gameState, holding.id, Number(select.value));
                             saveGame();
                             renderPlay();
-                        });
-                        card.appendChild(btn);
-                    });
+                        }));
+                        card.appendChild(grantRow);
+                    }
                 }
             }
             view.appendChild(card);
         });
+
+        const max = DOMAIN_MAX_BY_TIER[player.tier] || 0;
+        if (max > 0) {
+            const cost = buyHoldingCost(gameState);
+            const buyCard = makeCard("Buy more land", `<p class="muted">${holdings.length} of ${max} holdings a title at your rank could plausibly absorb. Next purchase: ${cost} gold.</p>`);
+            if (!gameState.gameOver) {
+                HOLDING_TYPES.forEach(type => {
+                    buyCard.appendChild(makeChoiceButton(`Buy a ${type.name.toLowerCase()}`, () => {
+                        buyHolding(gameState, type.key);
+                        saveGame();
+                        renderPlay();
+                    }, !canBuyHolding(gameState)));
+                });
+            }
+            view.appendChild(buyCard);
+        }
         return;
     }
 
@@ -180,6 +252,14 @@ function renderPlayView() {
 
         if (spouse && spouse.alive) {
             card.appendChild(el("div", null, personLine(spouse, "spouse")));
+            if (!gameState.gameOver) {
+                const tryBtn = makeChoiceButton("Try for a child", () => {
+                    tryForChild(gameState);
+                    saveGame();
+                    renderPlay();
+                }, !canTryForChild(gameState));
+                card.appendChild(tryBtn);
+            }
         } else if (spouse && !spouse.alive) {
             card.appendChild(el("div", null, `<p>Widowed — ${spouse.name} died at ${spouse.age}.</p>`));
         }
@@ -223,7 +303,10 @@ function renderPlayView() {
         roleKeys.forEach(roleKey => {
             const advisor = council[roleKey];
             const role = COUNCIL_ROLES.find(r => r.key === roleKey);
-            const row = el("div", "stat", `<span>${role.name}: ${advisor.name}</span><span>Skill ${advisor.skill} · Opinion ${Math.round(advisor.opinion)}</span>`);
+            const row = el("div", "stat", avatarRow(advisor, `
+                <strong>${role.name}: ${advisor.name}</strong><br>
+                <span class="muted">Skill ${advisor.skill} · Opinion ${Math.round(advisor.opinion)} · ${advisor.traits.join(", ")}</span>
+            `));
             const btn = makeChoiceButton("Replace", () => {
                 replaceAdvisor(gameState, roleKey);
                 saveGame();
@@ -238,7 +321,10 @@ function renderPlayView() {
         const card = makeCard("Your court", vassals.length ? "" : '<p class="muted">You command no vassals of your own yet — a higher title will bring them.</p>');
         vassals.forEach(v => {
             const vTitle = titleName(v.tier, v.gender, gameState.realmKey);
-            card.appendChild(el("div", "stat", `<span>${vTitle} ${v.name}</span><span>Opinion ${v.opinion} · Levies ${v.levies}</span>`));
+            card.appendChild(el("div", "stat", avatarRow(v, `
+                <strong>${vTitle} ${v.name}</strong><br>
+                <span class="muted">Opinion ${Math.round(v.opinion)} · Levies ${v.levies} · ${v.traits.join(", ")}</span>
+            `)));
         });
 
         const lawCard = makeCard("Succession", "");

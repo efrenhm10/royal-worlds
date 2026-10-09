@@ -23,13 +23,15 @@ function makeVassal(gameState, liegeTier) {
     const vassalTier = Math.max(0, Math.min(liegeTier - 1, 4));
     const gender = Math.random() < 0.5 ? "M" : "F";
     const name = generatePeriodName(realm.cultureKey, gender);
+    const traits = rollTraits(2);
     return {
         id: nextVassalId(),
         name,
         gender,
         tier: vassalTier,
         liegeId: gameState.player.id,
-        opinion: randInt(45, 70),
+        traits,
+        opinion: Math.max(0, Math.min(100, randInt(45, 70) + traitOpinionBias(traits))),
         levies: randInt(20, 200) * (vassalTier + 1),
     };
 }
@@ -66,8 +68,8 @@ function adjustOpinion(vassal, amount) {
 function tickVassals(gameState) {
     const level = (gameState.crownAuthority && gameState.crownAuthority[gameState.realmKey]) || 0;
     const info = crownAuthorityInfo(level);
-    const baseline = 50 - info.vassalOpinionPenalty;
     getVassals(gameState).forEach(vassal => {
+        const baseline = 50 - info.vassalOpinionPenalty + traitOpinionBias(vassal.traits);
         const pull = (baseline - vassal.opinion) * 0.1;
         const wobble = randInt(-3, 3);
         adjustOpinion(vassal, pull + wobble);

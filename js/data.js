@@ -36,6 +36,22 @@ const TEMPERAMENT_TRAITS = [
     "Deceitful", "Honest", "Gluttonous", "Temperate", "Paranoid", "Trusting",
 ];
 
+// Not every trait reads as an "attitude toward you" — these are the ones
+// that do, used wherever someone's disposition should actually color how
+// they treat you (a vassal, a councillor, a foreign ruler), not just sit
+// on a character sheet as flavor.
+const POSITIVE_ATTITUDE_TRAITS = ["Generous", "Honest", "Just", "Patient", "Trusting", "Gallant"];
+const NEGATIVE_ATTITUDE_TRAITS = ["Wrathful", "Vengeful", "Deceitful", "Paranoid", "Craven", "Gluttonous"];
+
+function traitOpinionBias(traits) {
+    let bias = 0;
+    (traits || []).forEach(t => {
+        if (POSITIVE_ATTITUDE_TRAITS.includes(t)) bias += 8;
+        if (NEGATIVE_ATTITUDE_TRAITS.includes(t)) bias -= 8;
+    });
+    return bias;
+}
+
 function randomFrom(arr) {
     return arr[Math.floor(Math.random() * arr.length)];
 }

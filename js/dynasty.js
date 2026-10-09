@@ -232,8 +232,13 @@ function tickDynasty(gameState) {
         }
     });
 
+    // NPC couples keep the family tree growing on their own — but the
+    // player's own childbearing is a deliberate action (tryForChild,
+    // below), not a passive yearly dice roll, so the player and their
+    // spouse are skipped here.
     allFamily(gameState).forEach(person => {
         if (!person.alive || person.gender !== "F" || person.age < 16 || person.age > 45) return;
+        if (person.id === gameState.player.id || person.id === gameState.player.spouseId) return;
         const spouse = getSpouse(gameState, person.id);
         if (!spouse || !spouse.alive) return;
         if (Math.random() < 0.12) {
@@ -241,6 +246,36 @@ function tickDynasty(gameState) {
             logEvent(`${person.name} and ${spouse.name} have had a child, ${child.name}.`);
         }
     });
+}
+
+function canTryForChild(gameState) {
+    const player = gameState.player;
+    if (!player.alive) return false;
+    const spouse = getSpouse(gameState, player.id);
+    if (!spouse || !spouse.alive) return false;
+    const mother = player.gender === "F" ? player : spouse;
+    const father = player.gender === "M" ? player : spouse;
+    if (mother.age < 16 || mother.age > 45) return false;
+    if (father.age < 16) return false;
+    return true;
+}
+
+// A deliberate player action rather than a background roll — real agency
+// over the one decision that matters most for the whole dynasty game.
+function tryForChild(gameState) {
+    if (!canTryForChild(gameState)) return null;
+    const player = gameState.player;
+    const spouse = getSpouse(gameState, player.id);
+    const mother = player.gender === "F" ? player : spouse;
+    const father = player.gender === "M" ? player : spouse;
+
+    if (Math.random() < 0.35) {
+        const child = bearChild(gameState, mother.id, father.id, gameState.realmKey);
+        logEvent(`${mother.name} and ${father.name} have had a child, ${child.name}.`);
+        return child;
+    }
+    logEvent(`${player.name} and ${spouse.name} have tried for a child this year, without success.`);
+    return null;
 }
 
 function isAvailableToMarry(gameState, personId) {

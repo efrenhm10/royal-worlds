@@ -19,13 +19,15 @@ function nextCouncilId() {
 function makeAdvisor(gameState, role) {
     const realm = getRealm(gameState.realmKey);
     const gender = Math.random() < 0.5 ? "M" : "F";
+    const traits = rollTraits(2);
     return {
         id: nextCouncilId(),
         name: generatePeriodName(realm.cultureKey, gender),
         gender,
         role: role.key,
         skill: randomSkillValue(),
-        opinion: randInt(45, 75),
+        traits,
+        opinion: Math.max(0, Math.min(100, randInt(45, 75) + traitOpinionBias(traits))),
     };
 }
 
@@ -61,7 +63,8 @@ function tickCouncil(gameState) {
 
     Object.keys(council).forEach(roleKey => {
         const advisor = council[roleKey];
-        adjustOpinion(advisor, (50 - advisor.opinion) * 0.08 + randInt(-3, 3));
+        const baseline = 50 + traitOpinionBias(advisor.traits);
+        adjustOpinion(advisor, (baseline - advisor.opinion) * 0.08 + randInt(-3, 3));
         if (Math.random() < 0.03) {
             const role = COUNCIL_ROLES.find(r => r.key === roleKey);
             logEvent(`${advisor.name} has left your service as ${role.name}.`);

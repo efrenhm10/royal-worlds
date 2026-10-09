@@ -138,6 +138,16 @@ button:disabled {
     padding: 7px 12px;
 }
 
+select {
+    font-family: "EB Garamond", Georgia, serif;
+    font-size: 15px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--gilt);
+    background: var(--parchment-panel);
+    color: var(--ink);
+}
+
 .back-btn:hover {
     background: rgba(90, 60, 20, 0.08);
 }

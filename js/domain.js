@@ -14,6 +14,11 @@ const HOLDING_TYPES = [
 // title actually governs.
 const DOMAIN_SIZE_BY_TIER = { 0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6 };
 
+// A tier's starting size isn't its ceiling — a ruler can buy more land,
+// up to a cap set by what that rank could plausibly absorb into their own
+// demesne (a baron isn't annexing a county's worth of territory).
+const DOMAIN_MAX_BY_TIER = { 0: 0, 1: 3, 2: 5, 3: 8, 4: 12, 5: 18, 6: 24 };
+
 let _nextHoldingId = 1;
 function nextHoldingId() {
     return _nextHoldingId++;
@@ -59,6 +64,30 @@ function revokeHolding(gameState, holdingId) {
     holding.grantedToVassalId = null;
     if (vassal) adjustOpinion(vassal, -25);
     logEvent(`${gameState.player.name} has revoked a ${holding.type} from ${vassal ? vassal.name : "a vassal"}.`);
+    return true;
+}
+
+// Buying land scales with how much you already hold — the first new
+// holding is a real but reachable purchase, the tenth is a kingdom-sized
+// undertaking.
+function buyHoldingCost(gameState) {
+    return 250 + getDomain(gameState).length * 180;
+}
+
+function canBuyHolding(gameState) {
+    const max = DOMAIN_MAX_BY_TIER[gameState.player.tier] || 0;
+    return getDomain(gameState).length < max && (gameState.player.gold || 0) >= buyHoldingCost(gameState);
+}
+
+function buyHolding(gameState, typeKey) {
+    const max = DOMAIN_MAX_BY_TIER[gameState.player.tier] || 0;
+    if (getDomain(gameState).length >= max) return false;
+    const cost = buyHoldingCost(gameState);
+    if ((gameState.player.gold || 0) < cost) return false;
+    const type = HOLDING_TYPES.find(t => t.key === typeKey) || HOLDING_TYPES[0];
+    gameState.player.gold -= cost;
+    gameState.domain.push({ id: nextHoldingId(), type: type.key, level: 1, grantedToVassalId: null });
+    logEvent(`${gameState.player.name} has purchased new land: a ${type.name.toLowerCase()}, for ${cost} gold.`);
     return true;
 }
 
