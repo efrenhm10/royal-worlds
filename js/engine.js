@@ -59,6 +59,7 @@ function startNewGame(eraKey, realmKey, character) {
     callHookIfPresent("setupWartime", gameState);
     callHookIfPresent("setupFactions", gameState);
     callHookIfPresent("setupReform", gameState);
+    callHookIfPresent("setupCanon", gameState);
 
     return gameState;
 }
@@ -134,6 +135,7 @@ function advanceYear() {
     callHookIfPresent("tickWartime", gameState);
     callHookIfPresent("tickReform", gameState);
     callHookIfPresent("tickCanon", gameState);
+    callHookIfPresent("tickEvents", gameState);
 
     if (died) {
         callHookIfPresent("applySuccession", gameState);

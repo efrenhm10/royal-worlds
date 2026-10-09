@@ -82,6 +82,7 @@ function renderPlay() {
     clearEl(hud);
     hud.appendChild(el("h2", null, `${title} ${player.name}`));
     hud.appendChild(el("p", "muted", `${realm.name} — ${gameState.year} — age ${player.age}`));
+    hud.appendChild(el("p", "muted", `<em>${sceneDescription(gameState)}</em>`));
     if (gameState.gameOver) {
         hud.appendChild(el("p", null, `<strong>${gameState.gameOverReason}</strong>`));
     }
