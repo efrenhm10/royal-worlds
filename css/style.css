@@ -1,0 +1,156 @@
+/* Crowns & Councils — base visual identity.
+   Carried over from royal-worlds.html's already-proven parchment/heraldic
+   palette (tested across a full session of UI work) rather than reinvented. */
+
+:root {
+    --ink: #2a1c10;
+    --ink-soft: #5a4a34;
+    --parchment: #efe4c8;
+    --parchment-deep: #e4d5ac;
+    --parchment-panel: #faf3e2;
+    --gilt: #c9971a;
+    --gilt-bright: #f0c23d;
+    --gules: #a3182e;
+    --gules-bright: #c92a3e;
+    --vert: #35502f;
+    --azure: #1a3d8f;
+    --azure-bright: #2f5fc9;
+    --shadow-warm: rgba(60, 38, 12, 0.28);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html {
+    scrollbar-color: var(--gilt) var(--parchment);
+}
+
+body {
+    margin: 0;
+    color: var(--ink);
+    font-family: "EB Garamond", Georgia, serif;
+    font-size: 16.5px;
+    background:
+        radial-gradient(ellipse at top left, rgba(255,255,255,0.35), transparent 55%),
+        radial-gradient(ellipse at bottom right, rgba(110, 20, 35, 0.06), transparent 60%),
+        repeating-linear-gradient(0deg, rgba(90,60,20,0.025) 0px, rgba(90,60,20,0.025) 1px, transparent 1px, transparent 3px),
+        linear-gradient(160deg, var(--parchment) 0%, var(--parchment-deep) 100%);
+    background-attachment: fixed;
+    min-height: 100vh;
+}
+
+#app {
+    max-width: 1150px;
+    margin: auto;
+    padding: 22px 18px 60px;
+}
+
+.screen {
+    display: none;
+}
+
+.screen.active {
+    display: block;
+}
+
+h1, h2, h3 {
+    font-family: "Cinzel", "Times New Roman", serif;
+    letter-spacing: 0.02em;
+}
+
+.card {
+    position: relative;
+    background: var(--parchment-panel);
+    border: 1px solid var(--parchment-deep);
+    outline: 1px solid rgba(179,134,31,0.35);
+    outline-offset: -5px;
+    border-radius: 10px;
+    padding: 18px 20px;
+    margin: 12px 0;
+    box-shadow: 0 3px 14px rgba(60,38,12,0.1);
+}
+
+.card::before {
+    content: "\2767";
+    position: absolute;
+    top: -11px;
+    left: 16px;
+    background: var(--parchment-panel);
+    color: var(--gilt);
+    padding: 0 6px;
+    font-size: 15px;
+    line-height: 1;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 10px;
+}
+
+.muted {
+    color: var(--ink-soft);
+}
+
+.pill {
+    display: inline-block;
+    border: 1px solid var(--gilt);
+    background: linear-gradient(180deg, #f7ecc9 0%, #ecd9a2 100%);
+    color: var(--ink);
+    border-radius: 20px;
+    padding: 5px 11px;
+    margin: 3px;
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(90,60,20,0.15);
+}
+
+button {
+    font-family: "EB Garamond", Georgia, serif;
+    font-size: 15px;
+    font-weight: 600;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--azure);
+    background: linear-gradient(180deg, var(--azure-bright) 0%, var(--azure) 100%);
+    color: #fdf6e6;
+    cursor: pointer;
+    box-shadow: 0 2px 6px var(--shadow-warm);
+}
+
+button:hover {
+    background: linear-gradient(180deg, #4576dd 0%, var(--azure-bright) 100%);
+}
+
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.stat {
+    display: flex;
+    justify-content: space-between;
+    padding: 9px 0;
+    border-bottom: 1px dashed rgba(179,134,31,0.4);
+}
+
+.stat:last-child {
+    border-bottom: none;
+}
+
+.meter {
+    height: 9px;
+    background: rgba(90,60,20,0.15);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: inset 0 1px 2px rgba(60,38,12,0.25);
+}
+
+.meter span {
+    display: block;
+    height: 100%;
+    background: linear-gradient(90deg, var(--gilt) 0%, var(--gilt-bright) 60%, #f0d688 100%);
+    border-radius: 10px;
+    transition: width .5s ease;
+}
