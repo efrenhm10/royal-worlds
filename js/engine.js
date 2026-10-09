@@ -39,10 +39,19 @@ function startNewGame(eraKey, realmKey, character) {
         realmKey,
         player: character,
         crownAuthority: { [realmKey]: 0 },
+        family: {},
+        vassals: {},
         log: [],
         turn: 0,
     };
     logEvent(`${character.name} comes of age in ${realm.name}, ${era.year}.`);
+
+    // One-time setup hooks — each module seeds its own starting state once
+    // the base gameState exists. No-op until dynasty.js/vassals.js define
+    // these.
+    callHookIfPresent("setupDynasty", gameState);
+    callHookIfPresent("setupVassals", gameState);
+
     return gameState;
 }
 

@@ -71,6 +71,8 @@ function renderCharacterCreate(eraKey, realmKey) {
     });
 }
 
+let _playViewTab = "chronicle";
+
 function renderPlay() {
     const realm = getRealm(gameState.realmKey);
     const player = gameState.player;
@@ -94,11 +96,67 @@ function renderPlay() {
         saveGame();
         renderPlay();
     }, !player.alive));
+    dock.appendChild(makeChoiceButton("Chronicle", () => { _playViewTab = "chronicle"; renderPlay(); }));
+    dock.appendChild(makeChoiceButton("Family", () => { _playViewTab = "family"; renderPlay(); }));
+    dock.appendChild(makeChoiceButton("Court", () => { _playViewTab = "court"; renderPlay(); }));
 
+    renderPlayView();
+}
+
+function personLine(person, relation) {
+    const alive = person.alive ? `age ${person.age}` : `died at ${person.age}`;
+    return `<p><strong>${person.name}</strong> — ${relation}, ${alive}</p>`;
+}
+
+function renderPlayView() {
     const view = document.getElementById("view");
     clearEl(view);
-    const logCard = makeCard("Chronicle", "");
-    const entries = gameState.log.slice(-10).reverse();
-    entries.forEach(e => logCard.appendChild(el("p", "muted", `${e.year} — ${e.text}`)));
-    view.appendChild(logCard);
+    const player = gameState.player;
+
+    if (_playViewTab === "chronicle") {
+        const logCard = makeCard("Chronicle", "");
+        const entries = gameState.log.slice(-10).reverse();
+        entries.forEach(e => logCard.appendChild(el("p", "muted", `${e.year} — ${e.text}`)));
+        view.appendChild(logCard);
+        return;
+    }
+
+    if (_playViewTab === "family") {
+        const card = makeCard("Your family", "");
+        const spouse = getSpouse(gameState, player.id);
+        const parents = getParents(gameState, player.id);
+        const siblings = getSiblings(gameState, player.id);
+        const children = getChildren(gameState, player.id);
+        const auntsUncles = getAuntsUncles(gameState, player.id);
+        const niecesNephews = getNiecesNephews(gameState, player.id);
+        const cousins = getCousins(gameState, player.id);
+
+        if (spouse) card.appendChild(el("div", null, personLine(spouse, "spouse")));
+        parents.forEach(p => card.appendChild(el("div", null, personLine(p, p.gender === "F" ? "mother" : "father"))));
+        if (children.length) {
+            card.appendChild(el("h3", null, "Children"));
+            children.forEach(c => card.appendChild(el("div", null, personLine(c, c.gender === "F" ? "daughter" : "son"))));
+        }
+        card.appendChild(el("h3", null, `Siblings (${siblings.length})`));
+        siblings.forEach(s => card.appendChild(el("div", null, personLine(s, s.gender === "F" ? "sister" : "brother"))));
+        card.appendChild(el("h3", null, `Nieces & nephews (${niecesNephews.length})`));
+        niecesNephews.forEach(n => card.appendChild(el("div", null, personLine(n, n.gender === "F" ? "niece" : "nephew"))));
+        card.appendChild(el("h3", null, `Aunts & uncles (${auntsUncles.length})`));
+        auntsUncles.forEach(a => card.appendChild(el("div", null, personLine(a, a.gender === "F" ? "aunt" : "uncle"))));
+        card.appendChild(el("h3", null, `Cousins (${cousins.length})`));
+        cousins.forEach(c => card.appendChild(el("div", null, personLine(c, "cousin"))));
+        view.appendChild(card);
+        return;
+    }
+
+    if (_playViewTab === "court") {
+        const vassals = getVassals(gameState);
+        const card = makeCard("Your court", vassals.length ? "" : '<p class="muted">You command no vassals of your own yet — a higher title will bring them.</p>');
+        vassals.forEach(v => {
+            const vTitle = titleName(v.tier, v.gender, gameState.realmKey);
+            card.appendChild(el("div", "stat", `<span>${vTitle} ${v.name}</span><span>Opinion ${v.opinion} · Levies ${v.levies}</span>`));
+        });
+        view.appendChild(card);
+        return;
+    }
 }
