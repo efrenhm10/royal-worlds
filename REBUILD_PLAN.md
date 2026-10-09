@@ -1,8 +1,8 @@
-# Royal Worlds — Rebuild Design Plan (v3: multi-era, CK3-shaped)
+# Royal Worlds — Rebuild Design Plan (v4: multi-era, CK3-shaped)
 
 **Setting:** all of Europe, with a choice of **bookmark start dates** spanning roughly 1200–1800, not a fixed Wars-of-the-Roses spine. See §1a.
 
-**This supersedes v2.** v2 still treated 1461 as the fixed starting point. You asked to loosen that: pick your era and realm the way CK3 itself lets you pick a bookmark (867, 1066, 1178, 1337, 1444...) rather than always starting in the same year. The target is still **Crusader Kings 3**: you play one noble or royal character across a life (and generations, through your dynasty), and the entire game points at one tension —
+**This supersedes v3.** v2 still treated 1461 as the one fixed starting point; v3 introduced bookmark eras but mislabeled the second one "1444" before I actually checked it against the existing data (Edward IV wasn't King of England until 1461 — Henry VI still held the throne in 1444, a real mismatch). That bookmark is now correctly dated 1461, matching the roster it actually reuses. The target is still **Crusader Kings 3**: you play one noble or royal character across a life (and generations, through your dynasty), and the entire game points at one tension —
 
 > **Protect your line and your country, or elevate your line toward greater rank.**
 
@@ -22,15 +22,15 @@ A truly continuous "any year 1200–1800" game would mean hand-modeling six cent
 
 - **1200** — High medieval Europe: the Angevin Empire just lost its continental core to Capetian France, the Reconquista still has Granada and much of Iberia under Muslim rule, the Holy Roman Empire under the Hohenstaufen, the Fourth Crusade about to upend Byzantium.
 - **1337** — the eve of the Hundred Years' War: England and France about to tear at each other for a century, the Black Death not yet arrived.
-- **1444** — mid-15th century: close to where today's game already starts (1461), so the existing 19-realm roster and the deeply-tested succession/dynasty engine port almost directly here.
+- **1461** — mid-15th century: this IS where today's game already starts. Using the real year (not a rounded "1444") means the existing 19-realm roster, starting rulers, and the deeply-tested succession/dynasty engine port directly and accurately, with no ages or reigns needing to be guessed backward.
 - **1517** — the Reformation's opening year: Luther, a fracturing Church, the Ottomans at their height under Suleiman soon to come, Spain newly united and about to become a world empire.
 - **1648** — post-Thirty Years' War: the Peace of Westphalia, the modern idea of sovereign states, absolutism rising in France, the Dutch Republic established.
 - **1740s–1750s** — the Enlightenment and the eve of real constitutional pressure: enlightened absolutism, the first real cracks toward what becomes constitutional monarchy, closer to (but still before) 1800.
 
-Each bookmark needs its own realm roster, starting rulers, and starting Crown Authority/Church/stability conditions — this is a genuinely large content requirement, so the plan is to **ship with 1444 first** (reusing everything already built and tested this session) and add the other bookmarks one at a time afterward, each using the exact same systems, just different data. I'd like your read on this bookmark list and the "1444 first" build order before I lock it in.
+Each bookmark needs its own realm roster, starting rulers, and starting Crown Authority/Church/stability conditions — this is a genuinely large content requirement, so the plan is to **ship with 1461 first** (reusing everything already built and tested this session) and add the other bookmarks one at a time afterward, each using the exact same systems, just different data. I'd like your read on this bookmark list and the "1461 first" build order before I lock it in.
 
 **Two timelines, per bookmark, same idea throughout:**
-- **Canon backbone** — each bookmark gets its OWN short list of known historical beats appropriate to that era and region (not one list stretched across 600 years). For 1444: Edward IV, Warwick, Richard III, Bosworth; the Castilian succession war; Charles the Bold's death; the Sforza succession; the Italian Wars; Matthias Corvinus's heirless death; Mehmed II — already written once in `royal-worlds.html`'s `WORLD_TIMELINE`, reused as reference material for this one bookmark specifically.
+- **Canon backbone** — each bookmark gets its OWN short list of known historical beats appropriate to that era and region (not one list stretched across 600 years). For 1461: Edward IV, Warwick, Richard III, Bosworth; the Castilian succession war; Charles the Bold's death; the Sforza succession; the Italian Wars; Matthias Corvinus's heirless death; Mehmed II — already written once in `royal-worlds.html`'s `WORLD_TIMELINE`, reused as reference material for this one bookmark specifically (the year corrected from an earlier "1444" placeholder to the real 1461 once I checked the actual roster against it — Edward IV did not become King of England until 1461; using 1444 would have meant Henry VI on the throne instead, a real mismatch).
 - **Adaptive branches** — a succession that runs through YOUR marriage instead of the history books; a realm absorbed by your war instead of the scripted one; a rebellion that succeeds or fails depending on who actually backed it.
 
 ## 2. What's IN (the CK3-shaped core)
@@ -96,8 +96,8 @@ No build step, no server — open `index.html` in a browser, same as today.
 
 ## 5. Confirmed — plan is approved, build starting
 
-1. **Bookmark years** — confirmed: 1200 / 1337 / 1444 / 1517 / 1648 / 1740s, shipping 1444 first.
+1. **Bookmark years** — confirmed: 1200 / 1337 / 1461 / 1517 / 1648 / 1740s (the second bookmark corrected from "1444" to the real 1461 — see §1a), shipping 1461 first.
 2. **Church as a playable path** — confirmed: the player can live a full Church-career life, specifically so it can be used to help siblings, nieces, and nephews — which is why §2's family-tree tracking and the Church-career system are now built together, not separately.
-3. **Build order** — proceeding in the order above, revised to put the real extended-family-tree data model early (inside dynasty.js) since the Church-career path depends on it directly: (a) core engine + character creation + titles/rank ladder, (b) the real extended family tree + vassals, (c) succession/dynasty (marriage, widowhood, inheritance), (d) Church career + the Church-as-power-center system, (e) council + intrigue, (f) claims/wartime, (g) reform/Crown-Authority pressure, (h) the 1444 canon timeline content.
+3. **Build order** — proceeding in the order above, revised to put the real extended-family-tree data model early (inside dynasty.js) since the Church-career path depends on it directly: (a) core engine + character creation + titles/rank ladder, (b) the real extended family tree + vassals, (c) succession/dynasty (marriage, widowhood, inheritance), (d) Church career + the Church-as-power-center system, (e) council + intrigue, (f) claims/wartime, (g) reform/Crown-Authority pressure, (h) the 1461 canon timeline content.
 
 Building now — module by module, each tested in isolation before the next, same disciplined pattern as this whole session. `royal-worlds.html` stays in place and untouched until the new build is genuinely playable; it is not deleted as part of this work.
