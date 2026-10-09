@@ -1,94 +1,84 @@
-# Royal Worlds — Rebuild Design Plan
+# Royal Worlds — Rebuild Design Plan (v2: CK3 pivot)
 
-**Working title:** *Crowns & Councils* (placeholder — can change)
 **Setting:** Western/Central Europe, 1461 onward (Wars of the Roses into the early Renaissance and the Italian Wars), the same ~19 realms already built out: England, France, Burgundy, Brittany, Castile, Aragon, Portugal, Austria, Milan, Venice, Naples, Florence, Rome, Hungary, Poland, Bohemia, Wallachia, the Ottoman Empire.
 
-This plan mirrors how *Galactic Senate* (the Star Wars game) is actually built — role-defined gameplay, a canon backbone with adaptive branches, a real legislature/budget/trade layer, pressure groups, and characters who remember what you did — translated into 1461 Europe instead of invented wholesale.
+**This supersedes v1.** v1 modeled the Star Wars game's *legislative-sim* structure (Senate bills, committees, budget markups) too literally. That's wrong for this game. The actual target is **Crusader Kings 3**: you play one noble or royal character across a life (and generations, through your dynasty), and the entire game points at one tension —
+
+> **Protect your line and your country, or elevate your line toward greater rank.**
+
+Everything below is built around that sentence. The Star Wars game's *underlying techniques* (canon backbone + adaptive branches, characters with real memory, realm attributes, a lived-in sense that the world moves without you) are still the quality bar — just applied to a dynasty game, not a parliamentary one.
 
 ---
 
 ## 1. The pitch
 
-> You are not the hero of the Wars of the Roses. You are one person inside it — a monarch, a regent, a great lord, a bishop, a banker, a courtier, or an exile pressing a claim — and the politics of a real, moving continent happen whether or not you're the one moving them.
+> You are a noble or royal character in 1461 Europe. Your own life is short; your dynasty is the real game. Hold what your line already has, or spend your life — marriages, wars, intrigue, the Church, claims — pushing it one rung higher. Die, and you become your heir. The line either survives you or it doesn't.
 
-**Two timelines**, same idea as the Star Wars game:
-- **The canon backbone**, on schedule: Edward IV's reign, Warwick's fall, Richard III, Bosworth, the Tudor settlement; the War of the Castilian Succession and Isabella/Ferdinand; Charles the Bold's death at Nancy and the Burgundian inheritance crisis; the Sforza succession in Milan; the Italian Wars from 1494; Matthias Corvinus's death without an heir; Mehmed II's wars. All of this already exists in `royal-worlds.html`'s `WORLD_TIMELINE` — it's the single best asset to carry forward **as reference material**, rewritten to fire role-aware and to actually branch.
-- **Adaptive events**, which start from canon but follow what the player (and the simulated world) actually did — a succession that goes a different way because a different marriage happened, a rebellion that succeeds or fails depending on who backed it, a realm that gets absorbed by war instead of by the scripted history.
+**One continuous role, scaled by your title**, not a menu of separate "games." A landless gentry character, a Baron, a Duke, and a King are all playing the *same* systems — council, vassals, intrigue, war, succession — just at different scale. Climbing the ladder (gentry → knighted/landed → Baron → Earl/Count → Duke → King → occasionally Emperor-recognition) is itself the central progress of "elevating your line." This replaces v1's idea of separate Crown/Consort/Great-Lord/Council-member/Courtier *interfaces* with one interface that simply does more as your rank rises.
 
-## 2. Every role is a different game
+**Two timelines, unchanged from v1:**
+- **Canon backbone** — Edward IV, Warwick, Richard III, Bosworth; the Castilian succession war; Charles the Bold's death and the Burgundian crisis; the Sforza succession; the Italian Wars; Matthias Corvinus's heirless death; Mehmed II. Already written once in `royal-worlds.html`'s `WORLD_TIMELINE` — reused as reference material, not ported file-for-file.
+- **Adaptive branches** — a succession that runs through YOUR marriage instead of the history books; a realm absorbed by your war instead of the scripted one; a rebellion that succeeds or fails depending on who actually backed it.
 
-This is the single biggest structural change. Today, every playthrough is the same shape (manage stats, seek marriages, maybe inherit a throne). The rebuild instead defines **distinct interfaces and powers per role**, the way the Star Wars game splits Senate Desk / Executive / Royal Court / Chancellery / City Hall / Movement:
+## 2. What's IN (the CK3-shaped core)
 
-- **Crown (King/Queen, sovereign).** Full authority: declare war, grant titles and land, levy taxes, call or dismiss a council/parliament, appoint a council, arrange royal marriages, grant or deny royal assent to bills the council passes. This is the closest to today's "Realm Management" tab, built out properly.
-- **Consort/Regent.** Married into or governing in trust for a minor or absent monarch. Real but bounded power — can advise, can be given specific delegated authority, cannot unilaterally declare war or grant titles without the Crown's (or council's) sanction. This absorbs today's `rulingStatus: "consort"/"regent"` states and gives them an actual distinct interface instead of just a different label on the same screens.
-- **Great Lord / Peer (Duke, Earl, Baron holding real land).** Commands own levies and revenue, holds a seat at the Crown's council or realm's parliament/Estates, can be summoned, can petition, can conspire, can rebel. This is the role most of today's "noble marriage" outcomes land you in, and today it gives you almost nothing to actually do with that standing.
-- **Council/Parliament member** (England's Parliament, France's Estates-General, an Italian city's Signoria/Great Council, the Empire's Diet). A real legislative body: committees, bills with stages (Idea → Drafting → Introduced → Committee → Debate → Vote → Passed), a chair who can bury or fast-track a bill, a budget the council must pass. Different realms have different bodies with different real powers (England's Parliament could withhold supply; an absolute realm like Naples has no such check at all).
-- **Church (Bishop, Cardinal, Pope).** Spiritual authority as real political leverage: tithes, excommunication, dispensations (annulments, marriage dispensations — ties directly into the existing marriage system), Church appointments, a seat at Rome's own council.
-- **Banker/Merchant (the Medici model, already partly built).** No formal office, real power anyway: loans to crowns (with real interest and real leverage when a king can't repay), guild politics, trade routes, courting or founding companies — modeled closely on the Star Wars game's "Courting companies / Homegrown companies" system, re-skinned to wool, wine, spice, and banking instead of starships.
-- **Courtier (untitled gentry).** The "mayor"-tier role — real but limited: petition for patronage, seek a position at court, build relationships, work toward a title or a good marriage as a path UP into one of the roles above, rather than the whole game.
-- **Pretender/Exile/Rebel.** Someone pressing a claim from outside power — a deposed line, a defeated pretender, a baron in open revolt. This absorbs today's occasional "rebellion" flavor events into an actual playable posture with its own toolbox (raise support, seek foreign backing, build a faction, time an uprising).
+- **Your character, your dynasty, your line.** Birth, appearance, traits, marriage, children, death, and then you BECOME your heir — the engine this game already does well, kept and deepened, not demoted to a side system.
+- **Titles and rank as the real progression ladder.** Untitled gentry → knighted/landed → Baron → Count/Earl → Duke/Archduke → King/Queen → (rare) Emperor-recognition (Austria's Holy Roman Emperor mechanic already exists and is the right model). Every rank unlocks more: more land, more vassals, more council seats, more war options.
+- **Vassals.** If you hold enough land, other nobles hold title FROM you — they have opinion of you, pay you, owe you levies, and can be content, resentful, or ready to join a faction against you. This is new and is the single most "CK3" system missing today.
+- **Your own demesne — land you govern directly**, distinct from vassal land you've granted out. Build and upgrade holdings (a keep for defense and levies, a town for tax income, a temple for piety/Church favor), choose how much of your title's land you keep in-hand versus grant to a vassal (more in-hand land = more direct income and control, but a vassal-less realm also means fewer levies to call on and nobody else absorbing the administrative load), and watch your capital's own development rise over a reign. This is the actual hands-on "governing my lands" loop — closer to CK3's holdings/buildings system than to today's Estates tab, and a real, separate system from vassal MANAGEMENT (which is about other people's land, not yours).
+- **A small Council**, not a legislature: Chancellor, Steward, Marshal, Spymaster, Court Chaplain — named advisors with a skill rating and a faction, each unlocking a toolbox (Chancellor: fabricate claims, improve foreign relations; Steward: grow the treasury, manage domain; Marshal: raise/train levies, war score bonuses; Spymaster: intrigue, uncover plots, sabotage; Chaplain: piety, Church relations, marriage dispensations). This is the "Council" the original mid-session summary already flagged as unbuilt — it's the right scope for this rebuild, replacing v1's Parliament/committee/bill machinery entirely.
+- **Intrigue / Schemes.** Fabricate a claim, foment unrest in a rival's land, seduce, arrange a "convenient" death, uncover a plot against you. This is the toolbox for a character who ISN'T strong enough to just declare war — exactly the "elevate my line" half of the pitch for a lower-ranked player.
+- **Claims and justified war**, replacing today's "declare war on any neighbor you're strong enough to beat": a war needs a real claim (inherited, fabricated via your Chancellor, or pressed through a collateral marriage tie — which plugs directly into the existing marriage/succession engine), and war goals are scoped to that claim (a county, a whole kingdom) rather than "roll until someone is annexed."
+- **Factions.** Vassals (or even your own close family) can form a faction against you — depose, revoke a title, press for independence, back a rival claimant. This IS "protect your line and your country" as a mechanical pressure, not just flavor text.
+- **Succession law as a real choice**, not a fixed rule: primogeniture vs. partition vs. elective vs. seniority, each with real tradeoffs (partition splits your realm among heirs — classic CK3 tension between a big single heir and a fractured dynasty). Builds directly on the succession engine already deeply tested in the current game.
+- **Canon characters with real memory** — same as v1, kept: Edward IV, Richard III, Warwick, Louis XI, Charles the Bold, Isabella and Ferdinand, Matthias Corvinus, Vlad III, Mehmed II and the rest, each with opinions that remember specific things you did.
+- **Realm attributes** (Wealth, Stability, Military strength, Strategic vulnerability, Cultural/religious identity) — kept from v1, replacing today's thin `REALM_MILITARY_STRENGTH`-only model, now also driving vassal opinion and faction risk.
+- **The Church**, kept but demoted from a full playable "role" (v1) to a real system any character interacts with: piety, a child's Church career (already exists today), dispensations/annulments tied to marriage, excommunication as a real political weapon used against you or by you.
+- **A real record of your life and your dynasty**, CK3-style: *cause of death, reign length, titles held, wars won and lost, a dynasty prestige score that carries from ruler to ruler.*
+- **NPC realm politics** (built this session) carries forward conceptually, rebuilt on the same vassal/faction/claim machinery the player uses — other rulers losing their own vassals to a faction, pressing their own claims — not a separate abstracted system.
 
-**Marriage and dynasty survive as a real system inside this**, not as the point of the game: every role above can still marry, found a dynasty, and pass a title to an heir — but a player's whole arc is no longer "manage stats until a good marriage happens." The deeply-tested succession/title/widowhood engine already built in `royal-worlds.html` is the best reference material for this piece specifically, even though it isn't being carried forward file-for-file.
+## 3. What's OUT (cut from v1, not just demoted)
 
-**Information depends on role**, same principle as the Star Wars game: a courtier hears "the harvest has failed in the north"; a sitting monarch sees the actual grain-reserve numbers and the council's private advice.
+- **Parliament/Estates-General/Great Council as a legislative body with bills, committees, and markup sessions.** Gone entirely. CK3 doesn't have this and neither should this game. Realm *laws* still exist (succession law, crown authority / vassal power balance) but as a short, meaningful list you change with real cost — not a 90-item lawbook with committee stages.
+- **Courtier as a distinct playable mode.** Folded into "low-ranked character" — the same systems, just with less land and fewer options, not a separate interface.
+- **Banker/Merchant as a core pillar**, and the Star Wars game's company-courting economic sim. A banking/trade dynasty (the Medici model) can still exist as *flavor and a path to wealth*, but it's not a structural pillar alongside Crown/Vassal/Church the way v1 had it.
+- **Budget markup sessions, multi-year infrastructure investment packages, trade missions as their own subsystem, pressure-group escalation ladders.** All Star-Wars-game-specific texture that doesn't belong in a CK3-shaped game. Replaced by CK3's actual economic layer: domain income, vassal levies/taxes, and the Steward council role.
 
-## 3. Core systems (new, or deepened far past today's version)
-
-- **The Council/Parliament layer.** Bills with real stages, committees (Finance, War, Foreign Affairs, Justice — renamed appropriately per realm), a chair's power to bury or advance a bill, a budget that must pass or the Crown governs on short rations. Varies by realm: England's Parliament is a real check; Naples' crown rules by decree; Venice's Great Council elects the Doge and runs everything.
-- **Budget & economy.** Real tax bases (land tax, customs, tithes, guild dues) that grow or shrink with what's actually built; a treasury with debt, interest, and a credit rating (echoes the Star Wars game's bonds/credit-rating system); multi-year investment packages (a new port, a university, fortifications) with real funding-source choices.
-- **Trade.** Each realm has real exports/imports (England: wool; Burgundy: cloth and finance; Venice: spice and shipping; Aragon: Mediterranean trade). Trade missions, negotiated agreements, blockades and piracy disrupting them — directly adapted from the Star Wars game's trade.js.
-- **Pressure groups.** Guilds, the clergy, the baronage, the peasantry, a city's own merchant class — each reacts to policy with escalating pressure (grumbling → petitions → strikes/revolt), the same escalation ladder as the Star Wars game's pressure groups.
-- **Canon characters with memory.** Edward IV, Richard III, Warwick, Louis XI, Charles the Bold, Isabella and Ferdinand, Matthias Corvinus, Vlad III, Mehmed II and the rest — each with an ideology, objectives, and a relationship that remembers specific things the player did ("I remember you sided with Warwick"), not just a flat favor number.
-- **Realm attributes**, same five-axis idea as the Star Wars game's worlds (Wealth, Stability, Military strength, Strategic vulnerability, Cultural/religious identity) replacing today's thinner `REALM_MILITARY_STRENGTH`-only model.
-- **A real record of your life**, written like the Star Wars game's end-of-career summary: *"Reigned as King of Naples, 1461–1489. Signed 12 laws. Survived 2 rebellions. Married into the House of Aragon. Lost Calabria to the Ottomans."*
-- **NPC realm politics** (already built this session) carries forward conceptually — other realms acting on their own — but gets deepened with the same council/budget/pressure-group machinery the player has, not just an abstracted war roll.
-
-## 4. What's being cut or demoted from today's game
-
-- **Marriage-as-the-main-loop.** Still present, still deep, no longer the spine of the whole game.
-- **The BitLife-style single annual-tick flow.** Replaced by the role/council/budget cadence above (monthly and yearly beats, matching the Star Wars game's Month 7/9/10 budget rhythm).
-- **The single-HTML-file architecture.** Replaced per your answer below.
-
-## 5. Architecture
-
-**Blank-slate rewrite, split into modules**, mirroring the Star Wars game's file layout:
+## 4. Architecture (unchanged from v1 — still a blank-slate, modular rewrite)
 
 ```
 index.html              — shell + script tags, no game logic
-css/style.css            — visual identity (parchment/heraldic, not sci-fi)
+css/style.css            — visual identity (parchment/heraldic)
 js/
   data.js                 — realms, houses, starting rosters, name pools
   engine.js                — core game-state object, the tick loop, save/load
-  attributes.js             — character creation: culture/background, appearance, traits
-  realms.js                  — the 19 realms' own attributes (wealth/stability/military/etc.)
-  roles.js                    — role definitions: powers, interface, constraints per role
-  council.js                   — Parliament/Estates/Great Council: bills, committees, votes
-  policy.js                     — the "laws before sliders" lawbook, per-realm law states
-  lawbook.js                     — the actual law catalog (England's ~90-law equivalent)
-  govdesk.js                      — the Crown/Executive desk: budget, capital program, appointments
-  trade.js                         — exports/imports, missions, agreements, disruption
-  dilemmas.js                       — one-off scripted choice events
-  events.js                          — the general random-event pool
-  canon.js / canon_events.js          — the scripted historical backbone (from WORLD_TIMELINE)
-  timeline.js                          — adaptive branching logic keyed off player/world state
-  dynasty.js                            — marriage, succession, titles, widowhood (ported concept, rewritten)
-  personal.js                            — the player's own life: age, health, family, career crossroads
-  rebellion.js                            — the pretender/exile/rebel playable posture
-  demographics.js                          — pressure groups and population reaction
-  powers.js                                 — per-role action menus
-  wartime.js                                 — war & conquest (ported concept, rewritten)
-  scenes.js                                   — location/court flavor text generation
-  ui.js / ui_world.js / ui_issues.js            — rendering
-  main.js                                        — boot sequence
+  attributes.js             — character creation: background, appearance, traits
+  realms.js                  — the 19 realms' own attributes + title hierarchy
+  titles.js                   — the rank ladder (county/duchy/kingdom/empire), who holds what
+  domain.js                    — your own demesne: holdings, buildings, development, in-hand vs. granted land
+  vassals.js                    — liege/vassal relationships, opinion, levies, taxes
+  council.js                     — Chancellor/Steward/Marshal/Spymaster/Chaplain
+  intrigue.js                     — schemes: fabricate claim, foment unrest, assassinate, seduce
+  factions.js                      — depose/revoke/independence/claimant factions against the player (or an NPC)
+  wartime.js                        — claims, justified war, war score, sieges (ported concept, rewritten)
+  dynasty.js                         — marriage, succession, titles, widowhood (ported concept, rewritten)
+  succession_laws.js                  — primogeniture/partition/elective/seniority choice + consequences
+  church.js                            — piety, Church careers, dispensations, excommunication
+  personal.js                           — the player's own life: age, health, family, career/death
+  canon.js / canon_events.js             — the scripted historical backbone (from WORLD_TIMELINE)
+  timeline.js                             — adaptive branching logic keyed off player/world state
+  events.js                                — the general random-event pool
+  scenes.js                                 — location/court flavor text generation
+  ui.js / ui_world.js                        — rendering
+  main.js                                     — boot sequence
 ```
 
-No build step, no server — same as today and the Star Wars game: open `index.html` in a browser.
+No build step, no server — open `index.html` in a browser, same as today.
 
-## 6. What I need from you before I start writing code
+## 5. Still open — need your answer on these before I write code
 
-1. **Confirm the role list above** — add, cut, or rename any of them (Crown / Consort-Regent / Great Lord / Council member / Church / Banker / Courtier / Pretender-Rebel).
-2. **Confirm what survives from today's marriage/succession engine** — the plan above keeps it as one system (`dynasty.js`) rather than the spine. If you'd rather drop dynastic marriage back further (flavor only, no real succession mechanics) or keep it MORE central than this plan proposes, say so now.
-3. **Time horizon** — today's game runs 1461 into the 1500s+. Keep that range, or extend/shrink it?
-4. **Any Star Wars-game system you specifically want ME to prioritize first** once building starts (e.g., "get the Council/bill system working before anything else") — since this is a large rebuild, I'd build and test it in the same staged, test-backed way this session has used throughout (one system, verified, before the next), and your priority order decides the staging.
+1. **Church as a playable path?** You can already send a child into the Church today (become a Cardinal, even Pope). In this rebuild, should the PLAYER be able to live a Church-career life themselves (vows, no legitimate heir, but real political power as a prince-bishop or eventually Pope) — or is Church strictly a thing your *children* can do, and the player is always a landed/noble track?
+2. **Time horizon** — keep 1461 into the 1500s+, or change the range? (CK3 itself spans centuries — do you want a similarly long possible playthrough, generation after generation, or a tighter focused era?)
+3. **Build order** — once I start, what should work FIRST? My instinct, in CK3-priority order: (a) titles/rank ladder + vassals, since everything else hangs off "what do you actually hold," then (b) succession/dynasty (the system most already proven in today's game, lowest risk to re-prove), then (c) council + intrigue, then (d) claims/wartime, then (e) canon timeline + adaptive branches last, once the skeleton underneath it is solid. Agree, or reorder?
 
-Once you confirm, I'll start building — module by module, each one tested in isolation the same way every system in today's game was, before moving to the next.
+Once you confirm, I start building — module by module, each tested in isolation before the next, same disciplined pattern as this whole session.
