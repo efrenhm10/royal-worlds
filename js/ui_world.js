@@ -82,6 +82,9 @@ function renderPlay() {
     clearEl(hud);
     hud.appendChild(el("h2", null, `${title} ${player.name}`));
     hud.appendChild(el("p", "muted", `${realm.name} — ${gameState.year} — age ${player.age}`));
+    if (gameState.gameOver) {
+        hud.appendChild(el("p", null, `<strong>${gameState.gameOverReason}</strong>`));
+    }
     const stats = el("div", "grid");
     stats.appendChild(el("div", "stat", `<span>Health</span><span>${player.health}</span>`));
     stats.appendChild(el("div", "stat", `<span>Gold</span><span>${player.gold}</span>`));
@@ -95,7 +98,7 @@ function renderPlay() {
         advanceYear();
         saveGame();
         renderPlay();
-    }, !player.alive));
+    }, !player.alive || gameState.gameOver));
     dock.appendChild(makeChoiceButton("Chronicle", () => { _playViewTab = "chronicle"; renderPlay(); }));
     dock.appendChild(makeChoiceButton("Family", () => { _playViewTab = "family"; renderPlay(); }));
     dock.appendChild(makeChoiceButton("Court", () => { _playViewTab = "court"; renderPlay(); }));
@@ -131,7 +134,11 @@ function renderPlayView() {
         const niecesNephews = getNiecesNephews(gameState, player.id);
         const cousins = getCousins(gameState, player.id);
 
-        if (spouse) card.appendChild(el("div", null, personLine(spouse, "spouse")));
+        if (spouse && spouse.alive) {
+            card.appendChild(el("div", null, personLine(spouse, "spouse")));
+        } else if (spouse && !spouse.alive) {
+            card.appendChild(el("div", null, `<p>Widowed — ${spouse.name} died at ${spouse.age}.</p>`));
+        }
         parents.forEach(p => card.appendChild(el("div", null, personLine(p, p.gender === "F" ? "mother" : "father"))));
         if (children.length) {
             card.appendChild(el("h3", null, "Children"));
@@ -146,6 +153,22 @@ function renderPlayView() {
         card.appendChild(el("h3", null, `Cousins (${cousins.length})`));
         cousins.forEach(c => card.appendChild(el("div", null, personLine(c, "cousin"))));
         view.appendChild(card);
+
+        if (!gameState.gameOver && isAvailableToMarry(gameState, player.id)) {
+            const marriageCard = makeCard("Propose a marriage", "");
+            generateMarriageCandidates(gameState, 3).forEach(candidate => {
+                const candidateRealm = getRealm(candidate.sourceRealmKey);
+                const row = el("div", "stat", `<span>${candidate.name}, age ${candidate.age} (${candidateRealm.name})</span>`);
+                const btn = makeChoiceButton("Marry", () => {
+                    marryPlayerTo(gameState, candidate);
+                    saveGame();
+                    renderPlay();
+                });
+                row.appendChild(btn);
+                marriageCard.appendChild(row);
+            });
+            view.appendChild(marriageCard);
+        }
         return;
     }
 
@@ -156,6 +179,25 @@ function renderPlayView() {
             const vTitle = titleName(v.tier, v.gender, gameState.realmKey);
             card.appendChild(el("div", "stat", `<span>${vTitle} ${v.name}</span><span>Opinion ${v.opinion} · Levies ${v.levies}</span>`));
         });
+
+        const lawCard = makeCard("Succession", "");
+        const currentLaw = SUCCESSION_LAWS[gameState.succession.lawKey];
+        lawCard.appendChild(el("p", null, `<strong>${currentLaw.name}</strong>`));
+        lawCard.appendChild(el("p", "muted", currentLaw.desc));
+        if (!gameState.gameOver && canChangeSuccessionLaw(gameState)) {
+            Object.values(SUCCESSION_LAWS).forEach(law => {
+                if (law.key === currentLaw.key) return;
+                const btn = makeChoiceButton(`Proclaim ${law.name}`, () => {
+                    changeSuccessionLaw(gameState, law.key);
+                    saveGame();
+                    renderPlay();
+                });
+                lawCard.appendChild(btn);
+            });
+        } else if (!gameState.gameOver) {
+            lawCard.appendChild(el("p", "muted", "Changing the law of succession requires Absolute Crown Authority."));
+        }
+        view.appendChild(lawCard);
         view.appendChild(card);
         return;
     }

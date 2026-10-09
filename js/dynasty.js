@@ -98,6 +98,7 @@ function marryIn(gameState, personId, realmKey) {
     if (!person || person.spouseId) return null;
     const spouseGender = person.gender === "M" ? "F" : "M";
     const spouse = makeRelative(realmKey, spouseGender, person.age + randInt(-5, 5));
+    spouse.bloodline = false; // married in, not blood kin — matters for seniority-law succession
     registerPerson(gameState, spouse);
     person.spouseId = spouse.id;
     spouse.spouseId = person.id;
@@ -105,17 +106,22 @@ function marryIn(gameState, personId, realmKey) {
 }
 
 function bearChild(gameState, motherId, fatherId, realmKey) {
-    const mother = getPerson(gameState, motherId);
     const child = makeRelative(realmKey, Math.random() < 0.5 ? "M" : "F", 0);
+    child.bloodline = true;
     child.motherId = motherId;
     child.fatherId = fatherId;
     registerPerson(gameState, child);
     return child;
 }
 
+function allBloodline(gameState) {
+    return allFamily(gameState).filter(p => p.bloodline);
+}
+
 function generateSiblingWithFamily(gameState, realmKey, player) {
     const gender = Math.random() < 0.5 ? "M" : "F";
     const sibling = makeRelative(realmKey, gender, Math.max(0, player.age + randInt(-12, 12)));
+    sibling.bloodline = true;
     sibling.motherId = player.motherId;
     sibling.fatherId = player.fatherId;
     sibling.alive = Math.random() < stillAliveChance(sibling.age);
@@ -140,6 +146,7 @@ function generateSiblingWithFamily(gameState, realmKey, player) {
 function generateParentSiblingWithFamily(gameState, realmKey, parent) {
     const gender = Math.random() < 0.5 ? "M" : "F";
     const auntUncle = makeRelative(realmKey, gender, Math.max(0, parent.age + randInt(-10, 10)));
+    auntUncle.bloodline = true;
     auntUncle.motherId = parent.motherId || null;
     auntUncle.fatherId = parent.fatherId || null;
     auntUncle.alive = Math.random() < stillAliveChance(auntUncle.age);
@@ -171,8 +178,11 @@ function setupDynasty(gameState) {
     registerPerson(gameState, player);
     const realmKey = gameState.realmKey;
 
+    player.bloodline = true;
     const father = makeRelative(realmKey, "M", player.age + randInt(20, 36));
     const mother = makeRelative(realmKey, "F", player.age + randInt(16, 32));
+    father.bloodline = true;
+    mother.bloodline = true;
     father.alive = Math.random() < stillAliveChance(father.age);
     mother.alive = Math.random() < stillAliveChance(mother.age);
     father.spouseId = mother.id;
@@ -231,4 +241,42 @@ function tickDynasty(gameState) {
             logEvent(`${person.name} and ${spouse.name} have had a child, ${child.name}.`);
         }
     });
+}
+
+function isAvailableToMarry(gameState, personId) {
+    const person = getPerson(gameState, personId);
+    if (!person || !person.alive || person.age < 16) return false;
+    const spouse = getSpouse(gameState, personId);
+    return !spouse || !spouse.alive;
+}
+
+// A handful of marriage prospects for the player specifically — drawn from
+// a spread of realms (including the player's own) so a match can be a
+// local arrangement or a cross-border one, same flavor as a real medieval
+// court weighing a match's foreign-alliance value against convenience.
+function generateMarriageCandidates(gameState, count) {
+    const n = count || 3;
+    const player = gameState.player;
+    const gender = player.gender === "M" ? "F" : "M";
+    const pool = listRealms();
+    const candidates = [];
+    for (let i = 0; i < n; i++) {
+        const realm = randomFrom(pool);
+        const age = Math.max(16, player.age + randInt(-8, 8));
+        const candidate = makeRelative(realm.key, gender, age);
+        candidate.sourceRealmKey = realm.key;
+        candidates.push(candidate);
+    }
+    return candidates;
+}
+
+function marryPlayerTo(gameState, candidate) {
+    const player = gameState.player;
+    if (!isAvailableToMarry(gameState, player.id)) return null;
+    candidate.bloodline = false;
+    candidate.spouseId = player.id;
+    registerPerson(gameState, candidate);
+    player.spouseId = candidate.id;
+    logEvent(`${player.name} has married ${candidate.name}.`);
+    return candidate;
 }

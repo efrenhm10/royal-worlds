@@ -41,6 +41,8 @@ function startNewGame(eraKey, realmKey, character) {
         crownAuthority: { [realmKey]: 0 },
         family: {},
         vassals: {},
+        succession: { lawKey: (typeof DEFAULT_SUCCESSION_LAW !== "undefined" ? DEFAULT_SUCCESSION_LAW : "maleProximogeniture") },
+        gameOver: false,
         log: [],
         turn: 0,
     };
@@ -95,19 +97,26 @@ function callHookIfPresent(name, ...args) {
 // can show; does not itself touch the DOM.
 function advanceYear() {
     if (!gameState) throw new Error("No active game");
+    if (gameState.gameOver) return { year: gameState.year, playerAlive: false, gameOver: true };
+
     gameState.year += 1;
     gameState.turn += 1;
     const player = gameState.player;
 
+    let died = false;
     if (player.alive) {
         player.age += 1;
-        const died = checkDeath(player);
+        died = checkDeath(player);
         if (died) {
             logEvent(`${player.name} has died at ${player.age}.`);
         }
     }
 
     // Hooks for later phases — each is a no-op until its module defines it.
+    // tickDynasty runs before succession is resolved below, so an heir who
+    // was just an ordinary relative a moment ago still ages/marries/has
+    // children normally this same year, rather than being skipped as "the
+    // player" before they've actually taken that role.
     callHookIfPresent("tickDomain", gameState);
     callHookIfPresent("tickVassals", gameState);
     callHookIfPresent("tickDynasty", gameState);
@@ -119,7 +128,11 @@ function advanceYear() {
     callHookIfPresent("tickReform", gameState);
     callHookIfPresent("tickCanon", gameState);
 
-    return { year: gameState.year, playerAlive: player.alive };
+    if (died) {
+        callHookIfPresent("applySuccession", gameState);
+    }
+
+    return { year: gameState.year, playerAlive: gameState.player.alive, gameOver: !!gameState.gameOver };
 }
 
 const SAVE_KEY = "crownsAndCouncilsSave";
