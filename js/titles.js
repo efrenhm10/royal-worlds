@@ -87,11 +87,25 @@ function crownAuthorityInfo(level) {
     return CROWN_AUTHORITY_LEVELS[Math.max(0, Math.min(level, CROWN_AUTHORITY_LEVELS.length - 1))];
 }
 
-// Raising Crown Authority a level is a deliberate ruler action, not a tick
-// effect — engine.js calls this and is responsible for logging the event
-// and for the immediate faction-unrest consequence described above.
-function canRaiseCrownAuthority(realmState) {
-    if (!realmState || realmState.rulerTier < 5) return false;
-    if (realmState.crownAuthority >= CROWN_AUTHORITY_LEVELS.length - 1) return false;
-    return realmState.stability >= 50;
+// Raising Crown Authority is a deliberate ruler action, not a tick effect.
+// It costs real, immediate vassal opinion (half the new level's standing
+// penalty, up front) — factions.js is what actually organizes against a
+// ruler who keeps pushing it too far, too fast.
+function canRaiseCrownAuthority(gameState) {
+    const level = (gameState.crownAuthority && gameState.crownAuthority[gameState.realmKey]) || 0;
+    if (gameState.player.tier < 5) return false;
+    if (level >= CROWN_AUTHORITY_LEVELS.length - 1) return false;
+    const stability = typeof effectiveStability === "function" ? effectiveStability(gameState, gameState.realmKey) : getRealm(gameState.realmKey).attributes.stability;
+    return stability >= 50;
+}
+
+function raiseCrownAuthority(gameState) {
+    if (!canRaiseCrownAuthority(gameState)) return false;
+    const level = (gameState.crownAuthority && gameState.crownAuthority[gameState.realmKey]) || 0;
+    const newLevel = level + 1;
+    gameState.crownAuthority[gameState.realmKey] = newLevel;
+    const info = crownAuthorityInfo(newLevel);
+    getVassals(gameState).forEach(v => adjustOpinion(v, -Math.round(info.vassalOpinionPenalty / 2)));
+    logEvent(`${gameState.player.name} has raised Crown Authority to ${info.name}.`);
+    return true;
 }

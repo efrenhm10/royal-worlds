@@ -216,12 +216,49 @@ function renderPlayView() {
         } else if (!gameState.gameOver) {
             lawCard.appendChild(el("p", "muted", "Changing the law of succession requires Absolute Crown Authority."));
         }
+        const caLevel = gameState.crownAuthority[gameState.realmKey] || 0;
+        const caInfo = crownAuthorityInfo(caLevel);
+        const caCard = makeCard("Crown Authority", `<p><strong>${caInfo.name}</strong></p><p class="muted">${caInfo.desc}</p>`);
+        if (!gameState.gameOver) {
+            caCard.appendChild(makeChoiceButton("Raise Crown Authority", () => {
+                raiseCrownAuthority(gameState);
+                saveGame();
+                renderPlay();
+            }, !canRaiseCrownAuthority(gameState)));
+        }
+        view.appendChild(caCard);
+
+        if (gameState.faction) {
+            const factionCard = makeCard("A faction stirs", `<p class="muted">Formed ${gameState.faction.formedYear}, demanding ${gameState.faction.type === "depose" ? "your abdication" : "independence"}.</p>`);
+            view.appendChild(factionCard);
+        }
+
         view.appendChild(lawCard);
         view.appendChild(card);
         return;
     }
 
     if (_playViewTab === "church") {
+        const standing = getStanding(gameState, gameState.realmKey);
+        const reform = reformLevel(gameState);
+        const pressureCard = makeCard("Rome and the realm", `
+            <div class="stat"><span>Standing with Rome</span><span>${Math.round(standing)}${isExcommunicationRisk(gameState, gameState.realmKey) ? " — excommunication risk" : ""}</span></div>
+            <div class="stat"><span>Reform pressure</span><span>${Math.round(reform)}${gameState.reform.schismed ? " — SCHISM" : ""}</span></div>
+        `);
+        if (!gameState.gameOver && !gameState.reform.schismed) {
+            pressureCard.appendChild(makeChoiceButton("Suppress reformist preaching (50 gold)", () => {
+                suppressReform(gameState);
+                saveGame();
+                renderPlay();
+            }, player.gold < 50));
+            pressureCard.appendChild(makeChoiceButton("Tolerate reformist preaching", () => {
+                embraceReform(gameState);
+                saveGame();
+                renderPlay();
+            }));
+        }
+        view.appendChild(pressureCard);
+
         if (player.churchTier == null) {
             const canEnter = canEnterChurch(gameState);
             const reasons = [];
