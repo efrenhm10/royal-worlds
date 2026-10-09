@@ -14,4 +14,18 @@ document.addEventListener("DOMContentLoaded", () => {
         if (typeof renderEraSelect === "function") renderEraSelect();
     });
 
+    // Back navigation between the pre-game screens. Each target screen's
+    // content is still in the DOM from when it was last rendered forward —
+    // showScreen() only toggles which .screen is visible — so no
+    // re-render is needed going backward.
+    document.getElementById("eraBackBtn").addEventListener("click", () => {
+        showScreen("boot");
+    });
+    document.getElementById("realmBackBtn").addEventListener("click", () => {
+        showScreen("eraSelect");
+    });
+    document.getElementById("characterBackBtn").addEventListener("click", () => {
+        showScreen("realmSelect");
+    });
+
 });

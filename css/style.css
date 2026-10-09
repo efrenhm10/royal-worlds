@@ -128,6 +128,20 @@ button:disabled {
     cursor: not-allowed;
 }
 
+.back-btn {
+    margin-top: 10px;
+    background: transparent;
+    border: 1px solid var(--ink-soft);
+    color: var(--ink-soft);
+    box-shadow: none;
+    font-size: 14px;
+    padding: 7px 12px;
+}
+
+.back-btn:hover {
+    background: rgba(90, 60, 20, 0.08);
+}
+
 .stat {
     display: flex;
     justify-content: space-between;
