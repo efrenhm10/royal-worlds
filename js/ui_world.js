@@ -4,20 +4,35 @@
 
 let _selectedEraKey = null;
 let _selectedRealmKey = null;
+let _marriageTargetId = null;
 let _marriageRealmKey = null;
 let _marriageCategory = null; // "royal" | "noble"
 
-// Propose a marriage: pick a realm, then its royal family or its noble
-// line, then a specific match — with the real cost of marrying above or
-// beneath your own station shown before you commit, not after.
-function renderMarriageSection(view, gameState) {
+function resetMarriageFlow() {
+    _marriageTargetId = null;
+    _marriageRealmKey = null;
+    _marriageCategory = null;
+}
+
+// Propose a marriage for the player, or arrange one for a child: pick a
+// realm, then its royal family or its noble line, then a specific match —
+// with the real cost of marrying above or beneath station shown before
+// it's committed to, not after. The player always pays the cost and
+// bears the shame, even when it's a child's match being arranged.
+function renderMarriageSection(view, gameState, targetPerson) {
     const player = gameState.player;
+    const target = targetPerson || player;
+    const isSelf = target.id === player.id;
+    const heading = isSelf ? "Propose a marriage" : `Arrange ${target.name}'s marriage`;
 
     if (!_marriageRealmKey) {
-        const card = makeCard("Propose a marriage", '<p class="muted">Choose a realm to seek a match in.</p>');
+        const card = makeCard(heading, '<p class="muted">Choose a realm to seek a match in.</p>');
+        if (!isSelf) {
+            card.appendChild(makeChoiceButton("← Back to family overview", () => { resetMarriageFlow(); renderPlay(); }));
+        }
         listRealms().forEach(realm => {
             const row = el("div", "stat", `<span>${realm.name}</span>`);
-            row.appendChild(makeChoiceButton("Choose", () => { _marriageRealmKey = realm.key; renderPlay(); }));
+            row.appendChild(makeChoiceButton("Choose", () => { _marriageTargetId = target.id; _marriageRealmKey = realm.key; renderPlay(); }));
             card.appendChild(row);
         });
         view.appendChild(card);
@@ -27,7 +42,7 @@ function renderMarriageSection(view, gameState) {
     const realm = getRealm(_marriageRealmKey);
 
     if (!_marriageCategory) {
-        const card = makeCard(`A match in ${realm.name}`, '<p class="muted">The royal house itself, or the wider noble line?</p>');
+        const card = makeCard(`${isSelf ? "A match" : `A match for ${target.name}`} in ${realm.name}`, '<p class="muted">The royal house itself, or the wider noble line?</p>');
         card.appendChild(makeChoiceButton("← Choose a different realm", () => { _marriageRealmKey = null; renderPlay(); }));
         card.appendChild(makeChoiceButton("Royal family", () => { _marriageCategory = "royal"; renderPlay(); }));
         card.appendChild(makeChoiceButton("Noble line", () => { _marriageCategory = "noble"; renderPlay(); }));
@@ -37,19 +52,18 @@ function renderMarriageSection(view, gameState) {
 
     const card = makeCard(`${_marriageCategory === "royal" ? "Royal family" : "Noble line"} of ${realm.name}`, "");
     card.appendChild(makeChoiceButton("← Choose a different kind of match", () => { _marriageCategory = null; renderPlay(); }));
-    const candidates = generateMarriageCandidatesForRealm(gameState, _marriageRealmKey, _marriageCategory);
+    const candidates = generateMarriageCandidatesForRealm(gameState, _marriageRealmKey, _marriageCategory, target);
     candidates.forEach(candidate => {
         const title = titleName(candidate.tier, candidate.gender, _marriageRealmKey);
-        const cost = marriageCost(player.tier, candidate.tier);
-        const shame = marriageShame(player.tier, candidate.tier);
-        let note = "A fitting match for your own station.";
-        if (cost > 0) note = `Marrying above your station — costs ${cost} gold in dowry and land concessions.`;
-        else if (shame > 0) note = `Marrying beneath your station — costs ${shame} prestige at court.`;
+        const cost = marriageCost(target.tier, candidate.tier);
+        const shame = marriageShame(target.tier, candidate.tier);
+        let note = "A fitting match.";
+        if (cost > 0) note = `Above ${isSelf ? "your" : "their"} station — costs ${cost} gold in dowry${isSelf ? "" : " (paid by you)"}.`;
+        else if (shame > 0) note = `Beneath ${isSelf ? "your" : "their"} station — costs ${shame} prestige at court.`;
         const row = el("div", "stat", avatarRow(candidate, `<strong>${title} ${candidate.name}</strong>, age ${candidate.age}<br><span class="muted">${note}</span>`));
-        const btn = makeChoiceButton("Marry", () => {
-            if (marryPlayerTo(gameState, candidate)) {
-                _marriageRealmKey = null;
-                _marriageCategory = null;
+        const btn = makeChoiceButton(isSelf ? "Marry" : "Arrange", () => {
+            if (arrangeMarriage(gameState, target, candidate)) {
+                resetMarriageFlow();
             }
             saveGame();
             renderPlay();
@@ -198,6 +212,7 @@ const DOCK_VIEWS = [
 
 function dockBadge(gameState, key) {
     if (key === "court" && gameState.faction) return "!";
+    if (key === "court" && typeof canBecomeFavorite === "function" && canBecomeFavorite(gameState)) return "★";
     if (key === "church" && isExcommunicationRisk(gameState, gameState.realmKey)) return "!";
     if (key === "intrigue" && gameState.war) return "⚔";
     if (key === "military" && standingUpkeep(gameState) > (gameState.player.gold || 0) && standingUpkeep(gameState) > 0) return "!";
@@ -447,8 +462,70 @@ function renderPlayView() {
         cousins.forEach(c => card.appendChild(el("div", null, personLine(c, "cousin"))));
         view.appendChild(card);
 
-        if (!gameState.gameOver && player.churchTier == null && isAvailableToMarry(gameState, player.id)) {
-            renderMarriageSection(view, gameState);
+        const minorChildren = children.filter(c => canSetEducation(c));
+        if (minorChildren.length) {
+            const eduCard = makeCard("Their upbringing", "");
+            minorChildren.forEach(c => {
+                const focusKey = getEducationFocus(gameState, c.id);
+                const focus = EDUCATION_FOCI.find(f => f.key === focusKey);
+                const row = el("div", null, avatarRow(c, `<strong>${c.name}</strong>, age ${c.age} — ${focus ? `being raised in ${focus.name.toLowerCase()}` : "no course of education set"}`));
+                if (!gameState.gameOver) {
+                    const selectRow = el("div", null, "");
+                    selectRow.style.display = "flex";
+                    selectRow.style.gap = "8px";
+                    selectRow.style.alignItems = "center";
+                    selectRow.style.margin = "6px 0 12px";
+                    const select = document.createElement("select");
+                    EDUCATION_FOCI.forEach(f => {
+                        const opt = document.createElement("option");
+                        opt.value = f.key;
+                        opt.textContent = f.name;
+                        if (f.key === focusKey) opt.selected = true;
+                        select.appendChild(opt);
+                    });
+                    selectRow.appendChild(select);
+                    selectRow.appendChild(makeChoiceButton("Set", () => {
+                        setEducationFocus(gameState, c.id, select.value);
+                        saveGame();
+                        renderPlay();
+                    }));
+                    row.appendChild(selectRow);
+                }
+                eduCard.appendChild(row);
+            });
+            view.appendChild(eduCard);
+        }
+
+        if (!gameState.gameOver && player.churchTier == null) {
+            let target = player;
+            if (_marriageTargetId && _marriageTargetId !== player.id) {
+                const candidate = getPerson(gameState, _marriageTargetId);
+                if (candidate && isAvailableToMarry(gameState, candidate.id)) {
+                    target = candidate;
+                } else {
+                    resetMarriageFlow();
+                }
+            }
+            if (isAvailableToMarry(gameState, target.id)) {
+                renderMarriageSection(view, gameState, target);
+            }
+
+            if (target.id === player.id) {
+                const marriageableChildren = children.filter(c => c.alive && isAvailableToMarry(gameState, c.id));
+                if (marriageableChildren.length) {
+                    const childCard = makeCard("Arrange a child's marriage", "");
+                    marriageableChildren.forEach(c => {
+                        const row = el("div", "stat", avatarRow(c, `<strong>${c.name}</strong>, age ${c.age}`));
+                        row.appendChild(makeChoiceButton("Arrange a marriage", () => {
+                            resetMarriageFlow();
+                            _marriageTargetId = c.id;
+                            renderPlay();
+                        }));
+                        childCard.appendChild(row);
+                    });
+                    view.appendChild(childCard);
+                }
+            }
         }
         return;
     }
@@ -520,6 +597,54 @@ function renderPlayView() {
 
         view.appendChild(lawCard);
         view.appendChild(card);
+
+        // Not the sovereign yourself? There's a real choice every year:
+        // stay home and run your own lands, or go to the realm's actual
+        // royal court and build closeness with the crown.
+        if (canAttendRoyalCourt(gameState)) {
+            const realm = getRealm(gameState.realmKey);
+            const rc = gameState.royalCourt;
+            const atCourt = isAtRoyalCourt(gameState);
+            const rcCard = makeCard(`The court of ${realm.ruler.name}`, `
+                <div class="stat"><span>Currently</span><span>${atCourt ? `At court` : `On your own lands`}</span></div>
+                <div class="stat"><span>Favor with ${realm.ruler.name}</span><span>${rc.favor}</span></div>
+                ${rc.status ? `<div class="stat"><span>Standing</span><span>${rc.status}</span></div>` : ""}
+                <p class="muted">Being away from home costs real domain income — there's no managing your lands from the capital.</p>
+            `);
+            if (!gameState.gameOver) {
+                if (atCourt) {
+                    rcCard.appendChild(makeChoiceButton("Return to your own lands", () => {
+                        returnHome(gameState);
+                        saveGame();
+                        renderPlay();
+                    }));
+                    rcCard.appendChild(makeChoiceButton("Pay your respects", () => {
+                        payRespects(gameState);
+                        saveGame();
+                        renderPlay();
+                    }));
+                    rcCard.appendChild(makeChoiceButton("Seek closer favor (50 gold)", () => {
+                        seekCloserFavor(gameState);
+                        saveGame();
+                        renderPlay();
+                    }, player.gold < 50));
+                    if (!rc.status) {
+                        rcCard.appendChild(makeChoiceButton(`Become ${royalFavoriteTitle(gameState)}`, () => {
+                            becomeFavorite(gameState);
+                            saveGame();
+                            renderPlay();
+                        }, !canBecomeFavorite(gameState)));
+                    }
+                } else {
+                    rcCard.appendChild(makeChoiceButton(`Travel to ${realm.ruler.name}'s court`, () => {
+                        travelToCourt(gameState);
+                        saveGame();
+                        renderPlay();
+                    }));
+                }
+            }
+            view.appendChild(rcCard);
+        }
         return;
     }
 

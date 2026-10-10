@@ -105,8 +105,16 @@ function marryIn(gameState, personId, realmKey) {
     return spouse;
 }
 
+// A newborn carries a courtesy title from birth, one rank below whichever
+// parent outranks the other — a king's son is a prince, not a commoner,
+// the moment he's born. The player's own children get this exactly the
+// same way as any other family member's.
 function bearChild(gameState, motherId, fatherId, realmKey) {
-    const child = makeRelative(realmKey, Math.random() < 0.5 ? "M" : "F", 0);
+    const mother = getPerson(gameState, motherId);
+    const father = getPerson(gameState, fatherId);
+    const parentTier = Math.max((mother && mother.tier) || 0, (father && father.tier) || 0);
+    const childTier = Math.max(0, parentTier - 1);
+    const child = createCharacter({ realmKey, tier: childTier, gender: Math.random() < 0.5 ? "M" : "F", age: 0 });
     child.bloodline = true;
     child.motherId = motherId;
     child.fatherId = fatherId;
@@ -344,10 +352,11 @@ function generateMarriageCandidates(gameState, count) {
 // Royal family prospects (the ruler, their siblings, their children) from
 // a chosen realm, or a spread of that realm's noble line — the two
 // categories the Family tab's marriage picker offers once a realm is
-// chosen. Always of the opposite gender from the player.
-function generateMarriageCandidatesForRealm(gameState, realmKey, category) {
-    const player = gameState.player;
-    const forcedGender = player.gender === "M" ? "F" : "M";
+// chosen. Always of the opposite gender from whoever is getting married
+// (the player themselves, or a child the player is arranging a match for).
+function generateMarriageCandidatesForRealm(gameState, realmKey, category, targetPerson) {
+    const target = targetPerson || gameState.player;
+    const forcedGender = target.gender === "M" ? "F" : "M";
     if (category === "royal") {
         const realm = getRealm(realmKey);
         const candidates = [];
@@ -374,42 +383,105 @@ function marriageShame(playerTier, candidateTier) {
     return gap > 0 ? gap * 10 : 0;
 }
 
-function marryPlayerTo(gameState, candidate) {
+// Historically, whichever spouse belonged to the clearly lesser household
+// relocated and gave up whatever they held in their own right — a
+// non-heir daughter moved to her husband's lands; an heiress (or a
+// reigning queen) stayed put and her husband joined HER instead. Tier
+// already represents how much real land/power a character currently
+// holds, so it stands in for "who was the heir": the lower-tier spouse
+// moves, full stop — no nominal claim kept on what's given up. Equal
+// tier defaults to the traditional wife-moves-to-husband pattern. A
+// reigning monarch (tier 5) never relocates.
+function relocatePlayerIfNeeded(gameState, candidate) {
     const player = gameState.player;
-    if (!isAvailableToMarry(gameState, player.id)) return null;
+    if (!candidate.sourceRealmKey || candidate.sourceRealmKey === gameState.realmKey) return;
+    if (player.tier === 5) return;
 
-    const cost = marriageCost(player.tier, candidate.tier);
-    if (cost > 0 && (player.gold || 0) < cost) return null;
+    const movesOut = player.gender === "F" ? candidate.tier >= player.tier : candidate.tier > player.tier;
+    if (!movesOut) return;
+
+    const oldRealm = getRealm(gameState.realmKey);
+    const newRealmKey = candidate.sourceRealmKey;
+    const newRealm = getRealm(newRealmKey);
+
+    gameState.realmKey = newRealmKey;
+    player.realmKey = newRealmKey;
+    player.cultureKey = newRealm.cultureKey;
+    player.tier = Math.max(player.tier, candidate.tier);
+
+    // What she held at home doesn't travel with her — new household,
+    // new court, built fresh around her new station.
+    gameState.domain = [];
+    gameState.vassals = {};
+    gameState.council = {};
+    gameState.crownAuthority = gameState.crownAuthority || {};
+    if (gameState.crownAuthority[newRealmKey] == null) gameState.crownAuthority[newRealmKey] = 0;
+    callHookIfPresent("setupDomain", gameState);
+    callHookIfPresent("setupVassals", gameState);
+    callHookIfPresent("setupCouncil", gameState);
+
+    logEvent(`${player.name} has left ${oldRealm.name} behind to join the household of ${newRealm.name}, surrendering what they held at home.`);
+}
+
+// The general case: arranges a marriage for ANY family member, not just
+// the player — the player always pays the cost and bears the shame,
+// since they're the one with the gold and the standing to spend. Only
+// the player's OWN marriage can trigger relocation (domain/vassals/
+// council are the player's, not any other family member's).
+function arrangeMarriage(gameState, targetPerson, candidate) {
+    if (!isAvailableToMarry(gameState, targetPerson.id)) return null;
+    const payer = gameState.player;
+    const isSelf = targetPerson.id === payer.id;
+
+    const cost = marriageCost(targetPerson.tier, candidate.tier);
+    if (cost > 0 && (payer.gold || 0) < cost) return null;
 
     candidate.bloodline = false;
-    candidate.spouseId = player.id;
+    candidate.spouseId = targetPerson.id;
     registerPerson(gameState, candidate);
-    player.spouseId = candidate.id;
+    targetPerson.spouseId = candidate.id;
 
     if (cost > 0) {
-        player.gold -= cost;
-        logEvent(`${player.name} has married ${candidate.name} — a match above their station, secured with ${cost} gold in dowry and land concessions.`);
+        payer.gold -= cost;
+        logEvent(isSelf
+            ? `${payer.name} has married ${candidate.name} — a match above their station, secured with ${cost} gold in dowry and land concessions.`
+            : `${payer.name} has arranged ${targetPerson.name}'s marriage to ${candidate.name} — above their station, costing ${cost} gold in dowry.`);
     } else {
-        const shame = marriageShame(player.tier, candidate.tier);
+        const shame = marriageShame(targetPerson.tier, candidate.tier);
         if (shame > 0) {
-            player.prestige = Math.max(0, (player.prestige || 0) - shame);
-            logEvent(`${player.name} has married ${candidate.name} — marrying beneath their station, and the court has taken notice (-${shame} prestige).`);
+            payer.prestige = Math.max(0, (payer.prestige || 0) - shame);
+            logEvent(isSelf
+                ? `${payer.name} has married ${candidate.name} — marrying beneath their station, and the court has taken notice (-${shame} prestige).`
+                : `${payer.name} has arranged ${targetPerson.name}'s marriage to ${candidate.name} — beneath their station, which reflects poorly on the family (-${shame} prestige).`);
         } else {
-            logEvent(`${player.name} has married ${candidate.name}.`);
+            logEvent(isSelf ? `${payer.name} has married ${candidate.name}.` : `${payer.name} has arranged ${targetPerson.name}'s marriage to ${candidate.name}.`);
         }
     }
 
     // A spouse from elsewhere brings a collateral claim on their homeland
     // with them — one of the three ways wartime.js recognizes a claim
     // (the others: fabricated via intrigue.js, or simply inherited, since
-    // claims live on gameState and already carry through succession).
+    // claims live on gameState and already carry through succession). If
+    // they're tied to that realm's actual royal house, the children of
+    // this marriage carry real royal blood, not just a flavor note.
     if (candidate.sourceRealmKey && candidate.sourceRealmKey !== gameState.realmKey) {
         gameState.claims = gameState.claims || [];
         const already = gameState.claims.some(c => c.realmKey === candidate.sourceRealmKey);
         if (!already) {
             gameState.claims.push({ realmKey: candidate.sourceRealmKey, grantedYear: gameState.year, type: "marriage" });
-            logEvent(`Through this marriage, ${player.name} presses a collateral claim on ${getRealm(candidate.sourceRealmKey).name}.`);
+            const realmName = getRealm(candidate.sourceRealmKey).name;
+            const stake = candidate._rulerLink
+                ? ` — any children of this marriage will carry royal blood of ${realmName}'s own ruling house, and a real claim on its throne`
+                : "";
+            logEvent(`Through this marriage, the family presses a collateral claim on ${realmName}${stake}.`);
         }
     }
+
+    if (isSelf) relocatePlayerIfNeeded(gameState, candidate);
+
     return candidate;
+}
+
+function marryPlayerTo(gameState, candidate) {
+    return arrangeMarriage(gameState, gameState.player, candidate);
 }

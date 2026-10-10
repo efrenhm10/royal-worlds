@@ -62,6 +62,8 @@ function startNewGame(eraKey, realmKey, character) {
     callHookIfPresent("setupReform", gameState);
     callHookIfPresent("setupCanon", gameState);
     callHookIfPresent("setupMilitary", gameState);
+    callHookIfPresent("setupEducation", gameState);
+    callHookIfPresent("setupRoyalCourt", gameState);
 
     // Setup itself shouldn't flood the player with toasts the moment the
     // game starts — only events from here on (advanceYear's ticks, the
@@ -136,6 +138,8 @@ function advanceYear() {
     callHookIfPresent("tickMilitary", gameState);
     callHookIfPresent("tickVassals", gameState);
     callHookIfPresent("tickDynasty", gameState);
+    callHookIfPresent("tickEducation", gameState);
+    callHookIfPresent("tickRoyalCourt", gameState);
     callHookIfPresent("tickChurch", gameState);
     callHookIfPresent("tickChurchCareer", gameState);
     callHookIfPresent("tickCouncil", gameState);

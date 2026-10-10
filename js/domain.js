@@ -113,16 +113,21 @@ function tickDomain(gameState) {
     const player = gameState.player;
     let personalLevies = 0;
 
+    // Land run from a distance yields less — a real reason "stay home and
+    // manage my own lands" and "go to the royal court" (royal_court.js)
+    // are a genuine trade-off, not a free pick of both.
+    const awayPenalty = (typeof isAtRoyalCourt === "function" && isAtRoyalCourt(gameState)) ? 0.5 : 1;
+
     getDomain(gameState).forEach(holding => {
         const vassal = holding.grantedToVassalId ? getVassals(gameState).find(v => v.id === holding.grantedToVassalId) : null;
         if (holding.type === "keep") {
             if (vassal) vassal.levies = Math.max(vassal.levies, holding.level * 20);
-            else personalLevies += holding.level * 40;
+            else personalLevies += Math.round(holding.level * 40 * awayPenalty);
         } else if (holding.type === "town") {
-            const income = holding.level * 4;
+            const income = Math.round(holding.level * 4 * (vassal ? 1 : awayPenalty));
             player.gold = (player.gold || 0) + (vassal ? Math.round(income * 0.3) : income);
         } else if (holding.type === "temple") {
-            if (!vassal) player.piety = (player.piety || 0) + holding.level * 2;
+            if (!vassal) player.piety = (player.piety || 0) + Math.round(holding.level * 2 * awayPenalty);
             else if (Math.random() < 0.1) adjustStanding(gameState, gameState.realmKey, 1);
         }
     });
