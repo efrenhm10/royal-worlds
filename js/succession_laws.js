@@ -157,9 +157,9 @@ function tickForeignRoyals(gameState) {
         const realm = getRealm(realmKey);
         const heir = determineHeir(gameState, FOREIGN_DEFAULT_SUCCESSION_LAW, ruler);
         if (heir) {
-            heir.tier = Math.max(heir.tier || 0, 5);
+            heir.tier = Math.max(heir.tier || 0, realmTopTier(realmKey));
             gameState.foreignRoyals[realmKey] = heir.id;
-            logEvent(`${heir.name} succeeds ${ruler.name} as ${titleName(5, heir.gender, realmKey)} of ${realm.name}.`);
+            logEvent(`${heir.name} succeeds ${ruler.name} as ${realmTopTitle(realmKey, heir.gender)} of ${realm.name}.`);
         } else {
             delete gameState.foreignRoyals[realmKey];
             logEvent(`${realm.name}'s royal house, which the family married into, has died out entirely.`);

@@ -57,21 +57,26 @@ function renderMarriageSection(view, gameState, targetPerson) {
     }
 
     const realm = getRealm(_marriageRealmKey);
+    // Not every realm has a king or queen to marry into — Burgundy and
+    // Brittany stop at Duke, Florence at Signore — so the category is
+    // labeled with whatever this realm's ruling house actually is,
+    // rather than always implying a crown.
+    const rulingFamilyLabel = realmTopTier(_marriageRealmKey) >= 5 ? "Royal family" : "Ruling family";
 
     if (!_marriageCategory) {
-        const card = makeCard(`${isSelf ? "A match" : `A match for ${target.name}`} in ${realm.name}`, '<p class="muted">The royal house itself, or the wider noble line?</p>');
+        const card = makeCard(`${isSelf ? "A match" : `A match for ${target.name}`} in ${realm.name}`, `<p class="muted">The ${rulingFamilyLabel.toLowerCase()} itself, or the wider noble line?</p>`);
         card.appendChild(makeChoiceButton("← Choose a different realm", () => { _marriageRealmKey = null; renderPlay(); }));
-        card.appendChild(makeChoiceButton("Royal family", () => { _marriageCategory = "royal"; renderPlay(); }));
+        card.appendChild(makeChoiceButton(rulingFamilyLabel, () => { _marriageCategory = "royal"; renderPlay(); }));
         card.appendChild(makeChoiceButton("Noble line", () => { _marriageCategory = "noble"; renderPlay(); }));
         view.appendChild(card);
         return;
     }
 
-    const card = makeCard(`${_marriageCategory === "royal" ? "Royal family" : "Noble line"} of ${realm.name}`, "");
+    const card = makeCard(`${_marriageCategory === "royal" ? rulingFamilyLabel : "Noble line"} of ${realm.name}`, "");
     card.appendChild(makeChoiceButton("← Choose a different kind of match", () => { _marriageCategory = null; renderPlay(); }));
     const candidates = generateMarriageCandidatesForRealm(gameState, _marriageRealmKey, _marriageCategory, target);
     candidates.forEach(candidate => {
-        const title = titleName(candidate.tier, candidate.gender, _marriageRealmKey);
+        const title = realmTitleFor(candidate.tier, candidate.gender, _marriageRealmKey);
         const cost = marriageCost(target.tier, candidate.tier);
         const shame = marriageShame(target.tier, candidate.tier);
         let note = "A fitting match.";
@@ -132,16 +137,24 @@ function renderRealmSelect(eraKey) {
 
 function renderCharacterCreate(eraKey, realmKey) {
     const realm = getRealm(realmKey);
+    const topTier = realmTopTier(realmKey);
+    const topLabel = realm.titleM === realm.titleF ? realm.titleM : `${realm.titleM}/${realm.titleF}`;
     document.getElementById("characterCreateIntro").textContent =
-        `Choose your rank in ${realm.name} — gentry through the crown itself — then pick which life to live.`;
+        `Choose your rank in ${realm.name} — gentry through ${topLabel} — then pick which life to live.`;
 
     const list = document.getElementById("characterList");
     clearEl(list);
-    TITLE_LADDER.filter(t => t.tier <= 5).forEach(tierInfo => {
-        const name = titleName(tierInfo.tier, "M", realmKey);
-        const nameF = titleName(tierInfo.tier, "F", realmKey);
+    // Not every realm's ladder tops out at King/Queen (Burgundy and
+    // Brittany stop at Duke, Florence at Signore) — the picker only goes
+    // as high as this realm's own rank actually reaches, and names that
+    // top rank the way this realm actually names it (Archduke, Doge,
+    // Voivode, Pope, Sultan...), not the generic ladder word.
+    TITLE_LADDER.filter(t => t.tier <= topTier).forEach(tierInfo => {
+        const isTop = tierInfo.tier === topTier;
+        const name = isTop ? realmTopTitle(realmKey, "M") : titleName(tierInfo.tier, "M", realmKey);
+        const nameF = isTop ? realmTopTitle(realmKey, "F") : titleName(tierInfo.tier, "F", realmKey);
         const label = name === nameF ? name : `${name} / ${nameF}`;
-        const card = makeCard(label, `<p class="muted">${TIER_BLURBS[tierInfo.tier]}</p>`);
+        const card = makeCard(label, `<p class="muted">${TIER_BLURBS[tierInfo.tier] || ""}</p>`);
         const btn = makeChoiceButton(`Play a ${label}`, () => {
             renderCandidatesForTier(eraKey, realmKey, tierInfo.tier);
         });
@@ -151,7 +164,7 @@ function renderCharacterCreate(eraKey, realmKey) {
 }
 
 function candidateCard(eraKey, realmKey, candidate) {
-    const title = titleName(candidate.tier, candidate.gender, realmKey);
+    const title = realmTitleFor(candidate.tier, candidate.gender, realmKey);
     const skillsLine = SKILL_KEYS.map(k => `${k[0].toUpperCase()}${k.slice(1)} ${candidate.skills[k]}`).join(" · ");
     const traitsLine = candidate.traits.join(", ");
     const body = avatarRow(candidate, `
@@ -187,7 +200,7 @@ function renderCandidatesForTier(eraKey, realmKey, tier) {
     // real relative of theirs (sibling/child) instead of only generated
     // nobles — realms.js's historical figures are playable, not just
     // flavor text on the realm-select screen.
-    if (tier === 5) {
+    if (tier === realmTopTier(realmKey)) {
         list.appendChild(candidateCard(eraKey, realmKey, createRulerCharacter(realmKey)));
         list.appendChild(candidateCard(eraKey, realmKey, createRulerRelativeCandidate(realmKey, "sibling")));
         list.appendChild(candidateCard(eraKey, realmKey, createRulerRelativeCandidate(realmKey, "child")));
@@ -240,7 +253,7 @@ function dockBadge(gameState, key) {
 function renderPlay() {
     const realm = getRealm(gameState.realmKey);
     const player = gameState.player;
-    const title = player.churchTier != null ? churchRankName(player.churchTier) : titleName(player.tier, player.gender, realm.key);
+    const title = player.churchTier != null ? churchRankName(player.churchTier) : realmTitleFor(player.tier, player.gender, realm.key);
 
     const hud = document.getElementById("hud");
     clearEl(hud);
@@ -509,10 +522,10 @@ function renderPlayView() {
                 const lineRealm = getRealm(realmKey);
                 const lineCard = makeCard(`Line of succession — ${lineRealm.name}`, "");
                 if (!line.ruler.alive) {
-                    lineCard.appendChild(el("p", "muted", `The house has died out — no one remains to hold the throne.`));
+                    lineCard.appendChild(el("p", "muted", `The house has died out — no one remains to hold the seat.`));
                 } else {
-                    const rulerTitle = titleName(5, line.ruler.gender, realmKey);
-                    lineCard.appendChild(el("p", null, `<strong>${rulerTitle} ${line.ruler.name}</strong>, age ${line.ruler.age}, currently holds the throne.`));
+                    const rulerTitle = realmTopTitle(realmKey, line.ruler.gender);
+                    lineCard.appendChild(el("p", null, `<strong>${rulerTitle} ${line.ruler.name}</strong>, age ${line.ruler.age}, currently holds the seat.`));
                     if (!line.order.length) {
                         lineCard.appendChild(el("p", "muted", "No living heir is known yet."));
                     } else {
@@ -606,7 +619,7 @@ function renderPlayView() {
             const realm = getRealm(gameState.realmKey);
             const rc = gameState.royalCourt;
             const atCourt = isAtRoyalCourt(gameState);
-            const rulerAvatar = avatarSvg({ name: realm.ruler.name, id: "ruler-" + gameState.realmKey, tier: 5, gender: realm.ruler.gender, alive: true }, 36);
+            const rulerAvatar = avatarSvg({ name: realm.ruler.name, id: "ruler-" + gameState.realmKey, tier: realmTopTier(gameState.realmKey), gender: realm.ruler.gender, alive: true }, 36);
             const rcCard = makeCard(`${rulerAvatar} The court of ${realm.ruler.name}`, `
                 <div class="stat"><span>Currently</span><span>${atCourt ? `At court` : `On your own lands`}</span></div>
                 <div class="stat"><span>Favor with ${realm.ruler.name}</span><span>${rc.favor}</span></div>

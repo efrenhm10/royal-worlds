@@ -185,7 +185,7 @@ function generateParentSiblingWithFamily(gameState, realmKey, parent) {
 // new family tree as a parent or sibling when the player chose to play
 // as their child or sibling (attributes.js's _rulerLink).
 function buildRulerLinkCharacter(realmKey, rulerData) {
-    const c = createCharacter({ realmKey, tier: 5, gender: rulerData.gender, age: rulerData.age, name: rulerData.name });
+    const c = createCharacter({ realmKey, tier: realmTopTier(realmKey), gender: rulerData.gender, age: rulerData.age, name: rulerData.name });
     if (rulerData.traits) c.traits = rulerData.traits.slice();
     c.bloodline = true;
     c.alive = true;
@@ -395,7 +395,7 @@ function marriageShame(playerTier, candidateTier) {
 function relocatePlayerIfNeeded(gameState, candidate) {
     const player = gameState.player;
     if (!candidate.sourceRealmKey || candidate.sourceRealmKey === gameState.realmKey) return;
-    if (player.tier === 5) return;
+    if (player.tier >= realmTopTier(gameState.realmKey)) return; // the reigning ruler of their own realm never relocates
 
     const movesOut = player.gender === "F" ? candidate.tier >= player.tier : candidate.tier > player.tier;
     if (!movesOut) return;
@@ -439,7 +439,7 @@ function graftRoyalHouse(gameState, candidate) {
     const realmKey = candidate.sourceRealmKey;
     if (!realmKey) return;
     const realm = getRealm(realmKey);
-    const isRulerThemself = !candidate._rulerLink && candidate.tier === 5 && candidate.name === realm.ruler.name;
+    const isRulerThemself = !candidate._rulerLink && candidate.tier === realmTopTier(realmKey) && candidate.name === realm.ruler.name;
     if (!candidate._rulerLink && !isRulerThemself) return;
 
     gameState.foreignRoyals = gameState.foreignRoyals || {};

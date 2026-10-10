@@ -24,6 +24,33 @@ const REALM_TITLE_OVERRIDES = {
     england: { 3: { nameM: "Earl", nameF: "Countess" } },
 };
 
+// Not every realm is a kingdom — Burgundy and Brittany are Duchies,
+// Florence a Signoria, the Papal States/Ottomans sit above the generic
+// ladder entirely. realms.js already records each realm's actual top
+// tier/title (titleTier/titleM/titleF); everywhere that needs "whoever
+// currently sits at the top of THIS realm" — character creation's
+// ruler/sibling/child quickstart, marriage into the ruling house, the
+// line of succession — reads it through these instead of assuming tier
+// 5 ("King/Queen") universally, so a Duke of Burgundy is never called a
+// king anywhere in the game.
+function realmTopTier(realmKey) {
+    const realm = getRealm(realmKey);
+    return (realm && realm.titleTier != null) ? realm.titleTier : 5;
+}
+
+function realmTopTitle(realmKey, gender) {
+    const realm = getRealm(realmKey);
+    if (!realm) return titleName(5, gender, realmKey);
+    return gender === "F" ? realm.titleF : realm.titleM;
+}
+
+// The one a caller should actually use for "what does this person's rank
+// look like out loud, in THIS realm" — the generic ladder word for every
+// tier except the very top one, which gets the realm's own native title.
+function realmTitleFor(tier, gender, realmKey) {
+    return tier === realmTopTier(realmKey) ? realmTopTitle(realmKey, gender) : titleName(tier, gender, realmKey);
+}
+
 function tierInfo(tier) {
     return TITLE_LADDER[tier];
 }

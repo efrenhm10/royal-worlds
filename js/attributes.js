@@ -126,10 +126,11 @@ function generateCandidates(realmKey, count) {
 function createRulerCharacter(realmKey) {
     const realm = getRealm(realmKey);
     const ruler = realm.ruler;
-    const c = createCharacter({ realmKey, tier: 5, gender: ruler.gender, age: ruler.age, name: ruler.name });
+    const rulerTier = realmTopTier(realmKey);
+    const c = createCharacter({ realmKey, tier: rulerTier, gender: ruler.gender, age: ruler.age, name: ruler.name });
     if (ruler.traits) c.traits = ruler.traits.slice();
     c.sourceRealmKey = realmKey;
-    c.blurb = `${ruler.name} in the flesh — the actual ${titleName(5, ruler.gender, realmKey)} of ${realm.name} this year.`;
+    c.blurb = `${ruler.name} in the flesh — the actual ${realmTopTitle(realmKey, ruler.gender)} of ${realm.name} this year.`;
     return c;
 }
 
@@ -141,22 +142,24 @@ function createRulerCharacter(realmKey) {
 function createRulerRelativeCandidate(realmKey, relation, forcedGender) {
     const realm = getRealm(realmKey);
     const ruler = realm.ruler;
+    const rulerTier = realmTopTier(realmKey);
     let age, tier;
     if (relation === "sibling") {
         age = Math.max(16, ruler.age + randInt(-15, 15));
-        tier = 4;
+        tier = Math.max(0, rulerTier - 1);
     } else { // child
         const maxGap = Math.min(40, Math.max(19, ruler.age - 16));
         age = Math.max(16, ruler.age - randInt(18, maxGap));
-        tier = 3;
+        tier = Math.max(0, rulerTier - 2);
     }
     const gender = forcedGender || (Math.random() < 0.5 ? "M" : "F");
     const c = createCharacter({ realmKey, tier, gender, age });
     c._rulerLink = { type: relation, ruler: { name: ruler.name, gender: ruler.gender, age: ruler.age, traits: ruler.traits } };
     c.sourceRealmKey = realmKey;
+    const rulerTitle = realmTopTitle(realmKey, ruler.gender);
     c.blurb = relation === "sibling"
-        ? `A sibling of ${ruler.name}, ${titleName(5, ruler.gender, realmKey)} of ${realm.name} — royal blood, with a great appanage of your own, but not the crown itself.`
-        : `A child of ${ruler.name}, ${titleName(5, ruler.gender, realmKey)} of ${realm.name} — raised at court, with land of your own, but the throne isn't yours yet.`;
+        ? `A sibling of ${ruler.name}, ${rulerTitle} of ${realm.name} — a great appanage of your own, but not the seat itself.`
+        : `A child of ${ruler.name}, ${rulerTitle} of ${realm.name} — raised at court, with land of your own, but the seat isn't yours yet.`;
     return c;
 }
 
