@@ -14,6 +14,23 @@ function resetMarriageFlow() {
     _marriageCategory = null;
 }
 
+// Leaves the current line (dead or not) and returns to the boot screen —
+// the save already on disk (saveGame() runs after every action) is left
+// in place so "Continue" can still pick it back up.
+function goToMainMenu() {
+    returnToMainMenu();
+    resetMarriageFlow();
+    _playViewTab = "chronicle";
+    _selectedEraKey = null;
+    _selectedRealmKey = null;
+    const continueBtn = document.getElementById("continueBtn");
+    if (continueBtn) {
+        continueBtn.disabled = !hasSavedGame();
+        continueBtn.textContent = hasSavedGame() ? "Continue" : "Continue (no save yet)";
+    }
+    showScreen("boot");
+}
+
 // Propose a marriage for the player, or arrange one for a child: pick a
 // realm, then its royal family or its noble line, then a specific match —
 // with the real cost of marrying above or beneath station shown before
@@ -291,6 +308,13 @@ function renderPlay() {
         btn.addEventListener("click", () => { _playViewTab = v.key; renderPlay(); });
         dock.appendChild(btn);
     });
+
+    // There was never a way out of a dead line, or simply back to the
+    // menu to start over — this is always available, not just on game
+    // over, so no one is ever stuck.
+    const menuBtn = el("button", `dock-btn back-btn${gameState.gameOver ? " btn-primary" : ""}`, gameState.gameOver ? "🏠 <span>Return to the main menu</span>" : "🏠 <span>Main Menu</span>");
+    menuBtn.addEventListener("click", () => { goToMainMenu(); });
+    dock.appendChild(menuBtn);
 
     renderPlayView();
 }

@@ -192,6 +192,16 @@ function loadGame() {
     }
 }
 
+// Called when the player wants out of the current line entirely — a dead
+// end with no heir, or simply wanting to start fresh. The current game
+// stays in localStorage (already kept up to date by saveGame(), called
+// after every action) so "Continue" on the boot screen can still pick it
+// back up; this just clears the in-memory pointer so a new game can be
+// started clean.
+function returnToMainMenu() {
+    gameState = null;
+}
+
 function hasSavedGame() {
     try {
         if (typeof localStorage === "undefined") return false;

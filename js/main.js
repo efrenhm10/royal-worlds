@@ -14,6 +14,17 @@ document.addEventListener("DOMContentLoaded", () => {
         if (typeof renderEraSelect === "function") renderEraSelect();
     });
 
+    const continueBtn = document.getElementById("continueBtn");
+    if (hasSavedGame()) {
+        continueBtn.disabled = false;
+        continueBtn.textContent = "Continue";
+    }
+    continueBtn.addEventListener("click", () => {
+        if (!loadGame()) return;
+        showScreen("play");
+        renderPlay();
+    });
+
     // Back navigation between the pre-game screens. Each target screen's
     // content is still in the DOM from when it was last rendered forward —
     // showScreen() only toggles which .screen is visible — so no

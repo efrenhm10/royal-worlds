@@ -17,7 +17,17 @@ const DECISION_EVENTS = [
         chance: 0.12,
         condition: gameState => gameState.player.age >= 16 && gameState.player.age <= 55 && gameState.player.tier >= 1,
         title: "A tournament is announced",
-        text: gameState => `A tournament is to be held nearby. ${gameState.player.name} is invited to take part, or simply to attend.`,
+        text: gameState => {
+            const n = gameState.player.name;
+            return voiceLine({
+                bold: [`Word of a tournament nearby reaches ${n} like a trumpet call — here, finally, is a chance to be seen.`, `${n} hears of the coming tournament and is already turning over how best to make an entrance.`],
+                wary: [`A tournament is announced nearby. ${n} weighs the glory against the very real chance of a cracked rib or worse.`],
+                devout: [`A tournament nearby draws every vain and ambitious soul in the region — ${n} wonders if attending is wisdom or vanity.`],
+                cunning: [`A tournament is announced — ${n} sees it less as sport than as a stage, full of rivals worth watching closely.`],
+                warm: [`A tournament nearby promises a rare gathering of old friends and new faces — ${n} is glad of the excuse.`],
+                neutral: `A tournament is to be held nearby. ${n} is invited to take part, or simply to attend.`,
+            }, gameState.player);
+        },
         options: [
             {
                 label: "Compete yourself",
@@ -58,7 +68,14 @@ const DECISION_EVENTS = [
         title: "A vassal's grievance",
         text: (gameState, ctx) => {
             const v = gameState.vassals[ctx.vassalId];
-            return `${v.name} airs a grievance at court — their patience with you is thin (opinion ${v.opinion}).`;
+            return voiceLine({
+                bold: [`${v.name} marches into court with a grievance, voice raised loud enough for the whole hall to hear (opinion ${v.opinion}).`],
+                wary: [`${v.name} corners you quietly about a grievance — the kind of complaint that festers if it's dismissed (opinion ${v.opinion}).`],
+                devout: [`${v.name} brings a grievance to court with the solemn air of someone who believes they are owed justice, not favor (opinion ${v.opinion}).`],
+                cunning: [`${v.name} raises a grievance — you can't help wondering what they're really testing (opinion ${v.opinion}).`],
+                warm: [`${v.name} comes to you troubled, clearly hoping to be heard rather than merely managed (opinion ${v.opinion}).`],
+                neutral: `${v.name} airs a grievance at court — their patience with you is thin (opinion ${v.opinion}).`,
+            }, gameState.player);
         },
         options: [
             {
@@ -99,7 +116,17 @@ const DECISION_EVENTS = [
         chance: 0.1,
         condition: gameState => gameState.player.health < 85,
         title: "A worrying cough",
-        text: gameState => `${gameState.player.name} is laid low by illness, worse than it first seemed.`,
+        text: gameState => {
+            const n = gameState.player.name;
+            return voiceLine({
+                bold: [`${n} tries to shrug off the illness and push through it, which is exactly how it gets worse.`],
+                wary: [`A nagging illness has ${n} watching every symptom like it might be the last warning they get.`],
+                devout: [`${n} takes to bed with illness, murmuring that this, too, is in God's hands.`],
+                warm: [`${n}'s illness draws the whole household's worry — everyone underfoot with remedies and advice.`],
+                cunning: [`${n} is laid low by illness, and already calculating who'd benefit most if it lingered.`],
+                neutral: `${n} is laid low by illness, worse than it first seemed.`,
+            }, gameState.player);
+        },
         options: [
             {
                 label: "Summon a physician (40 gold)",
@@ -143,7 +170,17 @@ const DECISION_EVENTS = [
         chance: 0.1,
         condition: gameState => gameState.player.tier >= 1,
         title: "Unkind gossip",
-        text: gameState => `A rumor about ${gameState.player.name}'s conduct is circulating at court — true or not, it's spreading.`,
+        text: gameState => {
+            const n = gameState.player.name;
+            return voiceLine({
+                bold: [`A rumor about ${n} is making the rounds at court — and ${n}'s first instinct is to find whoever started it.`],
+                wary: [`${n} hears, secondhand and much too late, that a rumor about them is already three rooms ahead.`],
+                cunning: [`A rumor about ${n} is spreading — which raises the question of who actually benefits from it spreading.`],
+                devout: [`An unkind rumor about ${n} circulates — a reminder that even blameless conduct invites gossip.`],
+                warm: [`${n} is hurt more than they'll admit to hear what's being said behind their back at court.`],
+                neutral: `A rumor about ${n}'s conduct is circulating at court — true or not, it's spreading.`,
+            }, gameState.player);
+        },
         options: [
             {
                 label: "Confront the accuser directly",
@@ -180,7 +217,17 @@ const DECISION_EVENTS = [
         chance: 0.08,
         condition: gameState => gameState.player.age >= 16,
         title: "A call to pilgrimage",
-        text: gameState => `${gameState.player.name}'s confessor speaks of a pilgrimage, for the good of the soul and the family's name.`,
+        text: gameState => {
+            const n = gameState.player.name;
+            return voiceLine({
+                devout: [`${n}'s confessor need not press hard — the idea of a pilgrimage has already taken root.`],
+                bold: [`A pilgrimage is proposed to ${n}, more duty than desire — though the roads promise their own adventure.`],
+                wary: [`${n}'s confessor raises the subject of a pilgrimage; ${n} thinks mostly of bandits and bad roads.`],
+                warm: [`${n} is drawn to the idea of a pilgrimage less for piety than for the company it would mean along the way.`],
+                cunning: [`${n}'s confessor suggests a pilgrimage; ${n} wonders how much piety can be had for how little inconvenience.`],
+                neutral: `${n}'s confessor speaks of a pilgrimage, for the good of the soul and the family's name.`,
+            }, gameState.player);
+        },
         options: [
             {
                 label: "Go yourself (20 gold)",
@@ -225,7 +272,14 @@ const DECISION_EVENTS = [
         title: "A council member's request",
         text: (gameState, ctx) => {
             const advisor = getCouncil(gameState)[ctx.roleKey];
-            return `${advisor.name} asks for more latitude — and more funding — to do their work properly.`;
+            return voiceLine({
+                cunning: [`${advisor.name} asks for more funding, framed as necessity — you suspect it's also ambition.`],
+                wary: [`${advisor.name} requests more funding; you find yourself wondering what exactly it will be spent on.`],
+                warm: [`${advisor.name} comes asking for more support, plainly believing you'll understand why it matters.`],
+                bold: [`${advisor.name} asks for more latitude bluntly, in the manner of someone used to getting it.`],
+                devout: [`${advisor.name} asks for more latitude, and makes a point of promising it will be used honestly.`],
+                neutral: `${advisor.name} asks for more latitude — and more funding — to do their work properly.`,
+            }, gameState.player);
         },
         options: [
             {
@@ -256,7 +310,17 @@ const DECISION_EVENTS = [
         chance: 0.12,
         condition: gameState => gameState.player.tier >= 2,
         title: "A lean harvest",
-        text: gameState => `Word reaches ${gameState.player.name} that the harvest has come in thin across the domain this year.`,
+        text: gameState => {
+            const n = gameState.player.name;
+            return voiceLine({
+                devout: [`Word of a thin harvest reaches ${n}, and with it the old fear that it's a judgment, not just bad weather.`],
+                warm: [`${n} hears the harvest has come in thin, and immediately thinks of which households will go hungriest first.`],
+                cunning: [`A lean harvest is reported to ${n} — and with it, a chance to be remembered as generous, or not.`],
+                bold: [`A thin harvest is reported; ${n}'s instinct is to act decisively before the grumbling starts.`],
+                wary: [`Word reaches ${n} of a thin harvest, and with it the question of how much unrest it'll buy.`],
+                neutral: `Word reaches ${n} that the harvest has come in thin across the domain this year.`,
+            }, gameState.player);
+        },
         options: [
             {
                 label: "Open your granaries (60 gold)",
@@ -288,7 +352,15 @@ const DECISION_EVENTS = [
         title: "A rival's insult",
         text: (gameState, ctx) => {
             const realm = getRealm(ctx.realmKey);
-            return `Word of a slight from ${realm.ruler.name} of ${realm.name} reaches ${gameState.player.name} — deliberate or not, the court is watching how you respond.`;
+            const n = gameState.player.name;
+            return voiceLine({
+                bold: [`${realm.ruler.name} of ${realm.name} has slighted ${n}, deliberately or not — and ${n} is in no mood to let it pass.`],
+                wary: [`Word reaches ${n} of a slight from ${realm.ruler.name} — the kind of thing that's dangerous to ignore and dangerous to answer.`],
+                cunning: [`${realm.ruler.name}'s slight reaches ${n}'s ears — worth noting exactly who was in the room when it happened.`],
+                devout: [`${n} hears of ${realm.ruler.name}'s slight, and is reminded that pride answered with pride rarely ends well.`],
+                warm: [`${n} is stung more than expected to hear of ${realm.ruler.name}'s slight — it feels personal, whether it was meant that way or not.`],
+                neutral: `Word of a slight from ${realm.ruler.name} of ${realm.name} reaches ${n} — deliberate or not, the court is watching how you respond.`,
+            }, gameState.player);
         },
         options: [
             {
