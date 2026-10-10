@@ -142,6 +142,7 @@ function advanceYear() {
     callHookIfPresent("tickMilitary", gameState);
     callHookIfPresent("tickVassals", gameState);
     callHookIfPresent("tickDynasty", gameState);
+    callHookIfPresent("tickForeignRoyals", gameState);
     callHookIfPresent("tickEducation", gameState);
     callHookIfPresent("tickRoyalCourt", gameState);
     callHookIfPresent("tickChurch", gameState);

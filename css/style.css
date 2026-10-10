@@ -83,6 +83,23 @@ h1, h2, h3 {
     line-height: 1;
 }
 
+.player-portrait-frame {
+    display: inline-block;
+    padding: 3px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--gilt-bright), var(--gilt));
+    box-shadow: 0 2px 8px rgba(60,38,12,0.3);
+}
+
+.player-portrait-frame svg {
+    display: block;
+}
+
+.royal-court-card {
+    border: 1px solid var(--gilt);
+    background: linear-gradient(180deg, rgba(201,151,26,0.08), var(--parchment-panel) 50%);
+}
+
 .decision-card {
     border: 2px solid var(--gilt-bright);
     outline: none;

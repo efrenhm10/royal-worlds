@@ -423,6 +423,88 @@ function relocatePlayerIfNeeded(gameState, candidate) {
     logEvent(`${player.name} has left ${oldRealm.name} behind to join the household of ${newRealm.name}, surrendering what they held at home.`);
 }
 
+// Marrying into a realm's actual royal house shouldn't just be flavor
+// text — it should mean something you can watch update. Grafts the real
+// ruler (or, if the candidate already IS the ruler, the candidate
+// themself) into the SAME shared family registry everyone else lives in,
+// linked to the candidate exactly the way _rulerLink says (sibling or
+// child of the ruler), with nominal already-deceased parents so the
+// existing shared-parent-id derivation (getSiblings, getChildren, etc.)
+// recognizes the relation for free. From this point on, that royal house
+// ages, marries, and dies through the SAME generic tickDynasty loop as
+// anyone else — nothing else has to re-run or re-compute it, which is
+// exactly what makes the line of succession a living thing instead of a
+// snapshot taken the moment the marriage happened.
+function graftRoyalHouse(gameState, candidate) {
+    const realmKey = candidate.sourceRealmKey;
+    if (!realmKey) return;
+    const realm = getRealm(realmKey);
+    const isRulerThemself = !candidate._rulerLink && candidate.tier === 5 && candidate.name === realm.ruler.name;
+    if (!candidate._rulerLink && !isRulerThemself) return;
+
+    gameState.foreignRoyals = gameState.foreignRoyals || {};
+    let ruler = isRulerThemself ? candidate : getPerson(gameState, gameState.foreignRoyals[realmKey]);
+    if (!ruler || !ruler.alive) {
+        ruler = candidate._rulerLink ? buildRulerLinkCharacter(realmKey, candidate._rulerLink.ruler) : candidate;
+        if (ruler !== candidate) registerPerson(gameState, ruler);
+    }
+    gameState.foreignRoyals[realmKey] = ruler.id;
+
+    // If the ruler IS the candidate, arrangeMarriage already gave them a
+    // spouse (the player/target) — only a grafted sibling or child needs
+    // one generated here.
+    if (!getSpouse(gameState, ruler.id) && ruler.id !== candidate.id) {
+        const rulerSpouse = marryIn(gameState, ruler.id, realmKey);
+        if (rulerSpouse) rulerSpouse.alive = true;
+    }
+
+    if (!ruler.motherId || !ruler.fatherId) {
+        const nominalMother = makeRelative(realmKey, "F", ruler.age + randInt(18, 30));
+        const nominalFather = makeRelative(realmKey, "M", ruler.age + randInt(20, 34));
+        nominalMother.alive = false;
+        nominalFather.alive = false;
+        nominalMother.spouseId = nominalFather.id;
+        nominalFather.spouseId = nominalMother.id;
+        registerPerson(gameState, nominalMother);
+        registerPerson(gameState, nominalFather);
+        ruler.motherId = nominalMother.id;
+        ruler.fatherId = nominalFather.id;
+    }
+
+    if (candidate._rulerLink && candidate._rulerLink.type === "sibling") {
+        candidate.motherId = ruler.motherId;
+        candidate.fatherId = ruler.fatherId;
+    } else if (candidate._rulerLink && candidate._rulerLink.type === "child") {
+        const rulerSpouse = getSpouse(gameState, ruler.id);
+        candidate.fatherId = ruler.gender === "M" ? ruler.id : (rulerSpouse ? rulerSpouse.id : null);
+        candidate.motherId = ruler.gender === "F" ? ruler.id : (rulerSpouse ? rulerSpouse.id : null);
+    }
+
+    // Seed the rest of the house once, the first time it's grafted in — a
+    // sibling or two of the ruler (each with their own spouse and
+    // children), so the line isn't trivially just one or two names.
+    if (!ruler._houseSeeded) {
+        ruler._houseSeeded = true;
+        const extraSiblings = randInt(1, 2);
+        for (let i = 0; i < extraSiblings; i++) generateSiblingWithFamily(gameState, realmKey, ruler);
+        if (!isRulerThemself) {
+            const rulerSpouse = getSpouse(gameState, ruler.id);
+            const mother = ruler.gender === "F" ? ruler : rulerSpouse;
+            const father = ruler.gender === "M" ? ruler : rulerSpouse;
+            if (mother && father) {
+                const extraChildren = randInt(0, 2);
+                for (let i = 0; i < extraChildren; i++) {
+                    const child = bearChild(gameState, mother.id, father.id, realmKey);
+                    child.age = Math.max(0, ruler.age - randInt(18, Math.max(18, ruler.age - 15)));
+                    child.alive = Math.random() < stillAliveChance(child.age);
+                }
+            }
+        }
+    }
+
+    logEvent(`${candidate.name}'s tie to ${realm.name}'s royal house is now tracked — the line of succession to its throne will show where the family stands, and update as the house itself does.`);
+}
+
 // The general case: arranges a marriage for ANY family member, not just
 // the player — the player always pays the cost and bears the shame,
 // since they're the one with the gold and the standing to spend. Only
@@ -440,6 +522,7 @@ function arrangeMarriage(gameState, targetPerson, candidate) {
     candidate.spouseId = targetPerson.id;
     registerPerson(gameState, candidate);
     targetPerson.spouseId = candidate.id;
+    graftRoyalHouse(gameState, candidate);
 
     if (cost > 0) {
         payer.gold -= cost;

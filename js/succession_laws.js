@@ -81,6 +81,92 @@ function determineHeir(gameState, lawKey, deceased) {
     return null;
 }
 
+// Full ordering within a candidate pool for a given law — determineHeir
+// above only needs the single top pick, but showing a real line of
+// succession needs the whole order. Each law's full-pool order is built
+// to agree with determineHeir's own pick as its first entry, so "where do
+// I stand" and "who would inherit" are always the same answer.
+function orderPool(pool, lawKey) {
+    const law = SUCCESSION_LAWS[lawKey] || SUCCESSION_LAWS[DEFAULT_SUCCESSION_LAW];
+    if (law.key === "agnatic") {
+        return pool.filter(p => p.gender === "M").sort((a, b) => b.age - a.age);
+    }
+    if (law.key === "elective") {
+        return [...pool].sort((a, b) => sumSkills(b) - sumSkills(a));
+    }
+    if (law.key === "maleProximogeniture" || law.key === "partition") {
+        const males = pool.filter(p => p.gender === "M").sort((a, b) => b.age - a.age);
+        const females = pool.filter(p => p.gender !== "M").sort((a, b) => b.age - a.age);
+        return [...males, ...females];
+    }
+    // cognaticPrimogeniture, and the default fallback: straight age order.
+    return [...pool].sort((a, b) => b.age - a.age);
+}
+
+// The full line of succession for ANY tracked person, not just the
+// player — used for a realm's royal house the family has married into
+// (see dynasty.js's graftRoyalHouse), where seeing exactly where you
+// stand matters as much as who's first in line.
+const FOREIGN_DEFAULT_SUCCESSION_LAW = "maleProximogeniture";
+
+function determineSuccessionOrder(gameState, lawKey, personId, count) {
+    const limit = count || 10;
+    const law = SUCCESSION_LAWS[lawKey] || SUCCESSION_LAWS[FOREIGN_DEFAULT_SUCCESSION_LAW];
+
+    if (law.key === "seniority") {
+        return allFamily(gameState)
+            .filter(p => p.alive && p.id !== personId)
+            .sort((a, b) => b.age - a.age)
+            .slice(0, limit);
+    }
+
+    const pools = candidatePools(gameState, personId);
+    const order = [];
+    for (const pool of pools) {
+        if (order.length >= limit) break;
+        orderPool(pool, lawKey).forEach(p => { if (order.length < limit) order.push(p); });
+    }
+    return order.slice(0, limit);
+}
+
+// The realm, its tracked monarch, and the live ordered line beneath
+// them — null if the family has no tie to this realm's royal house at
+// all. Reads straight off the shared family registry, so it's never
+// stale: it reflects every death, marriage, and birth tickDynasty has
+// already applied.
+function foreignSuccessionLine(gameState, realmKey, count) {
+    const rulerId = gameState.foreignRoyals && gameState.foreignRoyals[realmKey];
+    if (!rulerId) return null;
+    const ruler = getPerson(gameState, rulerId);
+    if (!ruler) return null;
+    const order = ruler.alive ? determineSuccessionOrder(gameState, FOREIGN_DEFAULT_SUCCESSION_LAW, ruler.id, count) : [];
+    return { ruler, order, lawKey: FOREIGN_DEFAULT_SUCCESSION_LAW };
+}
+
+// Yearly hook: a tracked foreign monarch who died this year (via the same
+// generic tickDynasty aging/death loop everyone else goes through) is
+// replaced by their own heir — the line promotes itself exactly the way
+// the player's own succession does, without the player having to do
+// anything.
+function tickForeignRoyals(gameState) {
+    if (!gameState.foreignRoyals) return;
+    Object.keys(gameState.foreignRoyals).forEach(realmKey => {
+        const rulerId = gameState.foreignRoyals[realmKey];
+        const ruler = getPerson(gameState, rulerId);
+        if (!ruler || ruler.alive) return;
+        const realm = getRealm(realmKey);
+        const heir = determineHeir(gameState, FOREIGN_DEFAULT_SUCCESSION_LAW, ruler);
+        if (heir) {
+            heir.tier = Math.max(heir.tier || 0, 5);
+            gameState.foreignRoyals[realmKey] = heir.id;
+            logEvent(`${heir.name} succeeds ${ruler.name} as ${titleName(5, heir.gender, realmKey)} of ${realm.name}.`);
+        } else {
+            delete gameState.foreignRoyals[realmKey];
+            logEvent(`${realm.name}'s royal house, which the family married into, has died out entirely.`);
+        }
+    });
+}
+
 function canChangeSuccessionLaw(gameState) {
     const level = (gameState.crownAuthority && gameState.crownAuthority[gameState.realmKey]) || 0;
     return crownAuthorityInfo(level).canOverrideSuccessionLaw;

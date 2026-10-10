@@ -227,7 +227,7 @@ function renderPlay() {
 
     const hud = document.getElementById("hud");
     clearEl(hud);
-    hud.appendChild(el("div", null, `<div style="display:flex;align-items:center;gap:14px;">${avatarSvg(player, 64)}<div>
+    hud.appendChild(el("div", null, `<div style="display:flex;align-items:center;gap:14px;"><div class="player-portrait-frame">${avatarSvg(player, 76)}</div><div>
         <h2 style="margin:0;">${title} ${player.name}</h2>
         <p class="muted" style="margin:2px 0 0;">${realm.name} — ${gameState.year} — age ${player.age}${player.traits && player.traits.length ? ` · ${player.traits.join(", ")}` : ""}</p>
         <p class="muted" style="margin:2px 0 0;"><em>${sceneDescription(gameState)}</em></p>
@@ -478,6 +478,33 @@ function renderPlayView() {
         cousins.forEach(c => card.appendChild(el("div", null, personLine(c, "cousin"))));
         view.appendChild(card);
 
+        if (gameState.foreignRoyals) {
+            Object.keys(gameState.foreignRoyals).forEach(realmKey => {
+                const line = foreignSuccessionLine(gameState, realmKey);
+                if (!line) return;
+                const lineRealm = getRealm(realmKey);
+                const lineCard = makeCard(`Line of succession — ${lineRealm.name}`, "");
+                if (!line.ruler.alive) {
+                    lineCard.appendChild(el("p", "muted", `The house has died out — no one remains to hold the throne.`));
+                } else {
+                    const rulerTitle = titleName(5, line.ruler.gender, realmKey);
+                    lineCard.appendChild(el("p", null, `<strong>${rulerTitle} ${line.ruler.name}</strong>, age ${line.ruler.age}, currently holds the throne.`));
+                    if (!line.order.length) {
+                        lineCard.appendChild(el("p", "muted", "No living heir is known yet."));
+                    } else {
+                        line.order.forEach((person, index) => {
+                            const isOurs = person.id === gameState.player.id || person.id === gameState.player.spouseId
+                                || person.fatherId === gameState.player.id || person.motherId === gameState.player.id
+                                || (gameState.player.spouseId && (person.fatherId === gameState.player.spouseId || person.motherId === gameState.player.spouseId));
+                            const tag = isOurs ? ' <span class="muted">— your family</span>' : "";
+                            lineCard.appendChild(el("div", null, `<strong>${index + 1}.</strong> ${personLine(person, index === 0 ? "heir apparent" : `in line (${index + 1})`)}${tag}`));
+                        });
+                    }
+                }
+                view.appendChild(lineCard);
+            });
+        }
+
         const minorChildren = children.filter(c => canSetEducation(c));
         if (minorChildren.length) {
             const eduCard = makeCard("Their upbringing", "");
@@ -547,6 +574,57 @@ function renderPlayView() {
     }
 
     if (_playViewTab === "court") {
+        // Not the sovereign yourself? There's a real choice every year:
+        // stay home and run your own lands, or go to the realm's actual
+        // royal court and build closeness with the crown — shown first,
+        // since it's the most personal, active thing on this whole tab.
+        if (canAttendRoyalCourt(gameState)) {
+            const realm = getRealm(gameState.realmKey);
+            const rc = gameState.royalCourt;
+            const atCourt = isAtRoyalCourt(gameState);
+            const rulerAvatar = avatarSvg({ name: realm.ruler.name, id: "ruler-" + gameState.realmKey, tier: 5, gender: realm.ruler.gender, alive: true }, 36);
+            const rcCard = makeCard(`${rulerAvatar} The court of ${realm.ruler.name}`, `
+                <div class="stat"><span>Currently</span><span>${atCourt ? `At court` : `On your own lands`}</span></div>
+                <div class="stat"><span>Favor with ${realm.ruler.name}</span><span>${rc.favor}</span></div>
+                ${rc.status ? `<div class="stat"><span>Standing</span><span><strong>${rc.status}</strong></span></div>` : '<p class="muted">Win enough favor and you could become the ruler\'s favorite — their mistress, or their closest confidant(e) — with real standing and real risk.</p>'}
+                <p class="muted">Being away from home costs real domain income — there's no managing your lands from the capital.</p>
+            `);
+            rcCard.classList.add("royal-court-card");
+            if (!gameState.gameOver) {
+                if (atCourt) {
+                    rcCard.appendChild(makeChoiceButton("Return to your own lands", () => {
+                        returnHome(gameState);
+                        saveGame();
+                        renderPlay();
+                    }));
+                    rcCard.appendChild(makeChoiceButton("Pay your respects", () => {
+                        payRespects(gameState);
+                        saveGame();
+                        renderPlay();
+                    }));
+                    rcCard.appendChild(makeChoiceButton("Seek closer favor (50 gold)", () => {
+                        seekCloserFavor(gameState);
+                        saveGame();
+                        renderPlay();
+                    }, player.gold < 50));
+                    if (!rc.status) {
+                        rcCard.appendChild(makeChoiceButton(`Become ${royalFavoriteTitle(gameState)}`, () => {
+                            becomeFavorite(gameState);
+                            saveGame();
+                            renderPlay();
+                        }, !canBecomeFavorite(gameState)));
+                    }
+                } else {
+                    rcCard.appendChild(makeChoiceButton(`Travel to ${realm.ruler.name}'s court`, () => {
+                        travelToCourt(gameState);
+                        saveGame();
+                        renderPlay();
+                    }));
+                }
+            }
+            view.appendChild(rcCard);
+        }
+
         const council = getCouncil(gameState);
         const roleKeys = Object.keys(council);
         const councilCard = makeCard("Your council", roleKeys.length ? "" : '<p class="muted">No formal council yet — that comes with a landed title.</p>');
@@ -613,54 +691,6 @@ function renderPlayView() {
 
         view.appendChild(lawCard);
         view.appendChild(card);
-
-        // Not the sovereign yourself? There's a real choice every year:
-        // stay home and run your own lands, or go to the realm's actual
-        // royal court and build closeness with the crown.
-        if (canAttendRoyalCourt(gameState)) {
-            const realm = getRealm(gameState.realmKey);
-            const rc = gameState.royalCourt;
-            const atCourt = isAtRoyalCourt(gameState);
-            const rcCard = makeCard(`The court of ${realm.ruler.name}`, `
-                <div class="stat"><span>Currently</span><span>${atCourt ? `At court` : `On your own lands`}</span></div>
-                <div class="stat"><span>Favor with ${realm.ruler.name}</span><span>${rc.favor}</span></div>
-                ${rc.status ? `<div class="stat"><span>Standing</span><span>${rc.status}</span></div>` : ""}
-                <p class="muted">Being away from home costs real domain income — there's no managing your lands from the capital.</p>
-            `);
-            if (!gameState.gameOver) {
-                if (atCourt) {
-                    rcCard.appendChild(makeChoiceButton("Return to your own lands", () => {
-                        returnHome(gameState);
-                        saveGame();
-                        renderPlay();
-                    }));
-                    rcCard.appendChild(makeChoiceButton("Pay your respects", () => {
-                        payRespects(gameState);
-                        saveGame();
-                        renderPlay();
-                    }));
-                    rcCard.appendChild(makeChoiceButton("Seek closer favor (50 gold)", () => {
-                        seekCloserFavor(gameState);
-                        saveGame();
-                        renderPlay();
-                    }, player.gold < 50));
-                    if (!rc.status) {
-                        rcCard.appendChild(makeChoiceButton(`Become ${royalFavoriteTitle(gameState)}`, () => {
-                            becomeFavorite(gameState);
-                            saveGame();
-                            renderPlay();
-                        }, !canBecomeFavorite(gameState)));
-                    }
-                } else {
-                    rcCard.appendChild(makeChoiceButton(`Travel to ${realm.ruler.name}'s court`, () => {
-                        travelToCourt(gameState);
-                        saveGame();
-                        renderPlay();
-                    }));
-                }
-            }
-            view.appendChild(rcCard);
-        }
         return;
     }
 
