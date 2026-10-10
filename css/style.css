@@ -1,0 +1,381 @@
+/* Crowns & Councils — visual identity: a dark, candlelit royal court
+   rather than a bright page of parchment. Deep oak/leather tones, gold
+   leaf accents, and a crimson/forest-green secondary palette — closer to
+   a illuminated manuscript read by firelight than a document on a desk. */
+
+:root {
+    --ink: #ece0c4;
+    --ink-soft: #b9a98a;
+    --bg-deep: #14100c;
+    --bg-mid: #1c1712;
+    --panel: #241d16;
+    --panel-raised: #2c2318;
+    --panel-border: #4a3a24;
+    --gilt: #c9971a;
+    --gilt-bright: #f0c23d;
+    --gules: #a3182e;
+    --gules-bright: #d4425a;
+    --vert: #3f6b3a;
+    --vert-bright: #5c9654;
+    --shadow-warm: rgba(0, 0, 0, 0.5);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html {
+    scrollbar-color: var(--gilt) var(--bg-deep);
+}
+
+body {
+    margin: 0;
+    color: var(--ink);
+    font-family: "EB Garamond", Georgia, serif;
+    font-size: 16.5px;
+    background:
+        radial-gradient(ellipse at top left, rgba(201,151,26,0.07), transparent 55%),
+        radial-gradient(ellipse at bottom right, rgba(163, 24, 46, 0.08), transparent 60%),
+        repeating-linear-gradient(0deg, rgba(0,0,0,0.12) 0px, rgba(0,0,0,0.12) 1px, transparent 1px, transparent 3px),
+        linear-gradient(160deg, var(--bg-mid) 0%, var(--bg-deep) 100%);
+    background-attachment: fixed;
+    min-height: 100vh;
+}
+
+#app {
+    max-width: 1150px;
+    margin: auto;
+    padding: 22px 18px 60px;
+}
+
+.screen {
+    display: none;
+}
+
+.screen.active {
+    display: block;
+}
+
+h1, h2, h3 {
+    font-family: "Cinzel", "Times New Roman", serif;
+    letter-spacing: 0.02em;
+    color: var(--gilt-bright);
+}
+
+h1 {
+    text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+}
+
+.card {
+    position: relative;
+    background: linear-gradient(180deg, var(--panel-raised) 0%, var(--panel) 100%);
+    border: 1px solid var(--panel-border);
+    outline: 1px solid rgba(201,151,26,0.22);
+    outline-offset: -5px;
+    border-radius: 10px;
+    padding: 18px 20px;
+    margin: 12px 0;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.03);
+}
+
+.card::before {
+    content: "\2767";
+    position: absolute;
+    top: -11px;
+    left: 16px;
+    background: var(--panel);
+    color: var(--gilt);
+    padding: 0 6px;
+    font-size: 15px;
+    line-height: 1;
+}
+
+.player-portrait-frame {
+    display: inline-block;
+    padding: 3px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--gilt-bright), var(--gilt));
+    box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+}
+
+.player-portrait-frame svg {
+    display: block;
+}
+
+.royal-court-card {
+    border: 1px solid var(--gilt);
+    background: linear-gradient(180deg, rgba(201,151,26,0.12), var(--panel) 50%);
+}
+
+.decision-card {
+    border: 2px solid var(--gilt-bright);
+    outline: none;
+    background: linear-gradient(180deg, rgba(240,194,61,0.16), var(--panel) 45%);
+    box-shadow: 0 0 0 3px rgba(240,194,61,0.22), 0 4px 18px rgba(0,0,0,0.5);
+    animation: decision-pulse 2.2s ease-in-out infinite;
+}
+
+.decision-card::before {
+    content: "\26A1";
+}
+
+@keyframes decision-pulse {
+    0%, 100% { box-shadow: 0 0 0 3px rgba(240,194,61,0.22), 0 4px 18px rgba(0,0,0,0.5); }
+    50% { box-shadow: 0 0 0 7px rgba(240,194,61,0.38), 0 4px 22px rgba(0,0,0,0.55); }
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 10px;
+}
+
+.muted {
+    color: var(--ink-soft);
+}
+
+.pill {
+    display: inline-block;
+    border: 1px solid var(--gilt);
+    background: linear-gradient(180deg, #3a2e1a 0%, #2a2012 100%);
+    color: var(--gilt-bright);
+    border-radius: 20px;
+    padding: 5px 11px;
+    margin: 3px;
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.35);
+}
+
+/* Buttons are part of the heraldic theme, not a generic web-app color
+   dropped on top of it — a warm bronze default, a brighter gold
+   "primary" variant for the one action that matters most on a given
+   screen, and a crimson "danger" variant for genuinely risky or costly
+   moves (a scheme that can backfire, a war, a death). */
+button {
+    font-family: "EB Garamond", Georgia, serif;
+    font-size: 15px;
+    font-weight: 600;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid #6b4a28;
+    background: linear-gradient(180deg, #8a6038 0%, #6b4a28 100%);
+    color: #fdf6e6;
+    cursor: pointer;
+    box-shadow: 0 2px 8px var(--shadow-warm);
+    transition: transform .12s ease, box-shadow .12s ease;
+}
+
+button:hover:not(:disabled) {
+    background: linear-gradient(180deg, #a07a48 0%, #7a5530 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px var(--shadow-warm);
+}
+
+button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.btn-primary {
+    border-color: var(--gilt);
+    background: linear-gradient(180deg, var(--gilt-bright) 0%, var(--gilt) 100%);
+    color: #2a1d08;
+    font-weight: 700;
+}
+
+.btn-primary:hover:not(:disabled) {
+    background: linear-gradient(180deg, #f7d262 0%, #dba924 100%);
+}
+
+.btn-danger {
+    border-color: var(--gules);
+    background: linear-gradient(180deg, var(--gules-bright) 0%, var(--gules) 100%);
+}
+
+.btn-danger:hover:not(:disabled) {
+    background: linear-gradient(180deg, #e2607a 0%, var(--gules-bright) 100%);
+}
+
+.back-btn {
+    margin-top: 10px;
+    background: transparent;
+    border: 1px solid var(--ink-soft);
+    color: var(--ink-soft);
+    box-shadow: none;
+    font-size: 14px;
+    padding: 7px 12px;
+}
+
+.back-btn:hover:not(:disabled) {
+    background: rgba(201, 151, 26, 0.1);
+    transform: none;
+    box-shadow: none;
+}
+
+select {
+    font-family: "EB Garamond", Georgia, serif;
+    font-size: 15px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--gilt);
+    background: var(--panel-raised);
+    color: var(--ink);
+}
+
+.stat {
+    display: flex;
+    justify-content: space-between;
+    padding: 9px 0;
+    border-bottom: 1px dashed rgba(201,151,26,0.25);
+}
+
+.stat:last-child {
+    border-bottom: none;
+}
+
+.meter {
+    height: 9px;
+    background: rgba(0,0,0,0.4);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
+}
+
+.meter span {
+    display: block;
+    height: 100%;
+    background: linear-gradient(90deg, var(--gilt) 0%, var(--gilt-bright) 60%, #f7d989 100%);
+    border-radius: 10px;
+    transition: width .5s ease;
+}
+
+/* Dashboard HUD: sticky, with a stat-tile row instead of a plain list. */
+#hud {
+    position: sticky;
+    top: 10px;
+    z-index: 5;
+}
+
+.hud-stats {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+}
+
+.hs {
+    background: var(--bg-mid);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    padding: 6px 12px;
+    min-width: 84px;
+}
+
+.hs span {
+    display: block;
+    font-size: 10.5px;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.hs b {
+    font-family: "Cinzel", serif;
+    font-size: 19px;
+    color: var(--ink);
+}
+
+.hs .meter {
+    margin-top: 4px;
+    width: 64px;
+}
+
+/* Icon dock: a row of tabs instead of a plain button grid, with badges
+   for things needing attention. */
+#dock {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding: 10px 0;
+}
+
+.dock-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    color: var(--ink);
+    box-shadow: none;
+    position: relative;
+}
+
+.dock-btn.active {
+    background: linear-gradient(180deg, var(--gilt-bright) 0%, var(--gilt) 100%);
+    border-color: var(--gilt);
+    color: #2a1d08;
+}
+
+.dock-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    background: var(--gules-bright);
+    color: #fff;
+    border-radius: 9px;
+    font-size: 10.5px;
+    font-weight: 700;
+    padding: 1px 5px;
+    line-height: 1.4;
+}
+
+/* Two-column dashboard layout for the main play views. */
+.cols {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 14px;
+    align-items: start;
+}
+
+@media (max-width: 760px) {
+    .cols {
+        grid-template-columns: 1fr;
+    }
+}
+
+.col-main, .col-side {
+    min-width: 0;
+}
+
+/* Toast notifications: so anything that happens is visible no matter
+   which tab is open, not just Chronicle. */
+#toasts {
+    position: fixed;
+    bottom: 16px;
+    right: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 100;
+    max-width: 320px;
+}
+
+.toast {
+    background: var(--panel-raised);
+    border: 1px solid var(--gilt);
+    border-left: 4px solid var(--gilt-bright);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 14px;
+    color: var(--ink);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity .35s ease, transform .35s ease;
+}
+
+.toast.show {
+    opacity: 1;
+    transform: translateY(0);
+}

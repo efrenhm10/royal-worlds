@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crowns & Councils</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="app">
+
+<!-- Boot -->
+<section id="boot" class="screen active">
+    <div class="card">
+        <h1>👑 Crowns &amp; Councils</h1>
+        <p>You are not the protagonist of the history books. You are one noble or royal line inside them — holding what your family already has, or spending a life trying to climb one rung higher. Marriages, wars, intrigue, the Church, a council you can trust or can't. Die, and you become your heir. The line either survives you or it doesn't.</p>
+        <div class="grid">
+            <button id="newBtn">Begin a new line</button>
+            <button id="continueBtn" disabled>Continue (no save yet)</button>
+        </div>
+    </div>
+</section>
+
+<!-- Era / bookmark selection -->
+<section id="eraSelect" class="screen">
+    <div class="card">
+        <h2>Choose your era</h2>
+        <p class="muted">Every era has its own map, its own rulers, and its own pressures.</p>
+        <button id="eraBackBtn" class="back-btn">&larr; Back</button>
+    </div>
+    <div class="grid" id="eraList"></div>
+</section>
+
+<!-- Realm selection (within the chosen era) -->
+<section id="realmSelect" class="screen">
+    <div class="card">
+        <h2 id="realmSelectEraName">Choose your realm</h2>
+        <p class="muted" id="realmSelectEraDesc"></p>
+        <button id="realmBackBtn" class="back-btn">&larr; Back</button>
+    </div>
+    <div class="grid" id="realmList"></div>
+</section>
+
+<!-- Character creation -->
+<section id="characterCreate" class="screen">
+    <div class="card">
+        <h2>Who are you?</h2>
+        <p class="muted" id="characterCreateIntro"></p>
+        <button id="characterBackBtn" class="back-btn">&larr; Back</button>
+    </div>
+    <div class="grid" id="characterList"></div>
+</section>
+
+<!-- Play -->
+<section id="play" class="screen">
+    <header id="hud" class="card"></header>
+    <nav id="dock" class="grid"></nav>
+    <main id="view"></main>
+</section>
+
+<div id="event"></div>
+<div id="toasts"></div>
+
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/realms.js"></script>
+<script src="js/titles.js"></script>
+<script src="js/attributes.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/domain.js"></script>
+<script src="js/military.js"></script>
+<script src="js/vassals.js"></script>
+<script src="js/dynasty.js"></script>
+<script src="js/education.js"></script>
+<script src="js/royal_court.js"></script>
+<script src="js/succession_laws.js"></script>
+<script src="js/church.js"></script>
+<script src="js/church_career.js"></script>
+<script src="js/council.js"></script>
+<script src="js/intrigue.js"></script>
+<script src="js/factions.js"></script>
+<script src="js/wartime.js"></script>
+<script src="js/reform.js"></script>
+<script src="js/personal.js"></script>
+<script src="js/canon.js"></script>
+<script src="js/canon_events.js"></script>
+<script src="js/timeline.js"></script>
+<script src="js/narrative.js"></script>
+<script src="js/events.js"></script>
+<script src="js/decisions.js"></script>
+<script src="js/scenes.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/ui_world.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
