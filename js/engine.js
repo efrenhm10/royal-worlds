@@ -45,6 +45,7 @@ function startNewGame(eraKey, realmKey, character) {
         gameOver: false,
         log: [],
         turn: 0,
+        pendingDecision: null,
     };
     logEvent(`${character.name} comes of age in ${realm.name}, ${era.year}.`);
 
@@ -115,6 +116,9 @@ function callHookIfPresent(name, ...args) {
 function advanceYear() {
     if (!gameState) throw new Error("No active game");
     if (gameState.gameOver) return { year: gameState.year, playerAlive: false, gameOver: true };
+    // A pending decision blocks time from moving on — the player has to
+    // actually choose something, not let it scroll past unresolved.
+    if (gameState.pendingDecision) return { year: gameState.year, playerAlive: gameState.player.alive, gameOver: false, blocked: true };
 
     gameState.year += 1;
     gameState.turn += 1;
@@ -151,7 +155,12 @@ function advanceYear() {
     callHookIfPresent("tickEvents", gameState);
 
     if (died) {
+        // Any decision that was waiting belonged to the person who just
+        // died — it's moot the instant someone else inherits.
+        gameState.pendingDecision = null;
         callHookIfPresent("applySuccession", gameState);
+    } else {
+        callHookIfPresent("tickDecisions", gameState);
     }
 
     return { year: gameState.year, playerAlive: gameState.player.alive, gameOver: !!gameState.gameOver };

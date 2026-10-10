@@ -244,6 +244,21 @@ function renderPlay() {
         hud.appendChild(el("p", null, `<strong>${gameState.gameOverReason}</strong>`));
     }
 
+    if (gameState.pendingDecision) {
+        const decisionCard = el("div", "card decision-card");
+        decisionCard.appendChild(el("h3", null, gameState.pendingDecision.title));
+        decisionCard.appendChild(el("p", null, gameState.pendingDecision.text));
+        gameState.pendingDecision.options.forEach((option, index) => {
+            const btn = makeChoiceButton(option.label, () => {
+                resolveDecision(gameState, index);
+                saveGame();
+                renderPlay();
+            });
+            decisionCard.appendChild(btn);
+        });
+        hud.appendChild(decisionCard);
+    }
+
     const standing = courtStanding(gameState);
     const safety = safetyStatus(gameState);
     const power = playerMilitaryPower(gameState);
@@ -261,8 +276,9 @@ function renderPlay() {
 
     const dock = document.getElementById("dock");
     clearEl(dock);
-    const advanceBtn = el("button", "dock-btn", "⏭ <span>Advance a year</span>");
-    advanceBtn.disabled = !player.alive || gameState.gameOver;
+    const hasPendingDecision = !!gameState.pendingDecision;
+    const advanceBtn = el("button", "dock-btn", hasPendingDecision ? "⏭ <span>Resolve the decision below first</span>" : "⏭ <span>Advance a year</span>");
+    advanceBtn.disabled = !player.alive || gameState.gameOver || hasPendingDecision;
     advanceBtn.addEventListener("click", () => {
         advanceYear();
         saveGame();
@@ -727,20 +743,34 @@ function renderPlayView() {
     }
 
     if (_playViewTab === "intrigue") {
-        const otherRealms = listRealms().filter(r => r.key !== gameState.realmKey);
+        // Not every one of the 18 realms is a realistic target for a given
+        // character — surface the ones that actually matter: realms the
+        // family already has a marriage tie to (a real stake), plus a
+        // handful of the weakest rivals (the realistic prey), rather than
+        // an identical wall of 18 buttons every single time.
+        const tiedRealmKeys = new Set((gameState.claims || []).filter(c => c.type === "marriage").map(c => c.realmKey));
+        const candidates = listRealms().filter(r => r.key !== gameState.realmKey && !hasClaim(gameState, r.key));
+        const tied = candidates.filter(r => tiedRealmKeys.has(r.key));
+        const weakest = candidates.filter(r => !tiedRealmKeys.has(r.key))
+            .sort((a, b) => effectiveStability(gameState, a.key) - effectiveStability(gameState, b.key));
+        const relevantRealms = [...tied, ...weakest].slice(0, 6);
 
-        const claimsCard = makeCard("Fabricate a claim", '<p class="muted">A fabricated claim is what makes a future war justified, rather than naked conquest.</p>');
-        otherRealms.forEach(realm => {
-            const already = hasClaim(gameState, realm.key);
-            const row = el("div", "stat", `<span>${realm.name}${already ? " — claim already held" : ""}</span>`);
-            const btn = makeChoiceButton("Fabricate claim", () => {
-                fabricateClaim(gameState, realm.key);
-                saveGame();
-                renderPlay();
-            }, already || !!gameState.gameOver);
-            row.appendChild(btn);
-            claimsCard.appendChild(row);
-        });
+        const claimsCard = makeCard("Fabricate a claim", '<p class="muted">A fabricated claim is what makes a future war justified, rather than naked conquest — these are the realms worth your Spymaster\'s time right now.</p>');
+        if (relevantRealms.length) {
+            relevantRealms.forEach(realm => {
+                const tag = tiedRealmKeys.has(realm.key) ? " — a marriage tie gives this real weight" : ` — stability ${effectiveStability(gameState, realm.key)}, a realistic target`;
+                const row = el("div", "stat", `<span>${realm.name}${tag}</span>`);
+                const btn = makeChoiceButton("Fabricate claim", () => {
+                    fabricateClaim(gameState, realm.key);
+                    saveGame();
+                    renderPlay();
+                }, !!gameState.gameOver);
+                row.appendChild(btn);
+                claimsCard.appendChild(row);
+            });
+        } else {
+            claimsCard.appendChild(el("p", "muted", "No realistic targets right now — every realm nearby is either already claimed or beyond reach."));
+        }
         view.appendChild(claimsCard);
 
         const warCard = makeCard("War");
@@ -769,18 +799,22 @@ function renderPlayView() {
         }
         view.appendChild(warCard);
 
-        const underminCard = makeCard("Undermine a rival realm", '<p class="muted">Sown unrest weakens a rival\'s stability — and, later, their ability to resist you.</p>');
-        otherRealms.forEach(realm => {
-            const stability = effectiveStability(gameState, realm.key);
-            const row = el("div", "stat", `<span>${realm.name} — stability ${stability}</span>`);
-            const btn = makeChoiceButton("Undermine", () => {
-                undermineRivalStability(gameState, realm.key);
-                saveGame();
-                renderPlay();
-            }, !!gameState.gameOver);
-            row.appendChild(btn);
-            underminCard.appendChild(row);
-        });
+        const underminCard = makeCard("Undermine a rival realm", '<p class="muted">Sown unrest weakens a rival\'s stability — and, later, their ability to resist you. The same short list of realms actually worth your attention.</p>');
+        if (relevantRealms.length) {
+            relevantRealms.forEach(realm => {
+                const stability = effectiveStability(gameState, realm.key);
+                const row = el("div", "stat", `<span>${realm.name} — stability ${stability}</span>`);
+                const btn = makeChoiceButton("Undermine", () => {
+                    undermineRivalStability(gameState, realm.key);
+                    saveGame();
+                    renderPlay();
+                }, !!gameState.gameOver);
+                row.appendChild(btn);
+                underminCard.appendChild(row);
+            });
+        } else {
+            underminCard.appendChild(el("p", "muted", "No realistic targets right now."));
+        }
         view.appendChild(underminCard);
 
         const targets = [
