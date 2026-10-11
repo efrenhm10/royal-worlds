@@ -401,7 +401,25 @@ function renderPlay() {
         hud.appendChild(el("p", null, `<strong>${gameState.gameOverReason}</strong>`));
     }
 
-    if (gameState.pendingDecision) {
+    // Procedural Drama Director — the succession scene is the one moment
+    // the whole game hinges on, so it blocks and reads as a real scene,
+    // not a log line: a bold obituary with a reign highlight, the heir's
+    // declaration, and an honest, live-computed read of what they're
+    // actually inheriting.
+    if (gameState.pendingSuccessionScene) {
+        const scene = gameState.pendingSuccessionScene;
+        const sceneCard = el("div", "card decision-card succession-scene");
+        sceneCard.appendChild(el("h3", null, `${scene.deceasedName} has died`));
+        sceneCard.appendChild(el("p", null, `${scene.deceasedName} has passed away at age ${scene.deceasedAge}, after ${scene.highlight}.`));
+        sceneCard.appendChild(el("p", null, `<strong>${scene.heirName}</strong> now succeeds as ${scene.title} of ${scene.realmName}.`));
+        sceneCard.appendChild(el("p", "muted", `You inherit a realm that is ${scene.assessment}.`));
+        sceneCard.appendChild(makeChoiceButton("Continue the family's story", () => {
+            gameState.pendingSuccessionScene = null;
+            saveGame();
+            renderPlay();
+        }));
+        hud.appendChild(sceneCard);
+    } else if (gameState.pendingDecision) {
         const decisionCard = el("div", "card decision-card");
         decisionCard.appendChild(el("h3", null, gameState.pendingDecision.title));
         decisionCard.appendChild(el("p", null, gameState.pendingDecision.text));
@@ -435,8 +453,9 @@ function renderPlay() {
     const dock = document.getElementById("dock");
     clearEl(dock);
     const hasPendingDecision = !!gameState.pendingDecision;
-    const advanceBtn = el("button", "dock-btn", hasPendingDecision ? "⏭ <span>Resolve the decision below first</span>" : "⏭ <span>Advance a year</span>");
-    advanceBtn.disabled = !player.alive || gameState.gameOver || hasPendingDecision;
+    const hasPendingScene = !!gameState.pendingSuccessionScene;
+    const advanceBtn = el("button", "dock-btn", hasPendingScene ? "⏭ <span>Read what comes next, above</span>" : hasPendingDecision ? "⏭ <span>Resolve the decision below first</span>" : "⏭ <span>Advance a year</span>");
+    advanceBtn.disabled = !player.alive || gameState.gameOver || hasPendingDecision || hasPendingScene;
     advanceBtn.addEventListener("click", () => {
         advanceYear();
         saveGame();
@@ -666,6 +685,25 @@ function renderPlayView() {
                 });
             }
             view.appendChild(buyCard);
+        }
+
+        // Proactive frontier defense — a standing investment, not a
+        // per-year reaction: once built, it nullifies border-raid risk
+        // (decisions.js) outright rather than just softening it.
+        const frontierNeighbors = typeof neighborsOf === "function" ? neighborsOf(gameState.realmKey) : [];
+        if (frontierNeighbors.length) {
+            const fortifyBody = gameState.borderFortified
+                ? `<p class="muted">The frontier is fortified — walls, watchtowers, and standing garrisons. Raiders look elsewhere.</p>`
+                : `<p class="muted">Bordering ${frontierNeighbors.map(k => getRealm(k).name).join(", ")}. An unfortified frontier is exposed to raids when a neighbor turns unstable or hostile.</p>`;
+            const fortifyCard = makeCard("Frontier defense", fortifyBody);
+            if (!gameState.gameOver && !gameState.borderFortified) {
+                fortifyCard.appendChild(makeChoiceButton(`Fortify the border (${BORDER_FORTIFICATION_COST} gold)`, () => {
+                    fortifyBorder(gameState);
+                    saveGame();
+                    renderPlay();
+                }, !canFortifyBorder(gameState)));
+            }
+            view.appendChild(fortifyCard);
         }
         return;
     }

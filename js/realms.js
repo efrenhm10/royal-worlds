@@ -199,3 +199,35 @@ function listStartableRealms() {
 function getRealm(key) {
     return REALMS[key];
 }
+
+// A rough, deliberately simple geography — who actually shares a border
+// with whom, for 1461's Europe — used wherever "this realm is a frontier"
+// matters mechanically: border-raid risk, a neighbor's instability
+// spilling over, a forced-marriage alliance aimed at a specific
+// neighboring house. Not exhaustive or symmetric by design; it only needs
+// to be plausible enough to read as real.
+const REALM_NEIGHBORS = {
+    england: ["france", "scotland"],
+    scotland: ["england"],
+    france: ["england", "burgundy", "brittany", "aragon", "austria"],
+    burgundy: ["france", "austria", "brittany"],
+    brittany: ["france", "england"],
+    castile: ["aragon", "portugal"],
+    aragon: ["castile", "france"],
+    portugal: ["castile"],
+    austria: ["burgundy", "hungary", "bohemia", "venice", "france"],
+    milan: ["venice", "florence", "austria"],
+    venice: ["milan", "austria", "hungary"],
+    naples: ["florence", "rome"],
+    florence: ["milan", "naples", "rome"],
+    rome: ["florence", "naples"],
+    hungary: ["austria", "poland", "bohemia", "wallachia", "ottoman"],
+    poland: ["hungary", "bohemia"],
+    bohemia: ["austria", "poland", "hungary"],
+    wallachia: ["hungary", "ottoman"],
+    ottoman: ["hungary", "wallachia"],
+};
+
+function neighborsOf(realmKey) {
+    return REALM_NEIGHBORS[realmKey] || [];
+}

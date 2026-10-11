@@ -102,6 +102,25 @@ function developHolding(gameState, holdingId) {
     return true;
 }
 
+// Frontier fortification — a standing, permanent investment distinct from
+// an individual holding: once built, it nullifies decisions.js's
+// border_raid risk entirely rather than just softening it, giving the
+// player a real, proactive choice between hardening a frontier and
+// spending that same gold elsewhere.
+const BORDER_FORTIFICATION_COST = 300;
+
+function canFortifyBorder(gameState) {
+    return !gameState.borderFortified && (gameState.player.gold || 0) >= BORDER_FORTIFICATION_COST;
+}
+
+function fortifyBorder(gameState) {
+    if (!canFortifyBorder(gameState)) return false;
+    gameState.player.gold -= BORDER_FORTIFICATION_COST;
+    gameState.borderFortified = true;
+    logEvent(`${gameState.player.name} has fortified the frontier — walls, watchtowers, and standing garrisons along the border (-${BORDER_FORTIFICATION_COST} gold). Raiders will find it a harder crossing now.`);
+    return true;
+}
+
 // Yearly hook: every holding produces its real effect for whoever holds
 // it — the player if it's in hand, the vassal it was granted to if not.
 // personalLevies is recomputed fresh each year from current in-hand

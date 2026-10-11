@@ -180,6 +180,32 @@ function changeSuccessionLaw(gameState, lawKey) {
     return true;
 }
 
+// Procedural Drama Director — the single biggest hinge point the whole
+// game turns on (your character dying and someone else picking up where
+// they left off) deserves more than a log line. reignHighlight reads
+// what was actually true of the reign that just ended; assessRealmState
+// does the same instant audit of what the heir is actually inheriting —
+// both built from state the engine already tracks (war, revolt, reform,
+// stability), not a new parallel system.
+function reignHighlight(deceased, gameState) {
+    if (gameState.war) return "a reign spent at war";
+    if (gameState.faction) return "a reign shadowed by rebellion among their own vassals";
+    if ((deceased.prestige || 0) >= 150) return "a reign remembered for its prestige and ambition";
+    if ((deceased.piety || 0) >= 80) return "a reign marked by real devotion";
+    if (deceased.traits && deceased.traits.length) return `a reign shaped by being ${deceased.traits[0].toLowerCase()}`;
+    return "a quiet, unremarkable reign";
+}
+
+function assessRealmState(gameState) {
+    if (gameState.war) return `at war with ${getRealm(gameState.war.targetRealmKey).name} — your country stands on the brink of real danger`;
+    if (gameState.faction) return `wracked by open revolt among your own vassals`;
+    if (gameState.reform && gameState.reform.schismed) return `permanently broken from Rome — a schism that will outlive this reign`;
+    const stability = typeof effectiveStability === "function" ? effectiveStability(gameState, gameState.realmKey) : 50;
+    if (stability < 35) return `weak and fracturing — its stability dangerously low`;
+    if (stability >= 70) return `peaceful and prosperous, a realm at ease with itself`;
+    return `holding steady — neither thriving nor in crisis`;
+}
+
 // Called from engine.js's advanceYear the moment the player is found dead.
 // Finds the heir, transfers rank/resources/court to them, and makes them
 // the new player — or, if the bloodline has run out entirely, ends the game.
@@ -196,6 +222,7 @@ function applySuccession(gameState) {
     }
 
     const isPartition = lawKey === "partition";
+    const highlight = reignHighlight(deceased, gameState);
     heir.tier = Math.max(heir.tier || 0, isPartition ? tierDown(deceased.tier) : deceased.tier);
     heir.gold = (heir.gold || 0) + Math.floor(deceased.gold * (isPartition ? 0.5 : 1));
     heir.prestige = (heir.prestige || 0) + Math.floor(deceased.prestige * 0.5);
@@ -206,5 +233,14 @@ function applySuccession(gameState) {
     getVassals(gameState).forEach(v => { v.liegeId = heir.id; });
 
     const newTitle = titleName(heir.tier, heir.gender, gameState.realmKey);
+    gameState.pendingSuccessionScene = {
+        deceasedName: deceased.name,
+        deceasedAge: deceased.age,
+        highlight,
+        heirName: heir.name,
+        title: newTitle,
+        realmName: getRealm(gameState.realmKey).name,
+        assessment: assessRealmState(gameState),
+    };
     logEvent(`${heir.name} inherits as ${newTitle}${isPartition ? ", the realm split among siblings" : ""}.`);
 }

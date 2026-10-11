@@ -623,6 +623,26 @@ function hasRelativeHoldingAForeignThrone(gameState) {
     });
 }
 
+// Procedural Drama Director hook — the specific relational check that
+// lets decisions.js write a believable "your own brother or sister, now
+// a crowned monarch, leans on you" story beat: a living sibling who
+// reigns, whether that's the player's own home realm (played as a
+// ruler's sibling from the start) or a realm the family's marriages have
+// grafted a tracked throne onto.
+function reigningSiblingMonarch(gameState) {
+    const player = gameState.player;
+    const siblings = getSiblings(gameState, player.id).filter(s => s.alive);
+    const homeRuler = siblings.find(s => s.realmKey === gameState.realmKey && s.tier >= realmTopTier(gameState.realmKey));
+    if (homeRuler) return homeRuler;
+    if (gameState.foreignRoyals) {
+        for (const realmKey of Object.keys(gameState.foreignRoyals)) {
+            const sib = siblings.find(s => s.id === gameState.foreignRoyals[realmKey]);
+            if (sib) return sib;
+        }
+    }
+    return null;
+}
+
 // Yearly hook: keeps the standing +30 bonus exactly in sync with whether
 // it's currently earned, adding or removing it the moment the family's
 // tie to a foreign throne starts or ends, rather than letting it drift.

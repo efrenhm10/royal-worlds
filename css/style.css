@@ -155,6 +155,22 @@ h1 {
     content: "\26A1";
 }
 
+.succession-scene {
+    border-color: var(--gules-bright);
+    background: linear-gradient(180deg, rgba(167,38,38,0.18), var(--panel) 45%);
+    box-shadow: 0 0 0 3px rgba(167,38,38,0.25), 0 4px 18px rgba(0,0,0,0.5);
+    animation: succession-pulse 2.6s ease-in-out infinite;
+}
+
+.succession-scene::before {
+    content: "\1F451";
+}
+
+@keyframes succession-pulse {
+    0%, 100% { box-shadow: 0 0 0 3px rgba(167,38,38,0.25), 0 4px 18px rgba(0,0,0,0.5); }
+    50% { box-shadow: 0 0 0 7px rgba(167,38,38,0.4), 0 4px 22px rgba(0,0,0,0.55); }
+}
+
 @keyframes decision-pulse {
     0%, 100% { box-shadow: 0 0 0 3px rgba(240,194,61,0.22), 0 4px 18px rgba(0,0,0,0.5); }
     50% { box-shadow: 0 0 0 7px rgba(240,194,61,0.38), 0 4px 22px rgba(0,0,0,0.55); }

@@ -46,6 +46,7 @@ function startNewGame(eraKey, realmKey, character) {
         log: [],
         turn: 0,
         pendingDecision: null,
+        pendingSuccessionScene: null,
     };
     logEvent(`${character.name} comes of age in ${realm.name}, ${era.year}.`);
 
@@ -116,9 +117,10 @@ function callHookIfPresent(name, ...args) {
 function advanceYear() {
     if (!gameState) throw new Error("No active game");
     if (gameState.gameOver) return { year: gameState.year, playerAlive: false, gameOver: true };
-    // A pending decision blocks time from moving on — the player has to
-    // actually choose something, not let it scroll past unresolved.
-    if (gameState.pendingDecision) return { year: gameState.year, playerAlive: gameState.player.alive, gameOver: false, blocked: true };
+    // A pending decision — or an unacknowledged succession scene — blocks
+    // time from moving on — the player has to actually see/choose
+    // something, not let it scroll past unresolved.
+    if (gameState.pendingDecision || gameState.pendingSuccessionScene) return { year: gameState.year, playerAlive: gameState.player.alive, gameOver: false, blocked: true };
 
     gameState.year += 1;
     gameState.turn += 1;

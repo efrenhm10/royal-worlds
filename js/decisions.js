@@ -283,6 +283,70 @@ const HISTORICAL_PRESSURE_TEMPLATES = [
             },
         ],
     },
+    {
+        // Not a separate ideology system — this plugs straight into the
+        // real, already-ticking friction scale reform.js maintains
+        // (gameState.reform.level, 0-100, driven by standing with Rome).
+        // Once that friction crosses a real threshold, it stops being an
+        // ambient number and becomes a decision with teeth: the choice
+        // permanently moves piety, standing, and — through vassal opinion
+        // feeding factions.js's own revolt risk — real military
+        // vulnerability, not just flavor text.
+        id: "protestant_reform_unrest",
+        realmKey: ["england", "france", "burgundy", "austria", "bohemia", "hungary", "poland", "brittany", "scotland"],
+        yearMin: 1517,
+        yearMax: 1560,
+        chance: 0.35,
+        extraCondition: gameState => typeof reformLevel === "function" && reformLevel(gameState) >= 60 && !(gameState.reform && gameState.reform.schismed),
+        title: "The new preaching reaches your own lands",
+        text: gameState => voiceLine({
+            devout: [`Reformist preachers have reached ${gameState.player.name}'s own lands, and the old certainties are being argued over openly, even here.`],
+            wary: [`${gameState.player.name} can no longer treat the new preaching as someone else's problem — it has reached home, and taken root.`],
+            cunning: [`The new preaching has taken real root close to home — ${gameState.player.name} sees as much opportunity in it as danger.`],
+            neutral: `The reformist movement sweeping the Church has reached ${gameState.player.name}'s own lands directly, and can no longer be ignored.`,
+        }, gameState.player),
+        options: [
+            {
+                label: "Crack down hard on the preachers (50 gold)",
+                apply(gameState) {
+                    const player = gameState.player;
+                    if ((player.gold || 0) < 50) return "There isn't enough gold on hand to move against them properly, and the preaching continues unchecked.";
+                    player.gold -= 50;
+                    gameState.reform.level = Math.max(0, gameState.reform.level - randInt(10, 20));
+                    adjustStanding(gameState, gameState.realmKey, 5);
+                    getVassals(gameState).forEach(v => { if (Math.random() < 0.3) adjustOpinion(v, -3); });
+                    return `The preachers are driven out or silenced — the old order holds here, for now (-50 gold, +5 standing with Rome), though not every vassal is comfortable with how it was done.`;
+                },
+            },
+            {
+                label: "Openly tolerate the new preaching",
+                apply(gameState) {
+                    const player = gameState.player;
+                    gameState.reform.level = Math.min(100, gameState.reform.level + randInt(10, 20));
+                    adjustStanding(gameState, gameState.realmKey, -15);
+                    player.prestige = (player.prestige || 0) + 10;
+                    player.piety = Math.max(0, (player.piety || 0) - 5);
+                    const vassals = getVassals(gameState);
+                    if (vassals.length && Math.random() < 0.4) {
+                        const v = randomFrom(vassals);
+                        v.levies = Math.max(0, Math.round(v.levies * 0.8));
+                        adjustOpinion(v, randInt(-6, 10));
+                    }
+                    return `${player.name} lets the new preaching stand unmolested — popular in some quarters, costly with Rome (-15 standing, -5 piety, +10 prestige), and at least one vassal quietly diverts levies to keep their own lands' peace instead of yours.`;
+                },
+            },
+            {
+                label: "Steer a careful middle path",
+                apply(gameState) {
+                    const player = gameState.player;
+                    gameState.reform.level = Math.min(100, gameState.reform.level + randInt(2, 6));
+                    adjustStanding(gameState, gameState.realmKey, -3);
+                    player.piety = (player.piety || 0) + 3;
+                    return `${player.name} neither embraces nor crushes the new preaching — an uneasy compromise that leaves almost no one fully satisfied (-3 standing with Rome, +3 piety).`;
+                },
+            },
+        ],
+    },
 ];
 
 function buildHistoricalPressureDecisionEvent(tpl) {
@@ -292,7 +356,8 @@ function buildHistoricalPressureDecisionEvent(tpl) {
         chance: tpl.chance,
         condition: gameState => realms.includes(gameState.realmKey)
             && gameState.year >= tpl.yearMin && gameState.year <= tpl.yearMax
-            && (!tpl.flagField || !gameState[tpl.flagField]),
+            && (!tpl.flagField || !gameState[tpl.flagField])
+            && (!tpl.extraCondition || tpl.extraCondition(gameState)),
         title: tpl.title,
         text: tpl.text,
         options: tpl.options,
@@ -1314,6 +1379,140 @@ const DECISION_EVENTS = [
                     if (!person) return "The matter resolves itself before anything can be done.";
                     adjustOpinion(person, -8);
                     return `${person.name} is turned away, and doesn't hide the disappointment (-8 opinion).`;
+                },
+            },
+        ],
+    },
+    // Procedural Drama Director — a crowned sibling has real leverage over
+    // an unmarried relative, and uses it: a political marriage, framed as
+    // family, that isn't really optional. Comply, and the tie strengthens.
+    // Refuse, and the engine runs a real structural fallback rather than
+    // just docking a number — the sibling's loyalty (which gates every
+    // "ask for gold/support" in relationships.js) is crashed, and roughly
+    // half the time that refusal escalates into the crown quietly
+    // withdrawing the border's protection, read out as an actual raid.
+    {
+        id: "sibling_marriage_alliance",
+        chance: 0.3,
+        condition: gameState => {
+            const player = gameState.player;
+            if (!player.alive || player.age < 16 || player.age > 45) return false;
+            if (!isAvailableToMarry(gameState, player.id)) return false;
+            return typeof reigningSiblingMonarch === "function" && !!reigningSiblingMonarch(gameState);
+        },
+        buildContext: gameState => {
+            const sib = reigningSiblingMonarch(gameState);
+            const neighbors = neighborsOf(sib.realmKey).filter(k => k !== gameState.realmKey);
+            const pool = neighbors.length ? neighbors : listRealms().map(r => r.key).filter(k => k !== sib.realmKey);
+            const targetRealmKey = randomFrom(pool);
+            const forcedGender = gameState.player.gender === "M" ? "F" : "M";
+            const candidate = generateNobleMarriageCandidates(targetRealmKey, 1, forcedGender)[0];
+            const reasons = [
+                `seal an alliance with ${getRealm(targetRealmKey).name} against a shared rival`,
+                `buy a season's peace along the ${getRealm(targetRealmKey).name} border`,
+                `settle a debt owed to ${getRealm(targetRealmKey).name}'s own house`,
+            ];
+            return { siblingId: sib.id, candidate, targetRealmKey, reasonLine: randomFrom(reasons) };
+        },
+        title: "A crown's demand, dressed as family",
+        text: (gameState, ctx) => {
+            const sib = getPerson(gameState, ctx.siblingId);
+            const n = gameState.player.name;
+            const sibTitle = sib ? realmTopTitle(sib.realmKey, sib.gender) : "The crown";
+            const sibName = sib ? sib.name : "your sibling";
+            return voiceLine({
+                bold: [`${sibTitle} ${sibName} summons ${n} with a demand dressed up as a family favor: marry ${ctx.candidate.name} of ${getRealm(ctx.targetRealmKey).name}, to ${ctx.reasonLine}.`],
+                wary: [`${n} is called before ${sibTitle} ${sibName} — a marriage is being arranged, to ${ctx.candidate.name} of ${getRealm(ctx.targetRealmKey).name}, meant to ${ctx.reasonLine}. It isn't really a request.`],
+                cunning: [`${sibTitle} ${sibName} wants ${n} married to ${ctx.candidate.name} of ${getRealm(ctx.targetRealmKey).name} — useful to the crown, to ${ctx.reasonLine}, whatever it costs ${n} personally.`],
+                neutral: `${sibTitle} ${sibName} asks ${n} to marry ${ctx.candidate.name} of ${getRealm(ctx.targetRealmKey).name}, to ${ctx.reasonLine}.`,
+            }, gameState.player);
+        },
+        options: [
+            {
+                label: "Comply — marry for the crown",
+                apply(gameState, ctx) {
+                    const sib = getPerson(gameState, ctx.siblingId);
+                    const married = arrangeMarriage(gameState, gameState.player, ctx.candidate);
+                    if (!married) return `There isn't enough standing to make the match happen properly, as asked — the moment passes, awkwardly.`;
+                    if (sib) sib.loyalty = Math.min(100, relativeLoyalty(sib) + 20);
+                    gameState.player.prestige = (gameState.player.prestige || 0) + 15;
+                    return `${gameState.player.name} marries ${married.name} as asked — the crown remembers who answered the call (+15 prestige)${sib ? `, and ${sib.name}'s trust in you only grows.` : "."}`;
+                },
+            },
+            {
+                label: "Refuse",
+                apply(gameState, ctx) {
+                    const sib = getPerson(gameState, ctx.siblingId);
+                    const player = gameState.player;
+                    if (sib) sib.loyalty = Math.max(0, relativeLoyalty(sib) - 35);
+                    if (Math.random() < 0.5) {
+                        if (sib) sib.loyalty = 5;
+                        player.gold = Math.max(0, (player.gold || 0) - 40);
+                        getVassals(gameState).forEach(v => { if (Math.random() < 0.4) adjustOpinion(v, randInt(-6, -1)); });
+                        return `${player.name} refuses — and ${sib ? sib.name : "the crown"} doesn't forgive it quietly. The royal allowance stops cold, and word soon follows that raiders have grown bolder along an undefended stretch of the border since (-40 gold, vassals uneasy).`;
+                    }
+                    return `${player.name} refuses the match — ${sib ? sib.name : "the crown"} is coldly disappointed, and makes no secret of it.`;
+                },
+            },
+        ],
+    },
+    // Ambient border pressure — any realm with an unstable or openly
+    // hostile neighbor (per realms.js's REALM_NEIGHBORS) carries a real,
+    // recurring risk of raids, unless the player has paid to fortify the
+    // frontier (domain.js's fortifyBorder), which suppresses this
+    // entirely rather than just softening it.
+    {
+        id: "border_raid",
+        chance: 0.22,
+        condition: gameState => {
+            if (gameState.borderFortified) return false;
+            const neighbors = neighborsOf(gameState.realmKey);
+            if (!neighbors.length) return false;
+            return neighbors.some(k => effectiveStability(gameState, k) < 45 || k === "ottoman" || k === "wallachia");
+        },
+        buildContext: gameState => {
+            const neighbors = neighborsOf(gameState.realmKey);
+            const risky = neighbors.filter(k => effectiveStability(gameState, k) < 45 || k === "ottoman" || k === "wallachia");
+            const raiderRealmKey = randomFrom(risky.length ? risky : neighbors);
+            return { raiderRealmKey };
+        },
+        title: "Raiders along the border",
+        text: (gameState, ctx) => {
+            const raiderRealm = getRealm(ctx.raiderRealmKey);
+            return voiceLine({
+                bold: [`Riders come in from the border at a gallop — raiders out of ${raiderRealm.name} have struck an outlying village, and ${gameState.player.name} has to answer for it, one way or another.`],
+                wary: [`Word reaches ${gameState.player.name} of raiders out of ${raiderRealm.name} striking the border again — not the first time this year, and likely not the last.`],
+                neutral: `Raiders from across the ${raiderRealm.name} border have struck an outlying holding.`,
+            }, gameState.player);
+        },
+        options: [
+            {
+                label: "Muster the border levies to drive them off (40 gold)",
+                apply(gameState) {
+                    const player = gameState.player;
+                    if ((player.gold || 0) < 40) return "There isn't enough gold on hand to muster a proper response, and the raiders have their way.";
+                    player.gold -= 40;
+                    player.prestige = (player.prestige || 0) + 5;
+                    return `The border levies ride out and drive the raiders back across the frontier — costly, but it's noticed (-40 gold, +5 prestige).`;
+                },
+            },
+            {
+                label: "Pay them off quietly (25 gold)",
+                apply(gameState) {
+                    const player = gameState.player;
+                    const paid = Math.min(25, player.gold || 0);
+                    player.gold = Math.max(0, (player.gold || 0) - 25);
+                    return paid > 0 ? `A quiet payment sends the raiders elsewhere, for now (-${paid} gold).` : `There's nothing to pay them with, and they take what they want regardless.`;
+                },
+            },
+            {
+                label: "Let the local lords handle it themselves",
+                apply(gameState) {
+                    if (Math.random() < 0.5) {
+                        getVassals(gameState).forEach(v => { if (Math.random() < 0.4) adjustOpinion(v, -6); });
+                        return `The local lords handle it on their own — and resent being left to, afterward.`;
+                    }
+                    return `The raid burns itself out before it reaches anything that matters.`;
                 },
             },
         ],
