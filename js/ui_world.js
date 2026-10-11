@@ -230,8 +230,79 @@ function safetyStatus(gameState) {
     return { label: "Safe", bad: false };
 }
 
+// The people actually around the player right now, described the way a
+// real court would talk about them — not a roster, a cast. This is the
+// first thing the player sees: who you can trust, who's circling you,
+// what your own marriage actually feels like — before any number does.
+function renderCastOfCharacters(gameState) {
+    const player = gameState.player;
+    const people = [];
+
+    const spouse = getSpouse(gameState, player.id);
+    if (spouse && spouse.alive) {
+        people.push({
+            person: spouse,
+            role: "your spouse",
+            line: `${personalityFlavor(spouse)}.`,
+        });
+    }
+
+    const courtiers = [...getVassals(gameState), ...Object.values(getCouncil(gameState))];
+    if (courtiers.length) {
+        const ally = [...courtiers].sort((a, b) => b.opinion - a.opinion)[0];
+        const rival = [...courtiers].sort((a, b) => a.opinion - b.opinion)[0];
+        if (ally && ally.opinion >= 55) {
+            people.push({ person: ally, role: "closest to you at court", line: `${relationshipLabel(ally.opinion)} — ${personalityFlavor(ally)}.` });
+        }
+        if (rival && rival.opinion < 45 && rival !== ally) {
+            people.push({ person: rival, role: "a name to watch", line: `${relationshipLabel(rival.opinion)} — ${personalityFlavor(rival)}.` });
+        }
+    }
+
+    if (gameState.faction) {
+        const leader = gameState.vassals[gameState.faction.memberIds[0]];
+        if (leader) {
+            people.push({ person: leader, role: "openly scheming against you", line: `demanding ${gameState.faction.type === "depose" ? "your abdication" : "independence"} — and not alone in it.` });
+        }
+    }
+
+    if (gameState.royalCourt && gameState.royalCourt.status) {
+        const realm = getRealm(gameState.realmKey);
+        people.push({ person: { name: realm.ruler.name, gender: realm.ruler.gender, tier: realmTopTier(gameState.realmKey), alive: true, id: "ruler-" + gameState.realmKey }, role: `the ${realmTopTitle(gameState.realmKey, realm.ruler.gender)} you serve`, line: `you are ${gameState.royalCourt.status} — favor ${gameState.royalCourt.favor}.` });
+    }
+
+    const children = getChildren(gameState, player.id).filter(c => c.alive);
+    children.slice(0, 2).forEach(child => {
+        const grown = child.age >= 16;
+        const focusKey = grown ? null : getEducationFocus(gameState, child.id);
+        const focus = focusKey && EDUCATION_FOCI.find(f => f.key === focusKey);
+        const line = child.spouseId
+            ? `married now, and making their own way${child.royalHouseKey ? ` with royal blood of ${getRealm(child.royalHouseKey).name} in their children to come` : ""}.`
+            : grown
+                ? `of an age to be married off, if the right match can be found.`
+                : focus
+                    ? `being raised for ${focus.name.toLowerCase()}, still too young to know what it will make of them.`
+                    : `still a child, growing up watching everything you do.`;
+        people.push({ person: child, role: `your ${child.gender === "F" ? "daughter" : "son"}, age ${child.age}`, line });
+    });
+
+    const parents = getParents(gameState, player.id).filter(p => p.alive);
+    parents.forEach(parent => {
+        people.push({ person: parent, role: parent.gender === "F" ? "your mother" : "your father", line: `${personalityFlavor(parent)}, and still watching how you carry the family name.` });
+    });
+
+    if (!people.length) return null;
+
+    const card = makeCard("Your world", "");
+    people.forEach(({ person, role, line }) => {
+        const row = el("div", "stat", avatarRow(person, `<strong>${person.name}</strong> <span class="muted">— ${role}</span><br><span class="muted">${line}</span>`));
+        card.appendChild(row);
+    });
+    return card;
+}
+
 const DOCK_VIEWS = [
-    { key: "chronicle", name: "Chronicle", icon: "📜" },
+    { key: "chronicle", name: "Your World", icon: "🎭" },
     { key: "domain", name: "Domain", icon: "🏰" },
     { key: "military", name: "Military", icon: "⚔️" },
     { key: "family", name: "Family", icon: "👪" },
@@ -345,7 +416,11 @@ function renderPlayView() {
     const player = gameState.player;
 
     if (_playViewTab === "chronicle") {
-        const logCard = makeCard("Chronicle", "");
+        const castCard = renderCastOfCharacters(gameState);
+        if (castCard) view.appendChild(castCard);
+        else view.appendChild(makeCard("Your world", '<p class="muted">No one close to you yet — no spouse, no living parents, no one at court who stands out. That will change.</p>'));
+
+        const logCard = makeCard("The chronicle so far", "");
         const entries = gameState.log.slice(-10).reverse();
         entries.forEach(e => logCard.appendChild(el("p", "muted", `${e.year} — ${e.text}`)));
         view.appendChild(logCard);

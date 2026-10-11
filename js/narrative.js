@@ -33,3 +33,32 @@ function voiceLine(variants, person) {
     if (!pick) return "";
     return Array.isArray(pick) ? randomFrom(pick) : pick;
 }
+
+// A one-line read on who someone IS, from their own temperament — used
+// to describe anyone in the player's orbit (a vassal, a spouse, a
+// council member) as a person with a disposition, not a trait-tag list.
+const VOICE_PERSONALITY_FLAVOR = {
+    bold: "quick to act, and quicker to anger",
+    wary: "careful with every word around you",
+    devout: "devout, and watching to see if you are too",
+    cunning: "always working an angle",
+    warm: "openly, genuinely fond of you",
+    neutral: "hard to get a true read on",
+};
+
+function personalityFlavor(person) {
+    return VOICE_PERSONALITY_FLAVOR[playerVoice(person)] || VOICE_PERSONALITY_FLAVOR.neutral;
+}
+
+// Translates a raw opinion number into how that relationship would
+// actually be described, the way a real court would gossip about it —
+// the words the number means, not the number itself.
+function relationshipLabel(opinion) {
+    if (opinion >= 85) return "devoted to you";
+    if (opinion >= 70) return "a true ally";
+    if (opinion >= 55) return "warm toward you";
+    if (opinion >= 45) return "civil, nothing more";
+    if (opinion >= 30) return "wary of you";
+    if (opinion >= 15) return "resentful";
+    return "your enemy, in all but name";
+}
