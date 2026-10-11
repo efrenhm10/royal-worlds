@@ -102,6 +102,37 @@ h1 {
     display: block;
 }
 
+/* The Theater — each realm card's border/background reads its live
+   state at a glance: your own seat, an active war, a marriage tie, a
+   throne standing empty, or simple instability. */
+.theater-card {
+    transition: border-color .2s ease, box-shadow .2s ease;
+}
+
+.theater-card-home {
+    border: 2px solid var(--gilt-bright);
+    background: linear-gradient(180deg, rgba(240,194,61,0.12), var(--panel) 55%);
+}
+
+.theater-card-war {
+    border: 2px solid var(--gules-bright);
+    background: linear-gradient(180deg, rgba(212,66,90,0.14), var(--panel) 55%);
+}
+
+.theater-card-crisis {
+    border: 2px solid var(--gules);
+    background: linear-gradient(180deg, rgba(163,24,46,0.1), var(--panel) 55%);
+}
+
+.theater-card-tied {
+    border: 1px solid var(--gilt);
+    background: linear-gradient(180deg, rgba(201,151,26,0.09), var(--panel) 55%);
+}
+
+.theater-card-unstable {
+    border: 1px solid #6b4a4a;
+}
+
 .scheme-card {
     border: 1px solid var(--gules);
     background: linear-gradient(180deg, rgba(163,24,46,0.12), var(--panel) 50%);

@@ -904,7 +904,173 @@ const DECISION_EVENTS = [
             },
         ],
     },
+    // Historical pressure — proof-of-concept examples of a real brace-
+    // keted structural event, tied to an actual realm and an actual
+    // year range rather than a generic template. The pattern (a realm
+    // key + a year window as the condition) is meant to be extended with
+    // more brackets over time, not a finished, exhaustive list.
+    {
+        id: "wars_of_roses_allegiance",
+        chance: 0.5,
+        condition: gameState => gameState.realmKey === "england" && gameState.year >= 1455 && gameState.year <= 1487 && !gameState.warsOfRosesHouse,
+        title: "Lancaster or York?",
+        text: gameState => voiceLine({
+            bold: [`England tears at itself between Lancaster and York, and ${gameState.player.name} can't simply wait this one out — a side must be chosen, and chosen now.`],
+            wary: [`The realm is splitting between Lancaster and York. ${gameState.player.name} has put off choosing a side as long as it's been safe to — which is to say, no longer.`],
+            neutral: `England is tearing itself apart between the houses of Lancaster and York — a choice that can't be avoided forever.`,
+        }, gameState.player),
+        options: [
+            {
+                label: "Pledge for Lancaster",
+                apply(gameState) {
+                    gameState.warsOfRosesHouse = "lancaster";
+                    gameState.rivalStability = gameState.rivalStability || {};
+                    gameState.rivalStability.england = (gameState.rivalStability.england || 0) - 15;
+                    getVassals(gameState).forEach(v => adjustOpinion(v, randInt(-5, 10)));
+                    return `${gameState.player.name} pledges for the House of Lancaster. York is now a declared rival — and the realm's own stability bears the strain of the choice.`;
+                },
+            },
+            {
+                label: "Pledge for York",
+                apply(gameState) {
+                    gameState.warsOfRosesHouse = "york";
+                    gameState.rivalStability = gameState.rivalStability || {};
+                    gameState.rivalStability.england = (gameState.rivalStability.england || 0) - 15;
+                    getVassals(gameState).forEach(v => adjustOpinion(v, randInt(-5, 10)));
+                    return `${gameState.player.name} pledges for the House of York. Lancaster is now a declared rival — and the realm's own stability bears the strain of the choice.`;
+                },
+            },
+            {
+                label: "Stay neutral, for now",
+                apply(gameState) {
+                    gameState.warsOfRosesHouse = "neutral";
+                    getVassals(gameState).forEach(v => adjustOpinion(v, -8));
+                    gameState.player.prestige = Math.max(0, (gameState.player.prestige || 0) - 10);
+                    return `${gameState.player.name} refuses to choose a side — and both houses, and most of the court, take it as cowardice rather than wisdom (-10 prestige, vassals uneasy).`;
+                },
+            },
+        ],
+    },
+    {
+        id: "isabella_piety_demand",
+        chance: 0.15,
+        condition: gameState => gameState.realmKey === "castile" && gameState.year >= 1474 && gameState.year <= 1504,
+        title: "A Queen's own piety, demanded of you too",
+        text: gameState => voiceLine({
+            devout: [`Isabella's own famous piety sets the tone for the whole court now — and her clergy have started asking pointed questions about ${gameState.player.name}'s own devotion.`],
+            wary: [`Word reaches ${gameState.player.name} that Isabella's clergy have been asking pointed questions about devotion at court — the kind of attention that's dangerous to ignore.`],
+            cunning: [`Isabella's clergy are asking pointed questions about devotion at court — ${gameState.player.name} suspects it's as much about land as it is about God.`],
+            neutral: `Isabella's reign has brought real clerical scrutiny to every noble house in Castile, ${gameState.player.name}'s included.`,
+        }, gameState.player),
+        options: [
+            {
+                label: "Pay a generous tithe (60 gold)",
+                apply(gameState) {
+                    const player = gameState.player;
+                    if ((player.gold || 0) < 60) return "There isn't enough gold to make a tithe the clergy would actually respect.";
+                    player.gold -= 60;
+                    adjustStanding(gameState, gameState.realmKey, 12);
+                    return `A generous tithe quiets the whispers, for now (-60 gold, +12 standing with Rome).`;
+                },
+            },
+            {
+                label: "Publicly renounce impious ways",
+                apply(gameState) {
+                    const player = gameState.player;
+                    player.prestige = Math.max(0, (player.prestige || 0) - 10);
+                    player.piety = (player.piety || 0) + 15;
+                    adjustStanding(gameState, gameState.realmKey, 15);
+                    return `${player.name} makes a public show of devotion — humbling, but it satisfies the clergy (-10 prestige, +15 piety, +15 standing with Rome).`;
+                },
+            },
+            {
+                label: "Refuse to answer to anyone's piety but your own",
+                apply(gameState) {
+                    adjustStanding(gameState, gameState.realmKey, -25);
+                    return `${gameState.player.name} refuses to bow to the clergy's demands — and Isabella's own church does not forget a refusal (-25 standing with Rome).`;
+                },
+            },
+        ],
+    },
+    // Opinion Leverage — a royal tie cuts both ways: relatives who hold a
+    // foreign throne lean on you, and courtiers lean on you to use the
+    // connection on THEIR behalf.
+    {
+        id: "royal_relative_demands_favor",
+        chance: 0.12,
+        condition: gameState => typeof hasRelativeHoldingAForeignThrone === "function" && hasRelativeHoldingAForeignThrone(gameState),
+        title: "A royal relative calls in a favor",
+        text: gameState => voiceLine({
+            bold: [`Word arrives from a relative who now sits on a foreign throne — a demand, really, dressed up as a request.`],
+            cunning: [`A relative's crown seems to come with an expectation attached — a request arrives that isn't really optional.`],
+            neutral: `A relative who holds a foreign throne sends word, asking for real support — gold, or men.`,
+        }, gameState.player),
+        options: [
+            {
+                label: "Send gold (60 gold)",
+                apply(gameState) {
+                    const player = gameState.player;
+                    if ((player.gold || 0) < 60) return "There isn't enough gold to send what's being asked.";
+                    player.gold -= 60;
+                    player.prestige = (player.prestige || 0) + 10;
+                    return `Gold is sent, and the family's standing with its crowned relative only grows (-60 gold, +10 prestige).`;
+                },
+            },
+            {
+                label: "Decline, diplomatically",
+                apply(gameState) {
+                    gameState.player.prestige = Math.max(0, (gameState.player.prestige || 0) - 5);
+                    return `The request is declined as gently as possible — relations cool slightly (-5 prestige).`;
+                },
+            },
+        ],
+    },
+    {
+        id: "courtier_begs_influence",
+        chance: 0.1,
+        condition: gameState => typeof hasRelativeHoldingAForeignThrone === "function" && hasRelativeHoldingAForeignThrone(gameState) && [...getVassals(gameState), ...Object.values(getCouncil(gameState))].length > 0,
+        buildContext: gameState => {
+            const pool = [...getVassals(gameState), ...Object.values(getCouncil(gameState))];
+            return { personId: randomFrom(pool).id };
+        },
+        title: "A courtier begs a favor",
+        text: (gameState, ctx) => {
+            const person = getCourtierById(gameState, ctx.personId);
+            const n = gameState.player.name;
+            return voiceLine({
+                warm: [`${person ? person.name : "Someone at court"} comes to ${n} hoping you'll use your family's royal connection on their behalf — land, mostly, though they're careful not to say so outright.`],
+                cunning: [`${person ? person.name : "Someone at court"} is angling for ${n} to use the family's royal tie for their own gain — land, almost certainly.`],
+                neutral: `${person ? person.name : "Someone at court"} asks ${n} to use the family's connection to a throne on their behalf.`,
+            }, gameState.player);
+        },
+        options: [
+            {
+                label: "Use your influence for them",
+                apply(gameState, ctx) {
+                    const person = getCourtierById(gameState, ctx.personId);
+                    if (!person) return "The matter resolves itself before anything can be done.";
+                    adjustOpinion(person, 20);
+                    gameState.player.prestige = Math.max(0, (gameState.player.prestige || 0) - 3);
+                    return `${person.name} gets the help they wanted — word of it costs a little polish on your own name, but wins real loyalty (+20 opinion, -3 prestige).`;
+                },
+            },
+            {
+                label: "Decline — your influence isn't for spending here",
+                apply(gameState, ctx) {
+                    const person = getCourtierById(gameState, ctx.personId);
+                    if (!person) return "The matter resolves itself before anything can be done.";
+                    adjustOpinion(person, -8);
+                    return `${person.name} is turned away, and doesn't hide the disappointment (-8 opinion).`;
+                },
+            },
+        ],
+    },
 ];
+
+function getCourtierById(gameState, id) {
+    if (gameState.vassals[id]) return gameState.vassals[id];
+    return Object.values(getCouncil(gameState)).find(c => c.id === id) || null;
+}
 
 // Rolls for at most one new decision per year, and only if none is already
 // waiting to be resolved — advanceYear (engine.js) refuses to run again

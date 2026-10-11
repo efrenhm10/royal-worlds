@@ -352,6 +352,7 @@ function appendRelativeActions(container, gameState, personId) {
 
 const DOCK_VIEWS = [
     { key: "chronicle", name: "Your World", icon: "🎭" },
+    { key: "realms", name: "The Theater", icon: "🗺️" },
     { key: "domain", name: "Domain", icon: "🏰" },
     { key: "military", name: "Military", icon: "⚔️" },
     { key: "family", name: "Family", icon: "👪" },
@@ -374,7 +375,7 @@ function dockBadge(gameState, key) {
 function renderPlay() {
     const realm = getRealm(gameState.realmKey);
     const player = gameState.player;
-    const title = player.churchTier != null ? churchRankName(player.churchTier) : personDisplayTitle(player);
+    const title = player.churchTier != null ? churchRankName(player.churchTier) : fullPersonTitle(player);
 
     const hud = document.getElementById("hud");
     clearEl(hud);
@@ -454,10 +455,20 @@ function renderPlay() {
     renderPlayView();
 }
 
+// Whichever title actually applies right now: a consort tie (your
+// spouse just became king, you're queen) outranks a generic land-tier
+// title, which outranks nothing at all. Recomputed live every render,
+// so a succession elsewhere updates everyone's title the moment it
+// happens, with no separate step needed.
+function fullPersonTitle(person) {
+    const consort = consortDisplayTitle(gameState, person);
+    return consort || personDisplayTitle(person);
+}
+
 function personLine(person, relation) {
     const alive = person.alive ? `age ${person.age}` : `died at ${person.age}`;
     const traitsLine = person.traits && person.traits.length ? ` <span class="muted">(${person.traits.join(", ")})</span>` : "";
-    const title = personDisplayTitle(person);
+    const title = fullPersonTitle(person);
     return avatarRow(person, `<strong>${title} ${person.name}</strong> — ${relation}, ${alive}${traitsLine}`);
 }
 
@@ -467,7 +478,7 @@ function personLine(person, relation) {
 function renderDiaryColumn(gameState) {
     const player = gameState.player;
     const realm = getRealm(gameState.realmKey);
-    const title = player.churchTier != null ? churchRankName(player.churchTier) : personDisplayTitle(player);
+    const title = player.churchTier != null ? churchRankName(player.churchTier) : fullPersonTitle(player);
     const col = el("div", "col-diary", "");
 
     const card = makeCard("Royal Diary", "");
@@ -512,7 +523,11 @@ function renderPlayView() {
 
         const dramaCol = el("div", "col-drama", "");
         const logCard = makeCard("The Court", "");
-        const entries = gameState.log.slice(-12).reverse();
+        // This feed is about YOUR life — background world history (tagged
+        // "[World]" by canon.js, for realms/rulers you have no direct tie
+        // to) belongs to the wider Chronicle of your reign, not the thing
+        // you read first every time you open the game.
+        const entries = gameState.log.filter(e => !e.text.startsWith("[World]")).slice(-12).reverse();
         if (!entries.length) logCard.appendChild(el("p", "muted", "Nothing has happened yet — the story starts now."));
         entries.forEach(e => logCard.appendChild(el("p", "muted", `${e.year} — ${e.text}`)));
         dramaCol.appendChild(logCard);
@@ -524,6 +539,42 @@ function renderPlayView() {
         else socialCol.appendChild(makeCard("Your circle", '<p class="muted">No one close to you yet, or standing out at court. That will change.</p>'));
         grid.appendChild(socialCol);
 
+        view.appendChild(grid);
+        return;
+    }
+
+    // The Theater — a strategic overview of every realm in play, not a
+    // literal map: elegant cards instead of ASCII geography, each one
+    // reading the realm's actual live state (a tracked succession, a war,
+    // a marriage tie, its stability) rather than a static flavor blurb.
+    if (_playViewTab === "realms") {
+        const grid = el("div", "grid", "");
+        listRealms().forEach(realm => {
+            const isHome = realm.key === gameState.realmKey;
+            const atWar = gameState.war && gameState.war.targetRealmKey === realm.key;
+            const tied = (gameState.claims || []).some(c => c.realmKey === realm.key && c.type === "marriage");
+            const tracked = gameState.foreignRoyals && gameState.foreignRoyals[realm.key];
+            const ruler = tracked ? getPerson(gameState, tracked) : null;
+            const rulerAlive = ruler && ruler.alive;
+            const rulerName = rulerAlive ? ruler.name : realm.ruler.name;
+            const rulerTitle = rulerAlive ? realmTopTitle(realm.key, ruler.gender) : realmTopTitle(realm.key, realm.ruler.gender);
+            const stability = effectiveStability(gameState, realm.key);
+
+            let borderClass = "";
+            let statusLine = `Stability ${stability}`;
+            if (isHome) { borderClass = "theater-card-home"; statusLine = "Your own realm"; }
+            else if (atWar) { borderClass = "theater-card-war"; statusLine = "At war with you"; }
+            else if (tracked && !rulerAlive) { borderClass = "theater-card-crisis"; statusLine = "The throne stands empty"; }
+            else if (tied) { borderClass = "theater-card-tied"; statusLine = "Bound to your family by marriage"; }
+            else if (stability < 35) { borderClass = "theater-card-unstable"; statusLine = `Stability ${stability} — unstable`; }
+
+            const card = el("div", `card theater-card ${borderClass}`, `
+                <h3 style="margin-top:0;">${realm.name}</h3>
+                <p class="muted" style="margin:2px 0;">${gameState.year} — ${rulerTitle} ${rulerName}${tracked ? (rulerAlive ? " <span class=\"muted\">(your own bloodline)</span>" : "") : ""}</p>
+                <p class="muted" style="margin:2px 0;font-size:13px;">${statusLine}</p>
+            `);
+            grid.appendChild(card);
+        });
         view.appendChild(grid);
         return;
     }
@@ -859,8 +910,8 @@ function renderPlayView() {
             const advisor = council[roleKey];
             const role = COUNCIL_ROLES.find(r => r.key === roleKey);
             const row = el("div", "stat", avatarRow(advisor, `
-                <strong>${role.name}: ${advisor.name}</strong><br>
-                <span class="muted">Skill ${advisor.skill} · Opinion ${Math.round(advisor.opinion)} · ${advisor.traits.join(", ")}</span>
+                <strong>${advisor.name}</strong> <span class="muted">— ${role.name}</span><br>
+                <span class="muted">${relationshipLabel(advisor.opinion)} — ${personalityFlavor(advisor)}.</span>
             `));
             const btn = makeChoiceButton("Replace", () => {
                 replaceAdvisor(gameState, roleKey);
@@ -878,7 +929,7 @@ function renderPlayView() {
             const vTitle = titleName(v.tier, v.gender, gameState.realmKey);
             card.appendChild(el("div", "stat", avatarRow(v, `
                 <strong>${vTitle} ${v.name}</strong><br>
-                <span class="muted">Opinion ${Math.round(v.opinion)} · Levies ${v.levies} · ${v.traits.join(", ")}</span>
+                <span class="muted">${relationshipLabel(v.opinion)} — ${personalityFlavor(v)}. ${v.levies} levies to call on.</span>
             `)));
         });
 

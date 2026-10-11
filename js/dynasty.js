@@ -543,6 +543,65 @@ function graftRoyalHouse(gameState, candidate) {
     logEvent(`${candidate.name}'s tie to ${realm.name}'s royal house is now tracked — the line of succession to its throne will show where the family stands, and update as the house itself does.`);
 }
 
+// If a person's spouse is the actual reigning monarch of a realm — their
+// own, or one the family married into and is now tracking — the person
+// is that realm's consort: a real, dynamic title, not just "spouse of
+// someone important." Recomputed live every time it's asked, so a
+// daughter whose husband just inherited a throne becomes "Queen" the
+// moment that succession happens, with no separate update step needed.
+function consortRealmKey(gameState, person) {
+    const spouse = getSpouse(gameState, person.id);
+    if (!spouse || !spouse.alive || spouse.id === person.id) return null;
+    if (gameState.foreignRoyals) {
+        for (const realmKey of Object.keys(gameState.foreignRoyals)) {
+            if (gameState.foreignRoyals[realmKey] === spouse.id && spouse.tier >= realmTopTier(realmKey)) return realmKey;
+        }
+    }
+    if (spouse.realmKey === person.realmKey && spouse.tier >= realmTopTier(person.realmKey)) return person.realmKey;
+    return null;
+}
+
+function consortDisplayTitle(gameState, person) {
+    const realmKey = consortRealmKey(gameState, person);
+    return realmKey ? realmTopTitle(realmKey, person.gender) : null;
+}
+
+// Every family member — not just the player's spouse — who personally
+// holds a foreign crown, or is consort to one, reflects well on the
+// whole line: a real, standing +30 prestige while it lasts, not a
+// one-time pop. Recomputed from scratch each year rather than toggled,
+// so it always matches the family's CURRENT standing, not whatever it
+// was when a throne first changed hands.
+const DYNASTY_THRONE_PRESTIGE_BONUS = 30;
+
+function hasRelativeHoldingAForeignThrone(gameState) {
+    const player = gameState.player;
+    const candidates = [player, ...getChildren(gameState, player.id), ...getSiblings(gameState, player.id), getSpouse(gameState, player.id)].filter(Boolean);
+    return candidates.some(p => {
+        if (!p.alive) return false;
+        if (p.royalHouseKey && p.realmKey === p.royalHouseKey && p.tier >= realmTopTier(p.royalHouseKey) && p.royalHouseKey !== gameState.realmKey) return true;
+        return !!consortRealmKey(gameState, p);
+    });
+}
+
+// Yearly hook: keeps the standing +30 bonus exactly in sync with whether
+// it's currently earned, adding or removing it the moment the family's
+// tie to a foreign throne starts or ends, rather than letting it drift.
+function tickDynastyPrestige(gameState) {
+    const player = gameState.player;
+    const shouldHave = hasRelativeHoldingAForeignThrone(gameState);
+    const hasBonus = !!gameState._dynastyThroneBonusActive;
+    if (shouldHave && !hasBonus) {
+        player.prestige = (player.prestige || 0) + DYNASTY_THRONE_PRESTIGE_BONUS;
+        gameState._dynastyThroneBonusActive = true;
+        logEvent(`A member of your own family now holds a foreign throne — the family's name carries real weight for it (+${DYNASTY_THRONE_PRESTIGE_BONUS} prestige).`);
+    } else if (!shouldHave && hasBonus) {
+        player.prestige = Math.max(0, (player.prestige || 0) - DYNASTY_THRONE_PRESTIGE_BONUS);
+        gameState._dynastyThroneBonusActive = false;
+        logEvent(`The family's tie to a foreign throne has ended — the prestige that came with it goes too (-${DYNASTY_THRONE_PRESTIGE_BONUS} prestige).`);
+    }
+}
+
 // The general case: arranges a marriage for ANY family member, not just
 // the player — the player always pays the cost and bears the shame,
 // since they're the one with the gold and the standing to spend. Only
