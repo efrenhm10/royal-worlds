@@ -87,7 +87,9 @@ function getCousins(gameState, id) {
 }
 
 function makeRelative(realmKey, gender, age) {
-    return createCharacter({ realmKey, tier: 0, gender, age: Math.max(0, age) });
+    const r = createCharacter({ realmKey, tier: 0, gender, age: Math.max(0, age) });
+    r.loyalty = Math.max(0, Math.min(100, randInt(40, 70) + traitOpinionBias(r.traits)));
+    return r;
 }
 
 // Generates a spouse, and 0-N children, for an already-registered person —
@@ -118,6 +120,7 @@ function bearChild(gameState, motherId, fatherId, realmKey) {
     child.bloodline = true;
     child.motherId = motherId;
     child.fatherId = fatherId;
+    child.loyalty = Math.max(0, Math.min(100, randInt(55, 80) + traitOpinionBias(child.traits))); // a child starts closer to you than a background relative would
     // Royal blood passes down regardless of how much land the child
     // themselves ends up holding — a king's grandson through an
     // untitled marriage is still of that blood, not a commoner because
@@ -196,6 +199,7 @@ function buildRulerLinkCharacter(realmKey, rulerData) {
     c.bloodline = true;
     c.alive = true;
     c.royalHouseKey = realmKey;
+    c.loyalty = Math.max(0, Math.min(100, randInt(40, 70) + traitOpinionBias(c.traits)));
     return c;
 }
 

@@ -244,6 +244,7 @@ function renderCastOfCharacters(gameState) {
             person: spouse,
             role: "your spouse",
             line: `${personalityFlavor(spouse)}.`,
+            relative: true,
         });
     }
 
@@ -283,22 +284,70 @@ function renderCastOfCharacters(gameState) {
                 : focus
                     ? `being raised for ${focus.name.toLowerCase()}, still too young to know what it will make of them.`
                     : `still a child, growing up watching everything you do.`;
-        people.push({ person: child, role: `your ${child.gender === "F" ? "daughter" : "son"}, age ${child.age}`, line });
+        people.push({ person: child, role: `your ${child.gender === "F" ? "daughter" : "son"}, age ${child.age}`, line, relative: true });
     });
 
     const parents = getParents(gameState, player.id).filter(p => p.alive);
     parents.forEach(parent => {
-        people.push({ person: parent, role: parent.gender === "F" ? "your mother" : "your father", line: `${personalityFlavor(parent)}, and still watching how you carry the family name.` });
+        people.push({ person: parent, role: parent.gender === "F" ? "your mother" : "your father", line: `${personalityFlavor(parent)}, and still watching how you carry the family name.`, relative: true });
     });
 
     if (!people.length) return null;
 
     const card = makeCard("Your world", "");
-    people.forEach(({ person, role, line }) => {
+    people.forEach(({ person, role, line, relative }) => {
         const row = el("div", "stat", avatarRow(person, `<strong>${person.name}</strong> <span class="muted">— ${role}</span><br><span class="muted">${line}</span>`));
         card.appendChild(row);
+        if (relative && !gameState.gameOver) appendRelativeActions(card, gameState, person.id);
     });
     return card;
+}
+
+// The thing the earlier version of this game had and this one didn't:
+// family isn't just something you read about, it's loyalty you actively
+// work at — ask for gold, ask for political support, send a gift, or
+// simply spend real time with someone. Shared by the Your World cast and
+// the Family tab's own lists.
+function appendRelativeActions(container, gameState, personId) {
+    const person = getPerson(gameState, personId);
+    if (!person || !person.alive) return;
+    const wrap = el("div", null, "");
+    wrap.style.margin = "4px 0 14px";
+    const loyalty = relativeLoyalty(person);
+    wrap.appendChild(el("div", null, `<span class="muted" style="font-size:12px;">Loyalty to you: ${Math.round(loyalty)}/100</span><div class="meter" style="margin:3px 0 8px;"><span style="width:${loyalty}%"></span></div>`));
+    const btnRow = el("div", null, "");
+    btnRow.style.display = "flex";
+    btnRow.style.flexWrap = "wrap";
+    btnRow.style.gap = "6px";
+
+    if (person.age >= 16) {
+        btnRow.appendChild(makeChoiceButton("Ask for gold", () => {
+            askRelativeForGold(gameState, personId);
+            saveGame();
+            renderPlay();
+        }, !canAskRelativeForGold(gameState, personId)));
+
+        btnRow.appendChild(makeChoiceButton("Ask for support", () => {
+            askRelativeForSupport(gameState, personId);
+            saveGame();
+            renderPlay();
+        }, !canAskRelativeForSupportSeparately(gameState, personId)));
+    }
+
+    btnRow.appendChild(makeChoiceButton("Send a gift (20 gold)", () => {
+        sendGiftToRelative(gameState, personId, 20);
+        saveGame();
+        renderPlay();
+    }, (gameState.player.gold || 0) < 20));
+
+    btnRow.appendChild(makeChoiceButton("Spend time together", () => {
+        spendTimeWithRelative(gameState, personId);
+        saveGame();
+        renderPlay();
+    }, !canSpendTimeWithRelative(gameState, personId)));
+
+    wrap.appendChild(btnRow);
+    container.appendChild(wrap);
 }
 
 const DOCK_VIEWS = [
@@ -565,6 +614,7 @@ function renderPlayView() {
 
         if (spouse && spouse.alive) {
             card.appendChild(el("div", null, personLine(spouse, "spouse")));
+            if (!gameState.gameOver) appendRelativeActions(card, gameState, spouse.id);
             if (!gameState.gameOver) {
                 const tryBtn = makeChoiceButton("Try for a child", () => {
                     tryForChild(gameState);
@@ -576,17 +626,29 @@ function renderPlayView() {
         } else if (spouse && !spouse.alive) {
             card.appendChild(el("div", null, `<p>Widowed — ${spouse.name} died at ${spouse.age}.</p>`));
         }
-        parents.forEach(p => card.appendChild(el("div", null, personLine(p, p.gender === "F" ? "mother" : "father"))));
+        parents.forEach(p => {
+            card.appendChild(el("div", null, personLine(p, p.gender === "F" ? "mother" : "father")));
+            if (!gameState.gameOver) appendRelativeActions(card, gameState, p.id);
+        });
         if (children.length) {
             card.appendChild(el("h3", null, "Children"));
-            children.forEach(c => card.appendChild(el("div", null, personLine(c, c.gender === "F" ? "daughter" : "son"))));
+            children.forEach(c => {
+                card.appendChild(el("div", null, personLine(c, c.gender === "F" ? "daughter" : "son")));
+                if (!gameState.gameOver) appendRelativeActions(card, gameState, c.id);
+            });
         }
         card.appendChild(el("h3", null, `Siblings (${siblings.length})`));
-        siblings.forEach(s => card.appendChild(el("div", null, personLine(s, s.gender === "F" ? "sister" : "brother"))));
+        siblings.forEach(s => {
+            card.appendChild(el("div", null, personLine(s, s.gender === "F" ? "sister" : "brother")));
+            if (!gameState.gameOver) appendRelativeActions(card, gameState, s.id);
+        });
         card.appendChild(el("h3", null, `Nieces & nephews (${niecesNephews.length})`));
         niecesNephews.forEach(n => card.appendChild(el("div", null, personLine(n, n.gender === "F" ? "niece" : "nephew"))));
         card.appendChild(el("h3", null, `Aunts & uncles (${auntsUncles.length})`));
-        auntsUncles.forEach(a => card.appendChild(el("div", null, personLine(a, a.gender === "F" ? "aunt" : "uncle"))));
+        auntsUncles.forEach(a => {
+            card.appendChild(el("div", null, personLine(a, a.gender === "F" ? "aunt" : "uncle")));
+            if (!gameState.gameOver) appendRelativeActions(card, gameState, a.id);
+        });
         card.appendChild(el("h3", null, `Cousins (${cousins.length})`));
         cousins.forEach(c => card.appendChild(el("div", null, personLine(c, "cousin"))));
         view.appendChild(card);
