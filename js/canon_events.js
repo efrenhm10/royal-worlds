@@ -29,11 +29,42 @@ const CANON_EVENTS_1461 = [
         id: "england_tewkesbury", year: 1471, realmKey: "england",
         headline: "The Earl of Warwick, 'the Kingmaker,' has fallen at Barnet, and the Lancastrian cause has been broken at Tewkesbury. Edward IV's hold on the English throne looks secure at last.",
         stabilityDelta: { england: 15 },
+        // Branches on the real wars_of_roses_allegiance decision
+        // (decisions.js) — pledging Lancaster doesn't just cost standing
+        // at the time, it actually changes who wins this battle.
+        variants: [
+            {
+                when: gameState => gameState.warsOfRosesHouse === "lancaster",
+                headline: "Backed by real allies, the Lancastrian cause holds at Tewkesbury after all — Edward IV's Yorkist army is broken instead, and the Red Rose's grip on the throne is real again, for now.",
+                stabilityDelta: { england: -10 },
+            },
+            {
+                when: gameState => gameState.warsOfRosesHouse === "neutral",
+                headline: "The Earl of Warwick has fallen at Barnet, and the Lancastrian cause has been broken at Tewkesbury — Edward IV's throne is secure, though those who stayed neutral earn no credit for it.",
+                stabilityDelta: { england: 5 },
+            },
+        ],
     },
     {
         id: "burgundy_charles_dies_nancy", year: 1477, realmKey: "burgundy",
         headline: "Charles the Bold has died at the Battle of Nancy. His daughter Mary inherits a Burgundy suddenly surrounded on all sides, and marries Maximilian of Austria within the year — the Habsburgs' fortunes rise with her.",
         stabilityDelta: { burgundy: -25, austria: 10 },
+        // Branches on the real burgundian_succession_crisis decision
+        // (decisions.js) — championing Mary's own rule or encouraging
+        // French encroachment actually changes who ends up holding
+        // Burgundy, not just how the player's own standing moved.
+        variants: [
+            {
+                when: gameState => gameState.burgundySuccessionResolved === "mary",
+                headline: "Charles the Bold has died at the Battle of Nancy. With real support behind her, his daughter Mary holds Burgundy in her own right, no Habsburg marriage needed — a rarer thing, a woman ruling a great duchy outright.",
+                stabilityDelta: { burgundy: -10 },
+            },
+            {
+                when: gameState => gameState.burgundySuccessionResolved === "france",
+                headline: "Charles the Bold has died at the Battle of Nancy, and with the duchy's defenders turned against its own succession, Louis XI's France has moved into the leaderless duchy almost unopposed — Burgundy as an independent power is finished.",
+                stabilityDelta: { burgundy: -40, france: 10 },
+            },
+        ],
     },
     {
         id: "ottoman_otranto", year: 1480, realmKey: "ottoman",
@@ -49,6 +80,17 @@ const CANON_EVENTS_1461 = [
         id: "england_bosworth", year: 1485, realmKey: "england",
         headline: "Richard III has been defeated and killed at Bosworth Field. Henry Tudor takes the throne as Henry VII — the Plantagenet line is ended, and a new dynasty begins.",
         stabilityDelta: { england: -20 },
+        // Continues the alternate thread from england_tewkesbury — if
+        // Lancaster actually won in 1471, there's no Yorkist Richard III
+        // on the throne for Henry Tudor to depose. The crisis moves
+        // instead to the Lancastrian line's own succession.
+        variants: [
+            {
+                when: gameState => gameState.warsOfRosesHouse === "lancaster",
+                headline: "The House of Lancaster's restored throne faces its first real test as the old king's heirs quarrel bitterly over who inherits — the Red Rose's hold has outlasted Tewkesbury, but not without real cost.",
+                stabilityDelta: { england: -15 },
+            },
+        ],
     },
     {
         id: "hungary_matthias_dies", year: 1490, realmKey: "hungary",

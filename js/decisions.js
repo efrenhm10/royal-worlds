@@ -409,6 +409,243 @@ function leverageRequestFor(key) {
     return LEVERAGE_REQUEST_TYPES.find(r => r.key === key) || LEVERAGE_REQUEST_TYPES[0];
 }
 
+// THE PROCEDURAL DRAMA DIRECTOR — the engine every beat below is
+// actually generated from, not a label on three hand-picked examples.
+// It is two small classifiers plus one processor:
+//
+//   classifyPlayerSituation(gameState)  -> ["unmarried_royal_sibling", ...]
+//       WHO you structurally are right now — read live off the family
+//       tree, marriage status and crown proximity that already exist
+//       (reigningSiblingMonarch, isAvailableToMarry, getChildren,
+//       realmTopTier), never a fixed role picked at character creation.
+//
+//   assessRealmNeeds(gameState)  -> ["needs_border_alliance", ...]
+//       WHAT the realm actually needs right now — read live off
+//       borders/relations, succession security and the war, the same
+//       state the rest of the game already tracks.
+//
+//   buildDramaBeatDecisionEvent(tpl)
+//       Turns a {situation, need, ...} template into a real decision
+//       whose condition is the CROSS-REFERENCE of the two — a beat only
+//       exists where a situation tag and a need tag actually overlap.
+// A new beat means adding a template to DRAMA_BEAT_TEMPLATES, not
+// writing a new one-off condition function.
+function classifyPlayerSituation(gameState) {
+    const player = gameState.player;
+    const tags = [];
+    if (!player || !player.alive) return tags;
+
+    const isReigning = player.realmKey === gameState.realmKey && player.tier >= realmTopTier(gameState.realmKey);
+    if (isReigning) tags.push("reigning_monarch");
+
+    if (isAvailableToMarry(gameState, player.id) && player.age >= 16 && player.age <= 45) {
+        tags.push("unmarried");
+        if (typeof reigningSiblingMonarch === "function" && reigningSiblingMonarch(gameState)) {
+            tags.push("unmarried_royal_sibling");
+        }
+    }
+
+    if (isReigning && !getChildren(gameState, player.id).some(c => c.alive)) {
+        tags.push("childless_reigning_monarch");
+    }
+
+    if (gameState.war) {
+        const myPower = playerMilitaryPower(gameState);
+        const theirPower = targetMilitaryPower(gameState, gameState.war.targetRealmKey);
+        if (myPower < theirPower * 0.75) tags.push("war_leader_outmatched");
+    }
+
+    return tags;
+}
+
+function assessRealmNeeds(gameState) {
+    const needs = [];
+    const situations = classifyPlayerSituation(gameState);
+
+    const neighbors = typeof neighborsOf === "function" ? neighborsOf(gameState.realmKey) : [];
+    const hasUntiedRiskyNeighbor = neighbors.some(k => {
+        const alreadyTied = (gameState.claims || []).some(c => c.realmKey === k && c.type === "marriage");
+        if (alreadyTied) return false;
+        const relationsLow = typeof relationsWith === "function" ? relationsWith(gameState, k) < 65 : true;
+        const risky = effectiveStability(gameState, k) < 50 || k === "ottoman" || k === "wallachia";
+        return relationsLow && risky;
+    });
+    if (hasUntiedRiskyNeighbor) needs.push("needs_border_alliance");
+
+    if (situations.includes("childless_reigning_monarch")) needs.push("needs_heir");
+    if (situations.includes("war_leader_outmatched")) needs.push("needs_military_support");
+
+    return needs;
+}
+
+function buildDramaBeatDecisionEvent(tpl) {
+    return {
+        id: tpl.id,
+        chance: tpl.chance,
+        condition: gameState => classifyPlayerSituation(gameState).includes(tpl.situation)
+            && assessRealmNeeds(gameState).includes(tpl.need)
+            && (!tpl.extraCondition || tpl.extraCondition(gameState)),
+        buildContext: tpl.buildContext,
+        title: tpl.title,
+        text: tpl.text,
+        options: tpl.options,
+    };
+}
+
+const DRAMA_BEAT_TEMPLATES = [
+    // unmarried_royal_sibling x needs_border_alliance — the crown leans
+    // on a sibling to secure a border through marriage.
+    {
+        id: "sibling_marriage_alliance",
+        situation: "unmarried_royal_sibling",
+        need: "needs_border_alliance",
+        chance: 0.3,
+        buildContext: gameState => {
+            const sib = reigningSiblingMonarch(gameState);
+            const neighbors = neighborsOf(sib.realmKey).filter(k => k !== gameState.realmKey);
+            const risky = neighbors.filter(k => {
+                const tied = (gameState.claims || []).some(c => c.realmKey === k && c.type === "marriage");
+                return !tied && (effectiveStability(gameState, k) < 50 || k === "ottoman" || k === "wallachia") && relationsWith(gameState, k) < 65;
+            });
+            const pool = risky.length ? risky : (neighbors.length ? neighbors : listRealms().map(r => r.key).filter(k => k !== sib.realmKey));
+            const targetRealmKey = randomFrom(pool);
+            const forcedGender = gameState.player.gender === "M" ? "F" : "M";
+            const candidate = generateNobleMarriageCandidates(targetRealmKey, 1, forcedGender)[0];
+            const reasons = [
+                `seal an alliance with ${getRealm(targetRealmKey).name} against a shared rival`,
+                `buy a season's peace along the ${getRealm(targetRealmKey).name} border`,
+                `settle a debt owed to ${getRealm(targetRealmKey).name}'s own house`,
+            ];
+            return { siblingId: sib.id, candidate, targetRealmKey, reasonLine: randomFrom(reasons) };
+        },
+        title: "A crown's demand, dressed as family",
+        text: (gameState, ctx) => {
+            const sib = getPerson(gameState, ctx.siblingId);
+            const n = gameState.player.name;
+            const sibTitle = sib ? realmTopTitle(sib.realmKey, sib.gender) : "The crown";
+            const sibName = sib ? sib.name : "your sibling";
+            return voiceLine({
+                bold: [`${sibTitle} ${sibName} summons ${n} with a demand dressed up as a family favor: marry ${ctx.candidate.name} of ${getRealm(ctx.targetRealmKey).name}, to ${ctx.reasonLine}.`],
+                wary: [`${n} is called before ${sibTitle} ${sibName} — a marriage is being arranged, to ${ctx.candidate.name} of ${getRealm(ctx.targetRealmKey).name}, meant to ${ctx.reasonLine}. It isn't really a request.`],
+                cunning: [`${sibTitle} ${sibName} wants ${n} married to ${ctx.candidate.name} of ${getRealm(ctx.targetRealmKey).name} — useful to the crown, to ${ctx.reasonLine}, whatever it costs ${n} personally.`],
+                neutral: `${sibTitle} ${sibName} asks ${n} to marry ${ctx.candidate.name} of ${getRealm(ctx.targetRealmKey).name}, to ${ctx.reasonLine}.`,
+            }, gameState.player);
+        },
+        options: [
+            {
+                label: "Comply — marry for the crown",
+                apply(gameState, ctx) {
+                    const sib = getPerson(gameState, ctx.siblingId);
+                    const married = arrangeMarriage(gameState, gameState.player, ctx.candidate);
+                    if (!married) return `There isn't enough standing to make the match happen properly, as asked — the moment passes, awkwardly.`;
+                    if (sib) sib.loyalty = Math.min(100, relativeLoyalty(sib) + 20);
+                    gameState.player.prestige = (gameState.player.prestige || 0) + 15;
+                    return `${gameState.player.name} marries ${married.name} as asked — the crown remembers who answered the call (+15 prestige)${sib ? `, and ${sib.name}'s trust in you only grows.` : "."}`;
+                },
+            },
+            {
+                label: "Refuse",
+                apply(gameState, ctx) {
+                    const sib = getPerson(gameState, ctx.siblingId);
+                    const player = gameState.player;
+                    if (sib) sib.loyalty = Math.max(0, relativeLoyalty(sib) - 35);
+                    if (Math.random() < 0.5) {
+                        if (sib) sib.loyalty = 5;
+                        player.gold = Math.max(0, (player.gold || 0) - 40);
+                        getVassals(gameState).forEach(v => { if (Math.random() < 0.4) adjustOpinion(v, randInt(-6, -1)); });
+                        return `${player.name} refuses — and ${sib ? sib.name : "the crown"} doesn't forgive it quietly. The royal allowance stops cold, and word soon follows that raiders have grown bolder along an undefended stretch of the border since (-40 gold, vassals uneasy).`;
+                    }
+                    return `${player.name} refuses the match — ${sib ? sib.name : "the crown"} is coldly disappointed, and makes no secret of it.`;
+                },
+            },
+        ],
+    },
+    // unmarried x needs_heir (only reachable by a childless reigning
+    // monarch — needs_heir only exists when that situation does) — the
+    // council presses a crownless-heir monarch to marry quickly.
+    {
+        id: "pressed_to_remarry_for_heir",
+        situation: "unmarried",
+        need: "needs_heir",
+        chance: 0.25,
+        extraCondition: gameState => classifyPlayerSituation(gameState).includes("childless_reigning_monarch"),
+        buildContext: gameState => ({ candidate: generateMarriageCandidates(gameState, 1)[0] }),
+        title: "No heir, and the council knows it",
+        text: (gameState, ctx) => voiceLine({
+            bold: [`The council says plainly what everyone already thinks: there is no heir, and ${gameState.player.name} has put off marrying long enough that it's becoming a real danger to the line.`],
+            wary: [`${gameState.player.name} is reminded, not gently, that a crown without an heir is a crown half-lost already — and a match, ${ctx.candidate.name}, is already waiting to be considered.`],
+            cunning: [`The council has already found a convenient match — ${ctx.candidate.name} — and makes clear that the longer ${gameState.player.name} waits, the more they'll be seen as inviting a succession crisis on purpose.`],
+            neutral: `The council presses ${gameState.player.name} to marry and secure the succession, proposing ${ctx.candidate.name} as a practical match.`,
+        }, gameState.player),
+        options: [
+            {
+                label: "Marry quickly, for the realm's sake",
+                apply(gameState, ctx) {
+                    const married = arrangeMarriage(gameState, gameState.player, ctx.candidate);
+                    if (!married) return `The match falls through before it can be made official — the council is not pleased.`;
+                    getVassals(gameState).forEach(v => adjustOpinion(v, randInt(4, 10)));
+                    return `${gameState.player.name} marries ${married.name} — not for love, but the succession is secured, and the court visibly relaxes.`;
+                },
+            },
+            {
+                label: "Resist — you'll choose in your own time",
+                apply(gameState) {
+                    const player = gameState.player;
+                    player.prestige = Math.max(0, (player.prestige || 0) - 8);
+                    getVassals(gameState).forEach(v => { if (Math.random() < 0.5) adjustOpinion(v, randInt(-8, -2)); });
+                    return `${player.name} refuses to be rushed — a right any ruler should have, though the council's confidence in the line's security visibly slips (-8 prestige, vassals uneasy).`;
+                },
+            },
+        ],
+    },
+    // war_leader_outmatched x needs_military_support — the Marshal
+    // forces a real choice once a war is clearly being lost.
+    {
+        id: "war_funding_crisis",
+        situation: "war_leader_outmatched",
+        need: "needs_military_support",
+        chance: 0.3,
+        buildContext: gameState => ({ targetRealmKey: gameState.war.targetRealmKey }),
+        title: "The war is going badly, and your Marshal says so plainly",
+        text: (gameState, ctx) => voiceLine({
+            bold: [`Your Marshal lays it out without softening it: the war against ${getRealm(ctx.targetRealmKey).name} is being lost on the numbers alone, and something has to change now.`],
+            wary: [`${gameState.player.name}'s own Marshal is openly worried — the war against ${getRealm(ctx.targetRealmKey).name} is going badly, and waiting any longer only makes the numbers worse.`],
+            neutral: `The war against ${getRealm(ctx.targetRealmKey).name} is going badly — your own council urges a real decision, not more waiting.`,
+        }, gameState.player),
+        options: [
+            {
+                label: "Raise emergency funds for mercenaries (100 gold)",
+                apply(gameState) {
+                    const player = gameState.player;
+                    if (!gameState.war) return "The matter resolves itself before anything can be done.";
+                    if ((player.gold || 0) < 100) return "There isn't enough gold on hand to hire anyone worth the price.";
+                    player.gold -= 100;
+                    gameState.war.warScore = Math.min(100, gameState.war.warScore + 15);
+                    return `Mercenaries are hired on short notice — costly, but it buys real ground back on the war (-100 gold, +15 war score).`;
+                },
+            },
+            {
+                label: "Seek terms now, before it gets worse",
+                apply(gameState) {
+                    const player = gameState.player;
+                    if (!gameState.war) return "The matter resolves itself before anything can be done.";
+                    const realmName = getRealm(gameState.war.targetRealmKey).name;
+                    player.prestige = Math.max(0, (player.prestige || 0) - 10);
+                    gameState.war = null;
+                    return `${player.name} sues for peace against ${realmName} before the war gets any worse — a white peace, the claim unresolved, prestige bruised by the retreat (-10 prestige).`;
+                },
+            },
+            {
+                label: "Press on regardless",
+                apply(gameState) {
+                    gameState.player.health = Math.max(0, gameState.player.health - randInt(0, 5));
+                    return `${gameState.player.name} presses on despite the Marshal's warning — the strain of it is real.`;
+                },
+            },
+        ],
+    },
+];
+
 const DECISION_EVENTS = [
     {
         id: "tournament_invite",
@@ -1383,79 +1620,11 @@ const DECISION_EVENTS = [
             },
         ],
     },
-    // Procedural Drama Director — a crowned sibling has real leverage over
-    // an unmarried relative, and uses it: a political marriage, framed as
-    // family, that isn't really optional. Comply, and the tie strengthens.
-    // Refuse, and the engine runs a real structural fallback rather than
-    // just docking a number — the sibling's loyalty (which gates every
-    // "ask for gold/support" in relationships.js) is crashed, and roughly
-    // half the time that refusal escalates into the crown quietly
-    // withdrawing the border's protection, read out as an actual raid.
-    {
-        id: "sibling_marriage_alliance",
-        chance: 0.3,
-        condition: gameState => {
-            const player = gameState.player;
-            if (!player.alive || player.age < 16 || player.age > 45) return false;
-            if (!isAvailableToMarry(gameState, player.id)) return false;
-            return typeof reigningSiblingMonarch === "function" && !!reigningSiblingMonarch(gameState);
-        },
-        buildContext: gameState => {
-            const sib = reigningSiblingMonarch(gameState);
-            const neighbors = neighborsOf(sib.realmKey).filter(k => k !== gameState.realmKey);
-            const pool = neighbors.length ? neighbors : listRealms().map(r => r.key).filter(k => k !== sib.realmKey);
-            const targetRealmKey = randomFrom(pool);
-            const forcedGender = gameState.player.gender === "M" ? "F" : "M";
-            const candidate = generateNobleMarriageCandidates(targetRealmKey, 1, forcedGender)[0];
-            const reasons = [
-                `seal an alliance with ${getRealm(targetRealmKey).name} against a shared rival`,
-                `buy a season's peace along the ${getRealm(targetRealmKey).name} border`,
-                `settle a debt owed to ${getRealm(targetRealmKey).name}'s own house`,
-            ];
-            return { siblingId: sib.id, candidate, targetRealmKey, reasonLine: randomFrom(reasons) };
-        },
-        title: "A crown's demand, dressed as family",
-        text: (gameState, ctx) => {
-            const sib = getPerson(gameState, ctx.siblingId);
-            const n = gameState.player.name;
-            const sibTitle = sib ? realmTopTitle(sib.realmKey, sib.gender) : "The crown";
-            const sibName = sib ? sib.name : "your sibling";
-            return voiceLine({
-                bold: [`${sibTitle} ${sibName} summons ${n} with a demand dressed up as a family favor: marry ${ctx.candidate.name} of ${getRealm(ctx.targetRealmKey).name}, to ${ctx.reasonLine}.`],
-                wary: [`${n} is called before ${sibTitle} ${sibName} — a marriage is being arranged, to ${ctx.candidate.name} of ${getRealm(ctx.targetRealmKey).name}, meant to ${ctx.reasonLine}. It isn't really a request.`],
-                cunning: [`${sibTitle} ${sibName} wants ${n} married to ${ctx.candidate.name} of ${getRealm(ctx.targetRealmKey).name} — useful to the crown, to ${ctx.reasonLine}, whatever it costs ${n} personally.`],
-                neutral: `${sibTitle} ${sibName} asks ${n} to marry ${ctx.candidate.name} of ${getRealm(ctx.targetRealmKey).name}, to ${ctx.reasonLine}.`,
-            }, gameState.player);
-        },
-        options: [
-            {
-                label: "Comply — marry for the crown",
-                apply(gameState, ctx) {
-                    const sib = getPerson(gameState, ctx.siblingId);
-                    const married = arrangeMarriage(gameState, gameState.player, ctx.candidate);
-                    if (!married) return `There isn't enough standing to make the match happen properly, as asked — the moment passes, awkwardly.`;
-                    if (sib) sib.loyalty = Math.min(100, relativeLoyalty(sib) + 20);
-                    gameState.player.prestige = (gameState.player.prestige || 0) + 15;
-                    return `${gameState.player.name} marries ${married.name} as asked — the crown remembers who answered the call (+15 prestige)${sib ? `, and ${sib.name}'s trust in you only grows.` : "."}`;
-                },
-            },
-            {
-                label: "Refuse",
-                apply(gameState, ctx) {
-                    const sib = getPerson(gameState, ctx.siblingId);
-                    const player = gameState.player;
-                    if (sib) sib.loyalty = Math.max(0, relativeLoyalty(sib) - 35);
-                    if (Math.random() < 0.5) {
-                        if (sib) sib.loyalty = 5;
-                        player.gold = Math.max(0, (player.gold || 0) - 40);
-                        getVassals(gameState).forEach(v => { if (Math.random() < 0.4) adjustOpinion(v, randInt(-6, -1)); });
-                        return `${player.name} refuses — and ${sib ? sib.name : "the crown"} doesn't forgive it quietly. The royal allowance stops cold, and word soon follows that raiders have grown bolder along an undefended stretch of the border since (-40 gold, vassals uneasy).`;
-                    }
-                    return `${player.name} refuses the match — ${sib ? sib.name : "the crown"} is coldly disappointed, and makes no secret of it.`;
-                },
-            },
-        ],
-    },
+    // Procedural Drama Director — every beat generated by
+    // classifyPlayerSituation x assessRealmNeeds above (forced marriage
+    // for a border alliance, heir-pressure remarriage, a war-funding
+    // crisis, and whatever gets added to DRAMA_BEAT_TEMPLATES next).
+    ...DRAMA_BEAT_TEMPLATES.map(buildDramaBeatDecisionEvent),
     // Ambient border pressure — any realm with an unstable or openly
     // hostile neighbor (per realms.js's REALM_NEIGHBORS) carries a real,
     // recurring risk of raids, unless the player has paid to fortify the
@@ -1464,15 +1633,20 @@ const DECISION_EVENTS = [
     {
         id: "border_raid",
         chance: 0.22,
+        // Raid risk is now a genuine two-lever choice: fortifyBorder
+        // (domain.js) answers it with walls and gold spent once; good
+        // relations (wartime.js's relationsWith/sendEnvoy) answers it
+        // politically, realm by realm, and overrides even a classically
+        // raiding or unstable neighbor once trust is real.
         condition: gameState => {
             if (gameState.borderFortified) return false;
             const neighbors = neighborsOf(gameState.realmKey);
             if (!neighbors.length) return false;
-            return neighbors.some(k => effectiveStability(gameState, k) < 45 || k === "ottoman" || k === "wallachia");
+            return neighbors.some(k => (effectiveStability(gameState, k) < 45 || k === "ottoman" || k === "wallachia") && relationsWith(gameState, k) < 65);
         },
         buildContext: gameState => {
             const neighbors = neighborsOf(gameState.realmKey);
-            const risky = neighbors.filter(k => effectiveStability(gameState, k) < 45 || k === "ottoman" || k === "wallachia");
+            const risky = neighbors.filter(k => (effectiveStability(gameState, k) < 45 || k === "ottoman" || k === "wallachia") && relationsWith(gameState, k) < 65);
             const raiderRealmKey = randomFrom(risky.length ? risky : neighbors);
             return { raiderRealmKey };
         },

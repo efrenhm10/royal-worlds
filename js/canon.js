@@ -14,13 +14,33 @@ function setupCanon(gameState) {
     gameState.canonFired = gameState.canonFired || [];
 }
 
+// A scripted beat isn't locked to the real-history outcome — if the
+// player's own earlier choice (a Drama Director beat or a historical-
+// pressure decision) actually changed the balance of power it bears on,
+// canon_events.js can list alternate variants, each gated on a flag
+// those decisions set (gameState.warsOfRosesHouse,
+// gameState.burgundySuccessionResolved, ...). The first matching
+// variant replaces the real-history headline/stabilityDelta; with no
+// match (the player never engaged, or isn't in a position to have
+// mattered), the real historical outcome is exactly what still happens
+// — your choices bend the story, but the story was always going to move
+// on regardless.
+function resolveCanonEventVariant(evt, gameState) {
+    if (evt.variants) {
+        const match = evt.variants.find(v => v.when(gameState));
+        if (match) return { headline: match.headline, stabilityDelta: match.stabilityDelta };
+    }
+    return { headline: evt.headline, stabilityDelta: evt.stabilityDelta };
+}
+
 function applyCanonEvent(gameState, evt) {
+    const resolved = resolveCanonEventVariant(evt, gameState);
     const stakeholder = personalStakeInRealm(gameState, evt.realmKey);
-    logEvent(`${stakeholder ? "" : "[World] "}${evt.headline}`);
-    if (evt.stabilityDelta) {
+    logEvent(`${stakeholder ? "" : "[World] "}${resolved.headline}`);
+    if (resolved.stabilityDelta) {
         gameState.rivalStability = gameState.rivalStability || {};
-        Object.keys(evt.stabilityDelta).forEach(realmKey => {
-            gameState.rivalStability[realmKey] = (gameState.rivalStability[realmKey] || 0) + evt.stabilityDelta[realmKey];
+        Object.keys(resolved.stabilityDelta).forEach(realmKey => {
+            gameState.rivalStability[realmKey] = (gameState.rivalStability[realmKey] || 0) + resolved.stabilityDelta[realmKey];
         });
     }
     if (stakeholder) {

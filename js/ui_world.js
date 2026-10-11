@@ -608,11 +608,24 @@ function renderPlayView() {
             else if (tied) { borderClass = "theater-card-tied"; statusLine = "Bound to your family by marriage"; }
             else if (stability < 35) { borderClass = "theater-card-unstable"; statusLine = `Stability ${stability} — unstable`; }
 
+            // Relations — the political lever for "manage this neighbor"
+            // directly, alongside stability (their own internal state).
+            const relations = !isHome && typeof relationsWith === "function" ? relationsWith(gameState, realm.key) : null;
+            const relationsLine = relations != null ? `<p class="muted" style="margin:2px 0;font-size:13px;">Relations: ${relations}/100</p>` : "";
+
             const card = el("div", `card theater-card ${borderClass}`, `
                 <h3 style="margin-top:0;">${realm.name}</h3>
                 <p class="muted" style="margin:2px 0;">${gameState.year} — ${rulerTitle} ${rulerName}${tracked ? (rulerAlive ? " <span class=\"muted\">(your own bloodline)</span>" : "") : ""}</p>
                 <p class="muted" style="margin:2px 0;font-size:13px;">${statusLine}</p>
+                ${relationsLine}
             `);
+            if (!isHome && !gameState.gameOver && typeof sendEnvoy === "function") {
+                card.appendChild(makeChoiceButton(`Send an envoy (${ENVOY_COST} gold)`, () => {
+                    sendEnvoy(gameState, realm.key);
+                    saveGame();
+                    renderPlay();
+                }, !canSendEnvoy(gameState, realm.key)));
+            }
             grid.appendChild(card);
         });
         view.appendChild(grid);
@@ -623,7 +636,17 @@ function renderPlayView() {
         const holdings = getDomain(gameState);
         const vassals = getVassals(gameState);
 
-        if (!holdings.length) {
+        // "How much my lands are bringing in" — the same real numbers
+        // tickDomain applies every year, added up front rather than
+        // left to be inferred from watching the gold counter move.
+        if (holdings.length) {
+            const totals = domainIncomeSummary(gameState);
+            const bits = [];
+            if (totals.gold) bits.push(`${totals.gold} gold/yr`);
+            if (totals.levies) bits.push(`${totals.levies} levies`);
+            if (totals.piety) bits.push(`${totals.piety} piety/yr`);
+            view.appendChild(makeCard("Your lands, this year", `<p class="muted">${bits.length ? bits.join(" · ") : "Nothing in hand is yielding yet."}</p>`));
+        } else {
             view.appendChild(makeCard("Your demesne", '<p class="muted">No holdings of your own yet — that comes with a landed title.</p>'));
         }
 
@@ -631,7 +654,8 @@ function renderPlayView() {
             const typeInfo = HOLDING_TYPES.find(t => t.key === holding.type);
             const vassal = holding.grantedToVassalId ? vassals.find(v => v.id === holding.grantedToVassalId) : null;
             const status = vassal ? `granted to ${vassal.name}` : "in hand";
-            const card = makeCard(`${typeInfo.name} (level ${holding.level}) — ${status}`, `<p class="muted">${typeInfo.desc}</p>`);
+            const currentYield = holdingYieldLine(holdingYield(gameState, holding));
+            const card = makeCard(`${typeInfo.name} (level ${holding.level}) — ${status}`, `<p class="muted">${typeInfo.desc}</p><p class="muted">Currently producing: ${currentYield}</p>`);
             if (!gameState.gameOver) {
                 if (vassal) {
                     card.appendChild(makeChoiceButton("Revoke", () => {
@@ -640,6 +664,8 @@ function renderPlayView() {
                         renderPlay();
                     }, !crownAuthorityInfo(gameState.crownAuthority[gameState.realmKey] || 0).canRevokeTitlesFreely));
                 } else {
+                    const nextYield = holdingYieldLine(holdingYield(gameState, holding, holding.level + 1));
+                    card.appendChild(el("p", "muted", `At level ${holding.level + 1}: ${nextYield}`));
                     card.appendChild(makeChoiceButton(`Develop (${holding.level * 40} gold)`, () => {
                         developHolding(gameState, holding.id);
                         saveGame();

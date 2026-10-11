@@ -60,6 +60,43 @@ function resolveWar(gameState, outcome) {
     gameState.war = null;
 }
 
+// Foreign relations — a simple, player-actionable number (0-100, default
+// 50) per realm, distinct from a realm's own internal stability
+// (rivalStability/effectiveStability) and from claims/war. This is the
+// lever for "manage my relations" directly rather than only ever
+// reacting to events: a gift-bearing envoy raises it, and good relations
+// with a raiding or unstable neighbor measurably softens
+// decisions.js's border_raid risk — a political answer alongside
+// domain.js's fortifyBorder's military one.
+function relationsWith(gameState, realmKey) {
+    gameState.relations = gameState.relations || {};
+    return gameState.relations[realmKey] != null ? gameState.relations[realmKey] : 50;
+}
+
+const ENVOY_COOLDOWN = 2;
+const ENVOY_COST = 60;
+
+function canSendEnvoy(gameState, realmKey) {
+    if (realmKey === gameState.realmKey) return false;
+    if ((gameState.player.gold || 0) < ENVOY_COST) return false;
+    gameState.envoyCooldowns = gameState.envoyCooldowns || {};
+    const last = gameState.envoyCooldowns[realmKey];
+    return last == null || gameState.year - last >= ENVOY_COOLDOWN;
+}
+
+function sendEnvoy(gameState, realmKey) {
+    if (!canSendEnvoy(gameState, realmKey)) return false;
+    gameState.relations = gameState.relations || {};
+    gameState.envoyCooldowns = gameState.envoyCooldowns || {};
+    const player = gameState.player;
+    player.gold -= ENVOY_COST;
+    gameState.envoyCooldowns[realmKey] = gameState.year;
+    const before = relationsWith(gameState, realmKey);
+    gameState.relations[realmKey] = Math.min(100, before + randInt(5, 12));
+    logEvent(`${player.name} sends an envoy to ${getRealm(realmKey).name}, bearing gifts and goodwill (-${ENVOY_COST} gold, relations ${before} -> ${gameState.relations[realmKey]}).`);
+    return true;
+}
+
 // Yearly hook: war score moves with the balance of military power, and
 // every year at war has a real cost — levies attrite, the player's own
 // health is strained by the campaign — so a protracted, close war is

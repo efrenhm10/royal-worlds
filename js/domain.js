@@ -91,6 +91,55 @@ function buyHolding(gameState, typeKey) {
     return true;
 }
 
+// What a holding actually produces, at any level — the single source of
+// truth tickDomain's real yearly effects are built from, reused by the
+// UI to show a real, specific before/after preview ("gold income 8 -> 12
+// a year") before the player spends anything, instead of a flat "level
+// up" button with no visible payoff.
+function holdingYield(gameState, holding, levelOverride) {
+    const level = levelOverride != null ? levelOverride : holding.level;
+    const vassal = !!holding.grantedToVassalId;
+    const awayPenalty = (typeof isAtRoyalCourt === "function" && isAtRoyalCourt(gameState)) ? 0.5 : 1;
+    if (holding.type === "keep") {
+        return vassal
+            ? { levies: level * 20, note: "sets this vassal's levy floor" }
+            : { levies: Math.round(level * 40 * awayPenalty) };
+    }
+    if (holding.type === "town") {
+        const income = Math.round(level * 4 * (vassal ? 1 : awayPenalty));
+        return vassal ? { gold: Math.round(income * 0.3), note: "your cut of a vassal's tax" } : { gold: income };
+    }
+    if (holding.type === "temple") {
+        return vassal ? { note: "10% yearly chance of +1 standing with Rome" } : { piety: Math.round(level * 2 * awayPenalty) };
+    }
+    return {};
+}
+
+// A one-line summary of what a holding yields right now, for the Domain
+// tab's "what is this actually producing" display.
+function holdingYieldLine(yieldObj) {
+    const parts = [];
+    if (yieldObj.gold) parts.push(`${yieldObj.gold} gold/yr`);
+    if (yieldObj.levies) parts.push(`${yieldObj.levies} levies`);
+    if (yieldObj.piety) parts.push(`${yieldObj.piety} piety/yr`);
+    if (yieldObj.note) parts.push(yieldObj.note);
+    return parts.length ? parts.join(", ") : "no current yield";
+}
+
+// The domain-wide total — "how much my lands are bringing in", added up
+// across every in-hand holding, the same numbers tickDomain actually
+// applies each year.
+function domainIncomeSummary(gameState) {
+    const totals = { gold: 0, levies: 0, piety: 0 };
+    inHandHoldings(gameState).forEach(h => {
+        const y = holdingYield(gameState, h);
+        totals.gold += y.gold || 0;
+        totals.levies += y.levies || 0;
+        totals.piety += y.piety || 0;
+    });
+    return totals;
+}
+
 function developHolding(gameState, holdingId) {
     const holding = getDomain(gameState).find(h => h.id === holdingId);
     if (!holding || holding.grantedToVassalId) return false;
@@ -134,21 +183,25 @@ function tickDomain(gameState) {
 
     // Land run from a distance yields less — a real reason "stay home and
     // manage my own lands" and "go to the royal court" (royal_court.js)
-    // are a genuine trade-off, not a free pick of both.
-    const awayPenalty = (typeof isAtRoyalCourt === "function" && isAtRoyalCourt(gameState)) ? 0.5 : 1;
-
+    // are a genuine trade-off, not a free pick of both. The actual
+    // numbers come from holdingYield so the Domain tab's preview and
+    // this yearly application never drift apart.
     getDomain(gameState).forEach(holding => {
         const vassal = holding.grantedToVassalId ? getVassals(gameState).find(v => v.id === holding.grantedToVassalId) : null;
-        if (holding.type === "keep") {
-            if (vassal) vassal.levies = Math.max(vassal.levies, holding.level * 20);
-            else personalLevies += Math.round(holding.level * 40 * awayPenalty);
-        } else if (holding.type === "town") {
-            const income = Math.round(holding.level * 4 * (vassal ? 1 : awayPenalty));
-            player.gold = (player.gold || 0) + (vassal ? Math.round(income * 0.3) : income);
-        } else if (holding.type === "temple") {
-            if (!vassal) player.piety = (player.piety || 0) + Math.round(holding.level * 2 * awayPenalty);
-            else if (Math.random() < 0.1) adjustStanding(gameState, gameState.realmKey, 1);
+        if (vassal) {
+            if (holding.type === "keep") {
+                vassal.levies = Math.max(vassal.levies, holding.level * 20);
+            } else if (holding.type === "town") {
+                player.gold = (player.gold || 0) + (holdingYield(gameState, holding).gold || 0);
+            } else if (holding.type === "temple" && Math.random() < 0.1) {
+                adjustStanding(gameState, gameState.realmKey, 1);
+            }
+            return;
         }
+        const y = holdingYield(gameState, holding);
+        if (holding.type === "keep") personalLevies += y.levies || 0;
+        else if (holding.type === "town") player.gold = (player.gold || 0) + (y.gold || 0);
+        else if (holding.type === "temple") player.piety = (player.piety || 0) + (y.piety || 0);
     });
 
     player.personalLevies = personalLevies;
