@@ -51,6 +51,23 @@ function realmTitleFor(tier, gender, realmKey) {
     return tier === realmTopTier(realmKey) ? realmTopTitle(realmKey, gender) : titleName(tier, gender, realmKey);
 }
 
+// Land tier alone can't tell "a royal Duke" (born into a ruling house,
+// granted a duchy) from "just a Duke" (a feudal lord who climbed the
+// ladder) — a person.royalHouseKey (dynasty.js) records WHICH realm's
+// blood they carry, independent of how much land they currently hold.
+// Royal blood always outranks a matching land tier in how a person is
+// addressed: a king's son with no lands of his own is still a Prince,
+// not a Gentleman. Only the reigning monarch themself is styled by
+// their realm's actual crown title instead.
+function personDisplayTitle(person) {
+    if (person.royalHouseKey) {
+        const topTier = realmTopTier(person.royalHouseKey);
+        const isReigning = person.realmKey === person.royalHouseKey && person.tier >= topTier;
+        if (!isReigning) return person.gender === "F" ? "Princess" : "Prince";
+    }
+    return realmTitleFor(person.tier, person.gender, person.realmKey);
+}
+
 function tierInfo(tier) {
     return TITLE_LADDER[tier];
 }

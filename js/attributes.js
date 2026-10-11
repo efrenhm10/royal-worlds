@@ -130,6 +130,7 @@ function createRulerCharacter(realmKey) {
     const c = createCharacter({ realmKey, tier: rulerTier, gender: ruler.gender, age: ruler.age, name: ruler.name });
     if (ruler.traits) c.traits = ruler.traits.slice();
     c.sourceRealmKey = realmKey;
+    c.royalHouseKey = realmKey;
     c.blurb = `${ruler.name} in the flesh — the actual ${realmTopTitle(realmKey, ruler.gender)} of ${realm.name} this year.`;
     return c;
 }
@@ -156,6 +157,7 @@ function createRulerRelativeCandidate(realmKey, relation, forcedGender) {
     const c = createCharacter({ realmKey, tier, gender, age });
     c._rulerLink = { type: relation, ruler: { name: ruler.name, gender: ruler.gender, age: ruler.age, traits: ruler.traits } };
     c.sourceRealmKey = realmKey;
+    c.royalHouseKey = realmKey;
     const rulerTitle = realmTopTitle(realmKey, ruler.gender);
     c.blurb = relation === "sibling"
         ? `A sibling of ${ruler.name}, ${rulerTitle} of ${realm.name} — a great appanage of your own, but not the seat itself.`

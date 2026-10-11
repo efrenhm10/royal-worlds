@@ -76,9 +76,9 @@ function renderMarriageSection(view, gameState, targetPerson) {
     card.appendChild(makeChoiceButton("← Choose a different kind of match", () => { _marriageCategory = null; renderPlay(); }));
     const candidates = generateMarriageCandidatesForRealm(gameState, _marriageRealmKey, _marriageCategory, target);
     candidates.forEach(candidate => {
-        const title = realmTitleFor(candidate.tier, candidate.gender, _marriageRealmKey);
-        const cost = marriageCost(target.tier, candidate.tier);
-        const shame = marriageShame(target.tier, candidate.tier);
+        const title = personDisplayTitle(candidate);
+        const cost = marriageCost(effectiveStation(target), effectiveStation(candidate));
+        const shame = marriageShame(effectiveStation(target), effectiveStation(candidate));
         let note = "A fitting match.";
         if (cost > 0) note = `Above ${isSelf ? "your" : "their"} station — costs ${cost} gold in dowry${isSelf ? "" : " (paid by you)"}.`;
         else if (shame > 0) note = `Beneath ${isSelf ? "your" : "their"} station — costs ${shame} prestige at court.`;
@@ -164,7 +164,7 @@ function renderCharacterCreate(eraKey, realmKey) {
 }
 
 function candidateCard(eraKey, realmKey, candidate) {
-    const title = realmTitleFor(candidate.tier, candidate.gender, realmKey);
+    const title = personDisplayTitle(candidate);
     const skillsLine = SKILL_KEYS.map(k => `${k[0].toUpperCase()}${k.slice(1)} ${candidate.skills[k]}`).join(" · ");
     const traitsLine = candidate.traits.join(", ");
     const body = avatarRow(candidate, `
@@ -253,7 +253,7 @@ function dockBadge(gameState, key) {
 function renderPlay() {
     const realm = getRealm(gameState.realmKey);
     const player = gameState.player;
-    const title = player.churchTier != null ? churchRankName(player.churchTier) : realmTitleFor(player.tier, player.gender, realm.key);
+    const title = player.churchTier != null ? churchRankName(player.churchTier) : personDisplayTitle(player);
 
     const hud = document.getElementById("hud");
     clearEl(hud);
@@ -335,7 +335,8 @@ function renderPlay() {
 function personLine(person, relation) {
     const alive = person.alive ? `age ${person.age}` : `died at ${person.age}`;
     const traitsLine = person.traits && person.traits.length ? ` <span class="muted">(${person.traits.join(", ")})</span>` : "";
-    return avatarRow(person, `<strong>${person.name}</strong> — ${relation}, ${alive}${traitsLine}`);
+    const title = personDisplayTitle(person);
+    return avatarRow(person, `<strong>${title} ${person.name}</strong> — ${relation}, ${alive}${traitsLine}`);
 }
 
 function renderPlayView() {

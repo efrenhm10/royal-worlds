@@ -118,6 +118,12 @@ function bearChild(gameState, motherId, fatherId, realmKey) {
     child.bloodline = true;
     child.motherId = motherId;
     child.fatherId = fatherId;
+    // Royal blood passes down regardless of how much land the child
+    // themselves ends up holding — a king's grandson through an
+    // untitled marriage is still of that blood, not a commoner because
+    // of it.
+    const royalHouseKey = (mother && mother.royalHouseKey) || (father && father.royalHouseKey) || null;
+    if (royalHouseKey) child.royalHouseKey = royalHouseKey;
     registerPerson(gameState, child);
     return child;
 }
@@ -189,6 +195,7 @@ function buildRulerLinkCharacter(realmKey, rulerData) {
     if (rulerData.traits) c.traits = rulerData.traits.slice();
     c.bloodline = true;
     c.alive = true;
+    c.royalHouseKey = realmKey;
     return c;
 }
 
@@ -200,6 +207,7 @@ function setupDynasty(gameState) {
     const link = player._rulerLink || null;
 
     player.bloodline = true;
+    if (link) player.royalHouseKey = realmKey; // playing as the ruler's own child/sibling is playing as royalty, whatever land tier comes with it
     let father, mother;
     if (link && link.type === "child") {
         const rulerChar = buildRulerLinkCharacter(realmKey, link.ruler);
@@ -270,6 +278,12 @@ function tickDynasty(gameState) {
 
     allFamily(gameState).forEach(person => {
         if (!person.alive || person.id === gameState.player.id) return;
+        // The player's own children are promised in marriage by the
+        // player, deliberately (see "Arrange a child's marriage" in the
+        // Family tab) — never by a background dice roll the player had
+        // no say in. Background relatives (siblings, cousins, nieces and
+        // nephews) still marry on their own, same as always.
+        if (person.motherId === gameState.player.id || person.fatherId === gameState.player.id) return;
         if (!person.spouseId && person.age >= 16 && person.age <= 45 && Math.random() < 0.08) {
             const spouse = marryIn(gameState, person.id, realmKey);
             if (spouse) logEvent(`${person.name} has married ${spouse.name}.`);
@@ -369,6 +383,17 @@ function generateMarriageCandidatesForRealm(gameState, realmKey, category, targe
     return generateNobleMarriageCandidates(realmKey, 4, forcedGender);
 }
 
+// What a person's "station" actually is for marriage-market purposes —
+// raw land tier undersells royal blood: a king's son commands real
+// marriage value whether or not he's been granted land of his own, at
+// least on par with a Prince's usual appanage (one rank below the
+// crown). Ordinary nobility (no royalHouseKey) is judged on land tier
+// alone, same as before.
+function effectiveStation(person) {
+    if (!person.royalHouseKey) return person.tier;
+    return Math.max(person.tier, realmTopTier(person.royalHouseKey) - 1);
+}
+
 // Marrying outside your own rank is a real social and financial fact, not
 // just flavor: securing a match above your station costs a dowry scaled
 // to the gap (gold, paid up front); marrying beneath it costs standing at
@@ -449,6 +474,7 @@ function graftRoyalHouse(gameState, candidate) {
         if (ruler !== candidate) registerPerson(gameState, ruler);
     }
     gameState.foreignRoyals[realmKey] = ruler.id;
+    ruler.royalHouseKey = ruler.royalHouseKey || realmKey;
 
     // If the ruler IS the candidate, arrangeMarriage already gave them a
     // spouse (the player/target) — only a grafted sibling or child needs
@@ -500,6 +526,14 @@ function graftRoyalHouse(gameState, candidate) {
                 }
             }
         }
+
+        // Everyone directly seeded as part of this house — the ruler's
+        // siblings, their children, the ruler's own children — carries
+        // the blood, same as the ruler themself, so title display and
+        // marriage-station math treat them as royalty regardless of
+        // whatever land tier they happen to hold.
+        [ruler, ...getSiblings(gameState, ruler.id), ...getChildren(gameState, ruler.id), ...getNiecesNephews(gameState, ruler.id)]
+            .forEach(p => { p.royalHouseKey = p.royalHouseKey || realmKey; });
     }
 
     logEvent(`${candidate.name}'s tie to ${realm.name}'s royal house is now tracked — the line of succession to its throne will show where the family stands, and update as the house itself does.`);
@@ -515,7 +549,7 @@ function arrangeMarriage(gameState, targetPerson, candidate) {
     const payer = gameState.player;
     const isSelf = targetPerson.id === payer.id;
 
-    const cost = marriageCost(targetPerson.tier, candidate.tier);
+    const cost = marriageCost(effectiveStation(targetPerson), effectiveStation(candidate));
     if (cost > 0 && (payer.gold || 0) < cost) return null;
 
     candidate.bloodline = false;
@@ -530,7 +564,7 @@ function arrangeMarriage(gameState, targetPerson, candidate) {
             ? `${payer.name} has married ${candidate.name} — a match above their station, secured with ${cost} gold in dowry and land concessions.`
             : `${payer.name} has arranged ${targetPerson.name}'s marriage to ${candidate.name} — above their station, costing ${cost} gold in dowry.`);
     } else {
-        const shame = marriageShame(targetPerson.tier, candidate.tier);
+        const shame = marriageShame(effectiveStation(targetPerson), effectiveStation(candidate));
         if (shame > 0) {
             payer.prestige = Math.max(0, (payer.prestige || 0) - shame);
             logEvent(isSelf
