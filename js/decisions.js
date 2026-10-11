@@ -11,6 +11,339 @@
 // a decision is never just one more thing buried in a log the player can
 // ignore.
 
+// Historical Pressure Registry — a small, explicit schema for real
+// structural events (a realm, a real year window, a real choice), run
+// through one generic processor instead of each being its own hand-rolled
+// decision object. The brackets below are real history, not placeholders:
+// extending this list means adding another data entry, not writing a new
+// branch of game logic.
+const HISTORICAL_PRESSURE_TEMPLATES = [
+    {
+        id: "wars_of_roses_allegiance",
+        realmKey: "england",
+        yearMin: 1455,
+        yearMax: 1487,
+        flagField: "warsOfRosesHouse",
+        chance: 0.5,
+        title: "Lancaster or York?",
+        text: gameState => voiceLine({
+            bold: [`England tears at itself between Lancaster and York, and ${gameState.player.name} can't simply wait this one out — a side must be chosen, and chosen now.`],
+            wary: [`The realm is splitting between Lancaster and York. ${gameState.player.name} has put off choosing a side as long as it's been safe to — which is to say, no longer.`],
+            neutral: `England is tearing itself apart between the houses of Lancaster and York — a choice that can't be avoided forever.`,
+        }, gameState.player),
+        options: [
+            {
+                label: "Pledge for Lancaster",
+                apply(gameState) {
+                    gameState.warsOfRosesHouse = "lancaster";
+                    gameState.rivalStability = gameState.rivalStability || {};
+                    gameState.rivalStability.england = (gameState.rivalStability.england || 0) - 15;
+                    getVassals(gameState).forEach(v => adjustOpinion(v, randInt(-5, 10)));
+                    return `${gameState.player.name} pledges for the House of Lancaster. York is now a declared rival — and the realm's own stability bears the strain of the choice.`;
+                },
+            },
+            {
+                label: "Pledge for York",
+                apply(gameState) {
+                    gameState.warsOfRosesHouse = "york";
+                    gameState.rivalStability = gameState.rivalStability || {};
+                    gameState.rivalStability.england = (gameState.rivalStability.england || 0) - 15;
+                    getVassals(gameState).forEach(v => adjustOpinion(v, randInt(-5, 10)));
+                    return `${gameState.player.name} pledges for the House of York. Lancaster is now a declared rival — and the realm's own stability bears the strain of the choice.`;
+                },
+            },
+            {
+                label: "Stay neutral, for now",
+                apply(gameState) {
+                    gameState.warsOfRosesHouse = "neutral";
+                    getVassals(gameState).forEach(v => adjustOpinion(v, -8));
+                    gameState.player.prestige = Math.max(0, (gameState.player.prestige || 0) - 10);
+                    return `${gameState.player.name} refuses to choose a side — and both houses, and most of the court, take it as cowardice rather than wisdom (-10 prestige, vassals uneasy).`;
+                },
+            },
+        ],
+    },
+    {
+        id: "isabella_piety_demand",
+        realmKey: "castile",
+        yearMin: 1474,
+        yearMax: 1504,
+        chance: 0.15,
+        title: "A Queen's own piety, demanded of you too",
+        text: gameState => voiceLine({
+            devout: [`Isabella's own famous piety sets the tone for the whole court now — and her clergy have started asking pointed questions about ${gameState.player.name}'s own devotion.`],
+            wary: [`Word reaches ${gameState.player.name} that Isabella's clergy have been asking pointed questions about devotion at court — the kind of attention that's dangerous to ignore.`],
+            cunning: [`Isabella's clergy are asking pointed questions about devotion at court — ${gameState.player.name} suspects it's as much about land as it is about God.`],
+            neutral: `Isabella's reign has brought real clerical scrutiny to every noble house in Castile, ${gameState.player.name}'s included.`,
+        }, gameState.player),
+        options: [
+            {
+                label: "Pay a generous tithe (60 gold)",
+                apply(gameState) {
+                    const player = gameState.player;
+                    if ((player.gold || 0) < 60) return "There isn't enough gold to make a tithe the clergy would actually respect.";
+                    player.gold -= 60;
+                    adjustStanding(gameState, gameState.realmKey, 12);
+                    return `A generous tithe quiets the whispers, for now (-60 gold, +12 standing with Rome).`;
+                },
+            },
+            {
+                label: "Publicly renounce impious ways",
+                apply(gameState) {
+                    const player = gameState.player;
+                    player.prestige = Math.max(0, (player.prestige || 0) - 10);
+                    player.piety = (player.piety || 0) + 15;
+                    adjustStanding(gameState, gameState.realmKey, 15);
+                    return `${player.name} makes a public show of devotion — humbling, but it satisfies the clergy (-10 prestige, +15 piety, +15 standing with Rome).`;
+                },
+            },
+            {
+                label: "Refuse to answer to anyone's piety but your own",
+                apply(gameState) {
+                    adjustStanding(gameState, gameState.realmKey, -25);
+                    return `${gameState.player.name} refuses to bow to the clergy's demands — and Isabella's own church does not forget a refusal (-25 standing with Rome).`;
+                },
+            },
+        ],
+    },
+    {
+        id: "league_of_the_public_weal",
+        realmKey: "france",
+        yearMin: 1464,
+        yearMax: 1466,
+        flagField: "leagueOfThePublicWealSide",
+        chance: 0.4,
+        title: "The great vassals rise against the King",
+        text: gameState => voiceLine({
+            bold: [`Burgundy, Brittany, and the rest of the great vassals have banded together against Louis XI, calling it the League of the Public Weal. ${gameState.player.name} is expected to declare a side.`],
+            cunning: [`Louis XI is grasping for more power than any vassal is comfortable with — and the great lords' new League of the Public Weal wants to know where ${gameState.player.name} stands.`],
+            neutral: `The great vassals have formed the League of the Public Weal against Louis XI's crown. ${gameState.player.name} cannot stay unnoticed much longer.`,
+        }, gameState.player),
+        options: [
+            {
+                label: "Side with the King",
+                apply(gameState) {
+                    gameState.leagueOfThePublicWealSide = "king";
+                    gameState.player.prestige = (gameState.player.prestige || 0) + 10;
+                    getVassals(gameState).forEach(v => adjustOpinion(v, randInt(-8, 2)));
+                    return `${gameState.player.name} stands with Louis XI against the great vassals — the crown remembers its friends (+10 prestige), though not every vassal is pleased.`;
+                },
+            },
+            {
+                label: "Side with the League",
+                apply(gameState) {
+                    gameState.leagueOfThePublicWealSide = "league";
+                    gameState.rivalStability = gameState.rivalStability || {};
+                    gameState.rivalStability.france = (gameState.rivalStability.france || 0) - 10;
+                    getVassals(gameState).forEach(v => adjustOpinion(v, randInt(0, 10)));
+                    return `${gameState.player.name} joins Burgundy, Brittany, and the rest of the League against the crown — the great vassals take notice, and the King's own stability bears the cost.`;
+                },
+            },
+            {
+                label: "Stay neutral, for now",
+                apply(gameState) {
+                    gameState.leagueOfThePublicWealSide = "neutral";
+                    gameState.player.prestige = Math.max(0, (gameState.player.prestige || 0) - 8);
+                    return `${gameState.player.name} commits to neither side — a safe choice, but one that costs standing with both (-8 prestige).`;
+                },
+            },
+        ],
+    },
+    {
+        id: "ottoman_frontier_pressure",
+        realmKey: "hungary",
+        yearMin: 1461,
+        yearMax: 1526,
+        chance: 0.2,
+        title: "The Ottoman frontier presses closer",
+        text: gameState => voiceLine({
+            bold: [`Word comes from the southern marches that Ottoman raiders have struck again — the frontier needs real support, not sympathy.`],
+            wary: [`The Ottoman frontier is restless again. ${gameState.player.name} knows the raids won't stop on their own.`],
+            devout: [`The Ottoman threat is spoken of at court as a matter of faith as much as war — and ${gameState.player.name} is expected to answer for it.`],
+            neutral: `The southern frontier reports fresh Ottoman pressure. Hungary's nobles are asked, again, to answer for its defense.`,
+        }, gameState.player),
+        options: [
+            {
+                label: "Fund the frontier levies (80 gold)",
+                apply(gameState) {
+                    const player = gameState.player;
+                    if ((player.gold || 0) < 80) return "There isn't enough gold to fund the frontier properly.";
+                    player.gold -= 80;
+                    player.prestige = (player.prestige || 0) + 8;
+                    return `Gold flows south to the frontier levies — the marches hold a little firmer for it (-80 gold, +8 prestige).`;
+                },
+            },
+            {
+                label: "Buy a truce with tribute (50 gold)",
+                apply(gameState) {
+                    const player = gameState.player;
+                    if ((player.gold || 0) < 50) return "There isn't enough gold to buy even a truce.";
+                    player.gold -= 50;
+                    player.prestige = Math.max(0, (player.prestige || 0) - 5);
+                    return `A quiet tribute buys a season's peace on the frontier — practical, if not exactly glorious (-50 gold, -5 prestige).`;
+                },
+            },
+            {
+                label: "Ignore it — the frontier is not your problem",
+                apply(gameState) {
+                    const player = gameState.player;
+                    if (Math.random() < 0.4) {
+                        gameState.rivalStability = gameState.rivalStability || {};
+                        gameState.rivalStability.hungary = (gameState.rivalStability.hungary || 0) - 10;
+                        return `The raids go unanswered, and the realm's stability suffers for it.`;
+                    }
+                    return `The frontier holds on its own, this time, without any help from here.`;
+                },
+            },
+        ],
+    },
+    {
+        id: "burgundian_succession_crisis",
+        realmKey: "burgundy",
+        yearMin: 1477,
+        yearMax: 1477,
+        flagField: "burgundySuccessionResolved",
+        chance: 0.8,
+        title: "Charles the Bold is dead at Nancy",
+        text: gameState => voiceLine({
+            bold: [`Charles the Bold has fallen at Nancy, and Burgundy's great inheritance now rests on his daughter Mary alone — every neighbor smells opportunity, and ${gameState.player.name} must decide where to stand.`],
+            cunning: [`With Charles the Bold dead, Mary of Burgundy's inheritance is suddenly the question of the age — a Habsburg marriage is already being whispered of, and so is French annexation.`],
+            neutral: `Charles the Bold is dead, and Mary of Burgundy's succession is now the crisis of the moment, with France and the Habsburgs both circling.`,
+        }, gameState.player),
+        options: [
+            {
+                label: "Champion Mary's independent rule",
+                apply(gameState) {
+                    gameState.burgundySuccessionResolved = "mary";
+                    gameState.player.prestige = (gameState.player.prestige || 0) + 10;
+                    return `${gameState.player.name} declares for Mary of Burgundy's own right to rule — a popular stand at home, and prestige follows (+10 prestige).`;
+                },
+            },
+            {
+                label: "Urge the Habsburg marriage",
+                apply(gameState) {
+                    gameState.burgundySuccessionResolved = "habsburg";
+                    gameState.player.piety = (gameState.player.piety || 0) + 5;
+                    gameState.player.prestige = (gameState.player.prestige || 0) + 5;
+                    return `${gameState.player.name} presses for the match with Maximilian of Habsburg — a safe, dynastic answer to the crisis (+5 piety, +5 prestige).`;
+                },
+            },
+            {
+                label: "Exploit the chaos for France",
+                apply(gameState) {
+                    gameState.burgundySuccessionResolved = "france";
+                    gameState.rivalStability = gameState.rivalStability || {};
+                    gameState.rivalStability.burgundy = (gameState.rivalStability.burgundy || 0) - 20;
+                    gameState.player.prestige = Math.max(0, (gameState.player.prestige || 0) - 5);
+                    return `${gameState.player.name} quietly encourages French encroachment on the leaderless duchy — Burgundy's own stability pays the price, and not everyone at home approves (-5 prestige).`;
+                },
+            },
+        ],
+    },
+    {
+        id: "granada_war_pressure",
+        realmKey: ["castile", "aragon"],
+        yearMin: 1481,
+        yearMax: 1492,
+        chance: 0.3,
+        title: "The Crown calls for the war against Granada",
+        text: gameState => voiceLine({
+            devout: [`Ferdinand and Isabella's war against Granada is called a holy duty from every pulpit in the realm — and ${gameState.player.name} is expected to answer the call.`],
+            bold: [`The war against Granada grinds on, and the Crown is calling in every noble's debt of service to finish it.`],
+            neutral: `The Reconquista's final push against Granada continues, and the Crown asks every noble house to contribute to it.`,
+        }, gameState.player),
+        options: [
+            {
+                label: "Answer with men and gold (70 gold)",
+                apply(gameState) {
+                    const player = gameState.player;
+                    if ((player.gold || 0) < 70) return "There isn't enough gold to answer the Crown's call properly.";
+                    player.gold -= 70;
+                    player.prestige = (player.prestige || 0) + 12;
+                    player.piety = (player.piety || 0) + 5;
+                    return `Men and gold are sent south to the war against Granada — the Crown, and the Church, both take notice (-70 gold, +12 prestige, +5 piety).`;
+                },
+            },
+            {
+                label: "Contribute gold only (35 gold)",
+                apply(gameState) {
+                    const player = gameState.player;
+                    if ((player.gold || 0) < 35) return "There isn't enough gold to contribute even that much.";
+                    player.gold -= 35;
+                    player.prestige = (player.prestige || 0) + 4;
+                    return `A gold contribution is sent south — modest, but it satisfies the letter of the Crown's call (-35 gold, +4 prestige).`;
+                },
+            },
+            {
+                label: "Decline, citing other burdens",
+                apply(gameState) {
+                    gameState.player.prestige = Math.max(0, (gameState.player.prestige || 0) - 10);
+                    return `${gameState.player.name} begs off the Crown's call — and the Crown does not forget who answered and who didn't (-10 prestige).`;
+                },
+            },
+        ],
+    },
+];
+
+function buildHistoricalPressureDecisionEvent(tpl) {
+    const realms = [].concat(tpl.realmKey);
+    return {
+        id: tpl.id,
+        chance: tpl.chance,
+        condition: gameState => realms.includes(gameState.realmKey)
+            && gameState.year >= tpl.yearMin && gameState.year <= tpl.yearMax
+            && (!tpl.flagField || !gameState[tpl.flagField]),
+        title: tpl.title,
+        text: tpl.text,
+        options: tpl.options,
+    };
+}
+
+// Leverage Request pool — a royal tie cuts both ways: relatives who hold a
+// foreign throne lean on the player, and courtiers lean on the player to
+// use the connection on THEIR behalf. The request itself is drawn from a
+// small pool of standard social favors rather than being hardcoded to
+// "send gold", so the same two decisions read differently each time they
+// come up.
+const LEVERAGE_REQUEST_TYPES = [
+    {
+        key: "gold",
+        askLine: "a demand for gold, dressed up as a request",
+        acceptLabel: "Send gold (60 gold)",
+        accept(gameState) {
+            const player = gameState.player;
+            if ((player.gold || 0) < 60) return "There isn't enough gold to send what's being asked.";
+            player.gold -= 60;
+            player.prestige = (player.prestige || 0) + 10;
+            return `Gold is sent, and the family's standing with its crowned relative only grows (-60 gold, +10 prestige).`;
+        },
+    },
+    {
+        key: "military",
+        askLine: "a request for levies to stand behind a shaky crown",
+        acceptLabel: "Send levies to their aid",
+        accept(gameState) {
+            const player = gameState.player;
+            player.prestige = (player.prestige || 0) + 15;
+            return `Men are sent to stand behind a relative's crown — a costly show of loyalty, but it is noticed (+15 prestige).`;
+        },
+    },
+    {
+        key: "title",
+        askLine: "a request to finally make good on a title once promised",
+        acceptLabel: "Grant the title demanded",
+        accept(gameState) {
+            const player = gameState.player;
+            player.prestige = Math.max(0, (player.prestige || 0) - 10);
+            return `The title is granted — prestige slips for the favor it costs, though the relative's gratitude is real (-10 prestige).`;
+        },
+    },
+];
+
+function leverageRequestFor(key) {
+    return LEVERAGE_REQUEST_TYPES.find(r => r.key === key) || LEVERAGE_REQUEST_TYPES[0];
+}
+
 const DECISION_EVENTS = [
     {
         id: "tournament_invite",
@@ -904,116 +1237,36 @@ const DECISION_EVENTS = [
             },
         ],
     },
-    // Historical pressure — proof-of-concept examples of a real brace-
-    // keted structural event, tied to an actual realm and an actual
-    // year range rather than a generic template. The pattern (a realm
-    // key + a year window as the condition) is meant to be extended with
-    // more brackets over time, not a finished, exhaustive list.
-    {
-        id: "wars_of_roses_allegiance",
-        chance: 0.5,
-        condition: gameState => gameState.realmKey === "england" && gameState.year >= 1455 && gameState.year <= 1487 && !gameState.warsOfRosesHouse,
-        title: "Lancaster or York?",
-        text: gameState => voiceLine({
-            bold: [`England tears at itself between Lancaster and York, and ${gameState.player.name} can't simply wait this one out — a side must be chosen, and chosen now.`],
-            wary: [`The realm is splitting between Lancaster and York. ${gameState.player.name} has put off choosing a side as long as it's been safe to — which is to say, no longer.`],
-            neutral: `England is tearing itself apart between the houses of Lancaster and York — a choice that can't be avoided forever.`,
-        }, gameState.player),
-        options: [
-            {
-                label: "Pledge for Lancaster",
-                apply(gameState) {
-                    gameState.warsOfRosesHouse = "lancaster";
-                    gameState.rivalStability = gameState.rivalStability || {};
-                    gameState.rivalStability.england = (gameState.rivalStability.england || 0) - 15;
-                    getVassals(gameState).forEach(v => adjustOpinion(v, randInt(-5, 10)));
-                    return `${gameState.player.name} pledges for the House of Lancaster. York is now a declared rival — and the realm's own stability bears the strain of the choice.`;
-                },
-            },
-            {
-                label: "Pledge for York",
-                apply(gameState) {
-                    gameState.warsOfRosesHouse = "york";
-                    gameState.rivalStability = gameState.rivalStability || {};
-                    gameState.rivalStability.england = (gameState.rivalStability.england || 0) - 15;
-                    getVassals(gameState).forEach(v => adjustOpinion(v, randInt(-5, 10)));
-                    return `${gameState.player.name} pledges for the House of York. Lancaster is now a declared rival — and the realm's own stability bears the strain of the choice.`;
-                },
-            },
-            {
-                label: "Stay neutral, for now",
-                apply(gameState) {
-                    gameState.warsOfRosesHouse = "neutral";
-                    getVassals(gameState).forEach(v => adjustOpinion(v, -8));
-                    gameState.player.prestige = Math.max(0, (gameState.player.prestige || 0) - 10);
-                    return `${gameState.player.name} refuses to choose a side — and both houses, and most of the court, take it as cowardice rather than wisdom (-10 prestige, vassals uneasy).`;
-                },
-            },
-        ],
-    },
-    {
-        id: "isabella_piety_demand",
-        chance: 0.15,
-        condition: gameState => gameState.realmKey === "castile" && gameState.year >= 1474 && gameState.year <= 1504,
-        title: "A Queen's own piety, demanded of you too",
-        text: gameState => voiceLine({
-            devout: [`Isabella's own famous piety sets the tone for the whole court now — and her clergy have started asking pointed questions about ${gameState.player.name}'s own devotion.`],
-            wary: [`Word reaches ${gameState.player.name} that Isabella's clergy have been asking pointed questions about devotion at court — the kind of attention that's dangerous to ignore.`],
-            cunning: [`Isabella's clergy are asking pointed questions about devotion at court — ${gameState.player.name} suspects it's as much about land as it is about God.`],
-            neutral: `Isabella's reign has brought real clerical scrutiny to every noble house in Castile, ${gameState.player.name}'s included.`,
-        }, gameState.player),
-        options: [
-            {
-                label: "Pay a generous tithe (60 gold)",
-                apply(gameState) {
-                    const player = gameState.player;
-                    if ((player.gold || 0) < 60) return "There isn't enough gold to make a tithe the clergy would actually respect.";
-                    player.gold -= 60;
-                    adjustStanding(gameState, gameState.realmKey, 12);
-                    return `A generous tithe quiets the whispers, for now (-60 gold, +12 standing with Rome).`;
-                },
-            },
-            {
-                label: "Publicly renounce impious ways",
-                apply(gameState) {
-                    const player = gameState.player;
-                    player.prestige = Math.max(0, (player.prestige || 0) - 10);
-                    player.piety = (player.piety || 0) + 15;
-                    adjustStanding(gameState, gameState.realmKey, 15);
-                    return `${player.name} makes a public show of devotion — humbling, but it satisfies the clergy (-10 prestige, +15 piety, +15 standing with Rome).`;
-                },
-            },
-            {
-                label: "Refuse to answer to anyone's piety but your own",
-                apply(gameState) {
-                    adjustStanding(gameState, gameState.realmKey, -25);
-                    return `${gameState.player.name} refuses to bow to the clergy's demands — and Isabella's own church does not forget a refusal (-25 standing with Rome).`;
-                },
-            },
-        ],
-    },
+    // Historical pressure — every real bracket runs through the generic
+    // HISTORICAL_PRESSURE_TEMPLATES processor defined above, keyed by
+    // realm and year window. Adding another real event to history means
+    // adding another template, not writing a new decision by hand.
+    ...HISTORICAL_PRESSURE_TEMPLATES.map(buildHistoricalPressureDecisionEvent),
     // Opinion Leverage — a royal tie cuts both ways: relatives who hold a
     // foreign throne lean on you, and courtiers lean on you to use the
-    // connection on THEIR behalf.
+    // connection on THEIR behalf. The specific favor asked is drawn from
+    // the LEVERAGE_REQUEST_TYPES pool (gold, military aid, or a title)
+    // rather than being fixed to one kind of request.
     {
         id: "royal_relative_demands_favor",
         chance: 0.12,
         condition: gameState => typeof hasRelativeHoldingAForeignThrone === "function" && hasRelativeHoldingAForeignThrone(gameState),
+        buildContext: gameState => ({ requestType: randomFrom(LEVERAGE_REQUEST_TYPES).key }),
         title: "A royal relative calls in a favor",
-        text: gameState => voiceLine({
-            bold: [`Word arrives from a relative who now sits on a foreign throne — a demand, really, dressed up as a request.`],
-            cunning: [`A relative's crown seems to come with an expectation attached — a request arrives that isn't really optional.`],
-            neutral: `A relative who holds a foreign throne sends word, asking for real support — gold, or men.`,
-        }, gameState.player),
+        text: (gameState, ctx) => {
+            const req = leverageRequestFor(ctx.requestType);
+            return voiceLine({
+                bold: [`Word arrives from a relative who now sits on a foreign throne — ${req.askLine}.`],
+                cunning: [`A relative's crown seems to come with an expectation attached — ${req.askLine}.`],
+                neutral: `A relative who holds a foreign throne sends word: ${req.askLine}.`,
+            }, gameState.player);
+        },
         options: [
             {
-                label: "Send gold (60 gold)",
-                apply(gameState) {
-                    const player = gameState.player;
-                    if ((player.gold || 0) < 60) return "There isn't enough gold to send what's being asked.";
-                    player.gold -= 60;
-                    player.prestige = (player.prestige || 0) + 10;
-                    return `Gold is sent, and the family's standing with its crowned relative only grows (-60 gold, +10 prestige).`;
+                label: "Grant the request",
+                apply(gameState, ctx) {
+                    const req = leverageRequestFor(ctx && ctx.requestType);
+                    return req.accept(gameState);
                 },
             },
             {

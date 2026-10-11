@@ -211,6 +211,11 @@ function renderCandidatesForTier(eraKey, realmKey, tier) {
 }
 
 let _playViewTab = "chronicle";
+// Which half of the center log card is showing: your own court life, or
+// the wider world's history. Both read the same gameState.log — only the
+// [World] tag (set by canon.js for entries with no direct stakeholder)
+// decides which side an entry lands on.
+let _chronicleSubTab = "personal";
 
 // Court standing isn't tracked as its own number — it's what vassals and
 // councillors actually think of you, averaged, the same "respect" a real
@@ -461,8 +466,9 @@ function renderPlay() {
 // so a succession elsewhere updates everyone's title the moment it
 // happens, with no separate step needed.
 function fullPersonTitle(person) {
-    const consort = consortDisplayTitle(gameState, person);
-    return consort || personDisplayTitle(person);
+    const royalTitle = royalRelationTitle(gameState, person);
+    if (royalTitle) return royalTitle;
+    return personDisplayTitle(person);
 }
 
 function personLine(person, relation) {
@@ -522,14 +528,29 @@ function renderPlayView() {
         grid.appendChild(renderDiaryColumn(gameState));
 
         const dramaCol = el("div", "col-drama", "");
-        const logCard = makeCard("The Court", "");
-        // This feed is about YOUR life — background world history (tagged
-        // "[World]" by canon.js, for realms/rulers you have no direct tie
-        // to) belongs to the wider Chronicle of your reign, not the thing
-        // you read first every time you open the game.
-        const entries = gameState.log.filter(e => !e.text.startsWith("[World]")).slice(-12).reverse();
-        if (!entries.length) logCard.appendChild(el("p", "muted", "Nothing has happened yet — the story starts now."));
-        entries.forEach(e => logCard.appendChild(el("p", "muted", `${e.year} — ${e.text}`)));
+        const logCard = makeCard("", "");
+        // Personal Court Chronicles vs. Geopolitical Chronicles — the same
+        // gameState.log, split by the "[World]" tag canon.js already
+        // applies to entries with no direct stakeholder. Your own life is
+        // the default view; the wider world's history is one click away
+        // rather than hidden entirely.
+        const tabRow = el("div", "sub-tab-row", "");
+        const personalBtn = el("button", `sub-tab-btn${_chronicleSubTab === "personal" ? " active" : ""}`, "Personal Court Chronicles");
+        personalBtn.addEventListener("click", () => { _chronicleSubTab = "personal"; renderPlay(); });
+        const worldBtn = el("button", `sub-tab-btn${_chronicleSubTab === "geopolitical" ? " active" : ""}`, "Geopolitical Chronicles");
+        worldBtn.addEventListener("click", () => { _chronicleSubTab = "geopolitical"; renderPlay(); });
+        tabRow.appendChild(personalBtn);
+        tabRow.appendChild(worldBtn);
+        logCard.appendChild(tabRow);
+
+        const isWorld = _chronicleSubTab === "geopolitical";
+        const entries = gameState.log.filter(e => isWorld === e.text.startsWith("[World]")).slice(-12).reverse();
+        if (!entries.length) {
+            logCard.appendChild(el("p", "muted", isWorld
+                ? "The wider world holds still, for now — no great news has reached here yet."
+                : "Nothing has happened yet — the story starts now."));
+        }
+        entries.forEach(e => logCard.appendChild(el("p", "muted", `${e.year} — ${isWorld ? e.text.replace(/^\[World\] /, "") : e.text}`)));
         dramaCol.appendChild(logCard);
         grid.appendChild(dramaCol);
 

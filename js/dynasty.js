@@ -566,6 +566,45 @@ function consortDisplayTitle(gameState, person) {
     return realmKey ? realmTopTitle(realmKey, person.gender) : null;
 }
 
+// A generic family-tree-distance title: given any tracked, currently
+// reigning monarch (gameState.foreignRoyals, plus the person's own home
+// realm if their spouse reigns there), work out exactly how this person
+// relates to that throne and return the real courtesy title that
+// relation carries — Consort, Prince/Princess, Queen Mother/King
+// Father, or Royal Sibling — computed fresh from the actual relational
+// data (getSiblings, motherId/fatherId) every time, never hardcoded to
+// one specific person or marriage.
+function royalRelationTitle(gameState, person) {
+    const spouse = getSpouse(gameState, person.id);
+    const rulerEntries = [];
+    if (gameState.foreignRoyals) {
+        Object.keys(gameState.foreignRoyals).forEach(realmKey => {
+            const ruler = getPerson(gameState, gameState.foreignRoyals[realmKey]);
+            if (ruler && ruler.alive) rulerEntries.push({ realmKey, ruler });
+        });
+    }
+    if (spouse && spouse.alive && spouse.realmKey === person.realmKey && spouse.tier >= realmTopTier(person.realmKey)
+        && !rulerEntries.some(e => e.ruler.id === spouse.id)) {
+        rulerEntries.push({ realmKey: person.realmKey, ruler: spouse });
+    }
+
+    for (const { realmKey, ruler } of rulerEntries) {
+        if (ruler.id === person.id) continue;
+        if (ruler.spouseId === person.id) {
+            // Historically a female regnant's husband was not himself
+            // crowned king — "Prince Consort" instead, the way Albert
+            // was to Victoria. A king's wife, the reverse, was crowned
+            // Queen in the realm's own style.
+            if (ruler.gender === "F" && person.gender === "M") return "Prince Consort";
+            return realmTopTitle(realmKey, person.gender);
+        }
+        if (ruler.motherId === person.id) return person.gender === "F" ? "Queen Mother" : "King Father";
+        if (ruler.id === person.motherId || ruler.id === person.fatherId) return person.gender === "F" ? "Princess" : "Prince";
+        if (getSiblings(gameState, ruler.id).some(s => s.id === person.id)) return "Royal Sibling";
+    }
+    return null;
+}
+
 // Every family member — not just the player's spouse — who personally
 // holds a foreign crown, or is consort to one, reflects well on the
 // whole line: a real, standing +30 prestige while it lasts, not a
