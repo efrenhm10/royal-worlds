@@ -154,6 +154,7 @@ function advanceYear() {
     callHookIfPresent("tickReform", gameState);
     callHookIfPresent("tickCanon", gameState);
     callHookIfPresent("tickEvents", gameState);
+    callHookIfPresent("tickStress", gameState);
 
     if (died) {
         // Any decision that was waiting belonged to the person who just

@@ -294,7 +294,7 @@ function renderCastOfCharacters(gameState) {
 
     if (!people.length) return null;
 
-    const card = makeCard("Your world", "");
+    const card = makeCard("Your Circle", "");
     people.forEach(({ person, role, line, relative }) => {
         const row = el("div", "stat", avatarRow(person, `<strong>${person.name}</strong> <span class="muted">— ${role}</span><br><span class="muted">${line}</span>`));
         card.appendChild(row);
@@ -364,6 +364,7 @@ function dockBadge(gameState, key) {
     if (key === "court" && gameState.faction) return "!";
     if (key === "court" && typeof canBecomeFavorite === "function" && canBecomeFavorite(gameState)) return "★";
     if (key === "church" && isExcommunicationRisk(gameState, gameState.realmKey)) return "!";
+    if (key === "intrigue" && gameState.hostileScheme && gameState.hostileScheme.discovered) return "⚠";
     if (key === "intrigue" && gameState.war) return "⚔";
     if (key === "military" && standingUpkeep(gameState) > (gameState.player.gold || 0) && standingUpkeep(gameState) > 0) return "!";
     if (key === "family" && canTryForChild(gameState)) return "♥";
@@ -421,6 +422,7 @@ function renderPlay() {
         tile("Piety", player.piety) +
         tile("Power", power.toLocaleString()) +
         tile("Standing", standing != null ? `${standing}%` : "—", standing) +
+        tile("Stress", stressLabel(player.stress || 0), null, (player.stress || 0) >= STRESS_BREAKING_POINT - 15 ? "hs-danger" : "") +
         tile("Safety", safety.label);
     hud.appendChild(stats);
 
@@ -459,20 +461,70 @@ function personLine(person, relation) {
     return avatarRow(person, `<strong>${title} ${person.name}</strong> — ${relation}, ${alive}${traitsLine}`);
 }
 
+// The Royal Diary — who you ARE right now, not the kingdom. Your own
+// profile, the way a Sims panel would show it, with the people closest
+// to you right below it, each with their real loyalty, not a trait tag.
+function renderDiaryColumn(gameState) {
+    const player = gameState.player;
+    const realm = getRealm(gameState.realmKey);
+    const title = player.churchTier != null ? churchRankName(player.churchTier) : personDisplayTitle(player);
+    const col = el("div", "col-diary", "");
+
+    const card = makeCard("Royal Diary", "");
+    card.appendChild(el("div", null, `
+        <div style="display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;">
+            <div class="player-portrait-frame">${avatarSvg(player, 88)}</div>
+            <h3 style="margin:6px 0 0;">${title} ${player.name}</h3>
+            <p class="muted" style="margin:0;">${realm.name} — age ${player.age}</p>
+            <p class="muted" style="margin:0;">${player.traits && player.traits.length ? player.traits.join(" · ") : ""}</p>
+        </div>
+    `));
+    const stress = player.stress || 0;
+    card.appendChild(el("div", null, `<p style="margin:12px 0 2px;font-size:13px;"><strong>Stress</strong> — ${stressLabel(stress)}</p><div class="meter"><span style="width:${stress}%;background:linear-gradient(90deg,var(--vert-bright),var(--gilt) 60%,var(--gules-bright));"></span></div>`));
+    col.appendChild(card);
+
+    const spouse = getSpouse(gameState, player.id);
+    const children = getChildren(gameState, player.id).filter(c => c.alive);
+    if ((spouse && spouse.alive) || children.length) {
+        const relCard = makeCard("Closest to you", "");
+        if (spouse && spouse.alive) {
+            const loyalty = Math.round(relativeLoyalty(spouse));
+            relCard.appendChild(el("div", "stat", avatarRow(spouse, `<strong>${spouse.name}</strong><br><span class="muted">spouse — loyalty ${loyalty}</span>`)));
+        }
+        children.slice(0, 3).forEach(c => {
+            const loyalty = Math.round(relativeLoyalty(c));
+            relCard.appendChild(el("div", "stat", avatarRow(c, `<strong>${c.name}</strong><br><span class="muted">${c.gender === "F" ? "daughter" : "son"}, age ${c.age} — loyalty ${loyalty}</span>`)));
+        });
+        col.appendChild(relCard);
+    }
+    return col;
+}
+
 function renderPlayView() {
     const view = document.getElementById("view");
     clearEl(view);
     const player = gameState.player;
 
     if (_playViewTab === "chronicle") {
-        const castCard = renderCastOfCharacters(gameState);
-        if (castCard) view.appendChild(castCard);
-        else view.appendChild(makeCard("Your world", '<p class="muted">No one close to you yet — no spouse, no living parents, no one at court who stands out. That will change.</p>'));
+        const grid = el("div", "cols3", "");
 
-        const logCard = makeCard("The chronicle so far", "");
-        const entries = gameState.log.slice(-10).reverse();
+        grid.appendChild(renderDiaryColumn(gameState));
+
+        const dramaCol = el("div", "col-drama", "");
+        const logCard = makeCard("The Court", "");
+        const entries = gameState.log.slice(-12).reverse();
+        if (!entries.length) logCard.appendChild(el("p", "muted", "Nothing has happened yet — the story starts now."));
         entries.forEach(e => logCard.appendChild(el("p", "muted", `${e.year} — ${e.text}`)));
-        view.appendChild(logCard);
+        dramaCol.appendChild(logCard);
+        grid.appendChild(dramaCol);
+
+        const socialCol = el("div", "col-social", "");
+        const castCard = renderCastOfCharacters(gameState);
+        if (castCard) socialCol.appendChild(castCard);
+        else socialCol.appendChild(makeCard("Your circle", '<p class="muted">No one close to you yet, or standing out at court. That will change.</p>'));
+        grid.appendChild(socialCol);
+
+        view.appendChild(grid);
         return;
     }
 
@@ -948,6 +1000,30 @@ function renderPlayView() {
     }
 
     if (_playViewTab === "intrigue") {
+        // A hostile scheme against the player is a real, visible, ongoing
+        // threat now — not an invisible yearly dice roll. Shown first,
+        // since it's the most urgent thing on this whole tab when it
+        // exists at all.
+        if (gameState.hostileScheme) {
+            const scheme = gameState.hostileScheme;
+            const schemeInfo = HOSTILE_SCHEME_TYPES[scheme.type];
+            const pct = Math.round((scheme.progress / scheme.threshold) * 100);
+            const schemeCard = makeCard(`⚠ A scheme is in motion`, `
+                <p>${scheme.discovered ? `Your Spymaster has uncovered it: <strong>${schemeInfo.name}</strong>.` : `Something is being planned against you — its shape isn't clear yet.`}</p>
+                <div class="meter" style="margin:6px 0;"><span style="width:${pct}%;background:linear-gradient(90deg,var(--gules),var(--gules-bright));"></span></div>
+                <p class="muted">${scheme.discovered ? "It will strike when it's ready, unless it's rooted out first." : "Your Spymaster may yet uncover it in time to act."}</p>
+            `);
+            if (scheme.discovered && !gameState.gameOver) {
+                schemeCard.appendChild(makeChoiceButton("Root out the conspirators (40 gold)", () => {
+                    counterScheme(gameState);
+                    saveGame();
+                    renderPlay();
+                }, !canCounterScheme(gameState)));
+            }
+            schemeCard.classList.add("scheme-card");
+            view.appendChild(schemeCard);
+        }
+
         // Not every one of the 18 realms is a realistic target for a given
         // character — surface the ones that actually matter: realms the
         // family already has a marriage tie to (a real stake), plus a

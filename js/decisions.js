@@ -937,6 +937,7 @@ function resolveDecision(gameState, optionIndex) {
     if (!option) return false;
     const resultText = option.apply(gameState, pending.context);
     logEvent(resultText || `${gameState.player.name} makes a choice.`);
+    if (typeof applyStressForChoice === "function") applyStressForChoice(gameState, option.label);
     gameState.pendingDecision = null;
     return true;
 }

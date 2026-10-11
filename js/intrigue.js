@@ -71,16 +71,86 @@ function arrangeConvenientDeath(gameState, targetId) {
     return success;
 }
 
-// Yearly hook: the background risk of someone ELSE's scheme landing on the
-// player, offset by the Spymaster's skill (council.js) if one is seated.
+// A hostile scheme against the player isn't an invisible dice roll
+// anymore — it's a real, named, ongoing thing with a progress bar, the
+// way a murder plot in CK3 is something you can see building and maybe
+// catch in time, not just a surprise health hit. gameState.hostileScheme
+// is null until one begins; once it does, it ticks toward completion
+// every year, and the player's own Spymaster has a real chance each year
+// to uncover it — and only once uncovered can the player actually fight
+// back (counterScheme, below).
+const HOSTILE_SCHEME_TYPES = {
+    murder: { name: "a plot to have you quietly killed", verb: "murder" },
+    rumor_campaign: { name: "a whisper campaign meant to ruin your name", verb: "ruin" },
+};
+
+function setupHostileScheme(gameState) {
+    if (gameState.hostileScheme === undefined) gameState.hostileScheme = null;
+}
+
+function canCounterScheme(gameState) {
+    setupHostileScheme(gameState);
+    return !!(gameState.hostileScheme && gameState.hostileScheme.discovered) && (gameState.player.gold || 0) >= 40;
+}
+
+// Spends real gold and the player's own intrigue skill to root the
+// scheme out once it's been discovered — not guaranteed, but a real
+// chance to end it before it lands.
+function counterScheme(gameState) {
+    if (!canCounterScheme(gameState)) return false;
+    const player = gameState.player;
+    player.gold -= 40;
+    const chance = schemeSuccessChance(gameState, "intrigue", 10);
+    if (Math.random() < chance) {
+        const scheme = gameState.hostileScheme;
+        logEvent(`${player.name}'s own agents root out ${HOSTILE_SCHEME_TYPES[scheme.type].name} before it can strike — the conspirators scatter.`);
+        gameState.hostileScheme = null;
+    } else {
+        logEvent(`${player.name} spends gold chasing down the conspirators, but they stay one step ahead (-40 gold).`);
+    }
+    return true;
+}
+
+// Yearly hook: the background risk of someone ELSE's scheme landing on
+// the player, offset by the Spymaster's skill (council.js) if one is
+// seated. A scheme already in progress ticks toward completion instead
+// of a fresh one starting.
 function tickIntrigue(gameState) {
     setupIntrigue(gameState);
+    setupHostileScheme(gameState);
     const spymaster = gameState.council && gameState.council.spymaster;
     const defense = spymaster ? spymaster.skill : 5;
-    const risk = Math.max(0.01, 0.06 - defense * 0.002);
-    if (Math.random() < risk) {
+
+    if (!gameState.hostileScheme) {
+        const risk = Math.max(0.01, 0.07 - defense * 0.002);
+        if (Math.random() < risk) {
+            const type = Math.random() < 0.6 ? "murder" : "rumor_campaign";
+            gameState.hostileScheme = { type, progress: 0, threshold: randInt(3, 6), discovered: false };
+            logEvent(`Whispers reach your court of ill intent toward you — something is being planned, though its shape isn't clear yet.`);
+        }
+        return;
+    }
+
+    const scheme = gameState.hostileScheme;
+    scheme.progress += 1;
+    if (!scheme.discovered && Math.random() < 0.22 + defense * 0.02) {
+        scheme.discovered = true;
+        logEvent(`Your Spymaster uncovers the shape of the plot against you — ${HOSTILE_SCHEME_TYPES[scheme.type].name}.`);
+    }
+
+    if (scheme.progress >= scheme.threshold) {
         const player = gameState.player;
-        player.health = Math.max(0, player.health - randInt(5, 15));
-        logEvent(`A plot against ${player.name} has struck close — a poisoning scare, a near-accident. Health shaken.`);
+        const avoided = scheme.discovered && Math.random() < 0.5;
+        if (avoided) {
+            logEvent(`The plot against ${player.name} is foiled at the last moment, thanks to the warning already in hand.`);
+        } else if (scheme.type === "murder") {
+            player.health = Math.max(0, player.health - randInt(15, 30));
+            logEvent(`The plot against ${player.name} strikes home — a poisoning, made to look like illness. Health shaken badly.`);
+        } else {
+            player.prestige = Math.max(0, (player.prestige || 0) - 25);
+            getVassals(gameState).forEach(v => adjustOpinion(v, -6));
+            logEvent(`The whisper campaign against ${player.name} breaks into the open — real damage to your name at court.`);
+        }
+        gameState.hostileScheme = null;
     }
 }

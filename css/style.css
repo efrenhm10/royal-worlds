@@ -102,6 +102,11 @@ h1 {
     display: block;
 }
 
+.scheme-card {
+    border: 1px solid var(--gules);
+    background: linear-gradient(180deg, rgba(163,24,46,0.12), var(--panel) 50%);
+}
+
 .royal-court-card {
     border: 1px solid var(--gilt);
     background: linear-gradient(180deg, rgba(201,151,26,0.12), var(--panel) 50%);
@@ -272,6 +277,14 @@ select {
     min-width: 84px;
 }
 
+.hs-danger {
+    border-color: var(--gules);
+}
+
+.hs-danger b {
+    color: var(--gules-bright);
+}
+
 .hs span {
     display: block;
     font-size: 10.5px;
@@ -345,6 +358,26 @@ select {
 }
 
 .col-main, .col-side {
+    min-width: 0;
+}
+
+/* The main view's three-column layout: Royal Diary (who you are) /
+   The Court (what's happening) / Your Circle (who's around you) — the
+   Sims-profile-plus-CK3-court shape, instead of one long stacked column. */
+.cols3 {
+    display: grid;
+    grid-template-columns: 240px minmax(0, 1fr) 300px;
+    gap: 14px;
+    align-items: start;
+}
+
+@media (max-width: 980px) {
+    .cols3 {
+        grid-template-columns: 1fr;
+    }
+}
+
+.col-diary, .col-drama, .col-social {
     min-width: 0;
 }
 
