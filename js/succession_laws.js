@@ -81,6 +81,15 @@ function determineHeir(gameState, lawKey, deceased) {
     return null;
 }
 
+// A realm's own real succession law — Venice's Doge is elected, France
+// follows Salic law, etc. (realms.js's defaultSuccessionLaw) — rather than
+// the single hardcoded default every realm used to share regardless of
+// its actual government.
+function realmSuccessionLaw(realmKey) {
+    const realm = getRealm(realmKey);
+    return (realm && realm.defaultSuccessionLaw) || DEFAULT_SUCCESSION_LAW;
+}
+
 // Full ordering within a candidate pool for a given law — determineHeir
 // above only needs the single top pick, but showing a real line of
 // succession needs the whole order. Each law's full-pool order is built
@@ -139,8 +148,9 @@ function foreignSuccessionLine(gameState, realmKey, count) {
     if (!rulerId) return null;
     const ruler = getPerson(gameState, rulerId);
     if (!ruler) return null;
-    const order = ruler.alive ? determineSuccessionOrder(gameState, FOREIGN_DEFAULT_SUCCESSION_LAW, ruler.id, count) : [];
-    return { ruler, order, lawKey: FOREIGN_DEFAULT_SUCCESSION_LAW };
+    const lawKey = realmSuccessionLaw(realmKey);
+    const order = ruler.alive ? determineSuccessionOrder(gameState, lawKey, ruler.id, count) : [];
+    return { ruler, order, lawKey };
 }
 
 // Yearly hook: a tracked foreign monarch who died this year (via the same
@@ -155,7 +165,7 @@ function tickForeignRoyals(gameState) {
         const ruler = getPerson(gameState, rulerId);
         if (!ruler || ruler.alive) return;
         const realm = getRealm(realmKey);
-        const heir = determineHeir(gameState, FOREIGN_DEFAULT_SUCCESSION_LAW, ruler);
+        const heir = determineHeir(gameState, realmSuccessionLaw(realmKey), ruler);
         if (heir) {
             heir.tier = Math.max(heir.tier || 0, realmTopTier(realmKey));
             gameState.foreignRoyals[realmKey] = heir.id;

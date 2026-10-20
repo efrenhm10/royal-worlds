@@ -432,6 +432,7 @@ function relocatePlayerIfNeeded(gameState, candidate) {
     const oldRealm = getRealm(gameState.realmKey);
     const newRealmKey = candidate.sourceRealmKey;
     const newRealm = getRealm(newRealmKey);
+    const crossesCulture = oldRealm.cultureKey !== newRealm.cultureKey;
 
     gameState.realmKey = newRealmKey;
     player.realmKey = newRealmKey;
@@ -442,14 +443,23 @@ function relocatePlayerIfNeeded(gameState, candidate) {
     // new court, built fresh around her new station.
     gameState.domain = [];
     gameState.vassals = {};
-    gameState.council = {};
     gameState.crownAuthority = gameState.crownAuthority || {};
     if (gameState.crownAuthority[newRealmKey] == null) gameState.crownAuthority[newRealmKey] = 0;
     callHookIfPresent("setupDomain", gameState);
     callHookIfPresent("setupVassals", gameState);
-    callHookIfPresent("setupCouncil", gameState);
 
-    logEvent(`${player.name} has left ${oldRealm.name} behind to join the household of ${newRealm.name}, surrendering what they held at home.`);
+    // A ruler-in-waiting who crossed a real cultural border to get here
+    // isn't accepted just because the marriage was legal — the local
+    // lords remember exactly where this new blood came from, at least
+    // until it's answered (decisions.js's foreign_ruler_backlash beat,
+    // generated off gameState.originRealmKey the same way every other
+    // Drama Director beat reads live state rather than a scripted event).
+    if (crossesCulture) {
+        gameState.originRealmKey = oldRealm.key;
+        getVassals(gameState).forEach(v => adjustOpinion(v, -12));
+    }
+
+    logEvent(`${player.name} has left ${oldRealm.name} behind to join the household of ${newRealm.name}, surrendering what they held at home.${crossesCulture ? ` The local lords take notice of a foreign-born claimant in their midst.` : ""}`);
 }
 
 // Marrying into a realm's actual royal house shouldn't just be flavor
@@ -664,8 +674,8 @@ function tickDynastyPrestige(gameState) {
 // The general case: arranges a marriage for ANY family member, not just
 // the player — the player always pays the cost and bears the shame,
 // since they're the one with the gold and the standing to spend. Only
-// the player's OWN marriage can trigger relocation (domain/vassals/
-// council are the player's, not any other family member's).
+// the player's OWN marriage can trigger relocation (domain/vassals are
+// the player's, not any other family member's).
 function arrangeMarriage(gameState, targetPerson, candidate) {
     if (!isAvailableToMarry(gameState, targetPerson.id)) return null;
     const payer = gameState.player;

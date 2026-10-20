@@ -1,7 +1,7 @@
 // decisions.js — the moment-to-moment choices that were missing from every
 // other system: instead of a passive log line telling you what happened,
 // a real situation is put in front of you, tied to your actual state (a
-// resentful vassal, your own health, a council member's ask, a rival's
+// resentful vassal, your own health, a vassal's ask, a rival's
 // insult), and you pick between options that each cost or gain something
 // real. This is what makes "Advance a year" feel like playing a character
 // instead of watching a dashboard update itself.
@@ -508,6 +508,13 @@ function classifyPlayerSituation(gameState) {
         if (myPower < theirPower * 0.75) tags.push("war_leader_outmatched");
     }
 
+    // dynasty.js's relocatePlayerIfNeeded sets originRealmKey the moment a
+    // marriage carries the player across an actual cultural border — this
+    // reads that same flag rather than tracking foreignness separately.
+    if (player.tier >= 1 && gameState.originRealmKey && gameState.originRealmKey !== gameState.realmKey) {
+        tags.push("foreign_born_ruler");
+    }
+
     return tags;
 }
 
@@ -527,6 +534,12 @@ function assessRealmNeeds(gameState) {
 
     if (situations.includes("childless_reigning_monarch")) needs.push("needs_heir");
     if (situations.includes("war_leader_outmatched")) needs.push("needs_military_support");
+
+    if (situations.includes("foreign_born_ruler")) {
+        const vassals = getVassals(gameState);
+        const avgOpinion = vassals.length ? vassals.reduce((s, v) => s + v.opinion, 0) / vassals.length : 50;
+        if (avgOpinion < 55) needs.push("needs_local_acceptance");
+    }
 
     return needs;
 }
@@ -614,8 +627,8 @@ const DRAMA_BEAT_TEMPLATES = [
         ],
     },
     // unmarried x needs_heir (only reachable by a childless reigning
-    // monarch — needs_heir only exists when that situation does) — the
-    // council presses a crownless-heir monarch to marry quickly.
+    // monarch — needs_heir only exists when that situation does) — your
+    // own vassals press a crownless-heir monarch to marry quickly.
     {
         id: "pressed_to_remarry_for_heir",
         situation: "unmarried",
@@ -623,19 +636,19 @@ const DRAMA_BEAT_TEMPLATES = [
         chance: 0.25,
         extraCondition: gameState => classifyPlayerSituation(gameState).includes("childless_reigning_monarch"),
         buildContext: gameState => ({ candidate: generateMarriageCandidates(gameState, 1)[0] }),
-        title: "No heir, and the council knows it",
+        title: "No heir, and your lords know it",
         text: (gameState, ctx) => voiceLine({
-            bold: [`The council says plainly what everyone already thinks: there is no heir, and ${gameState.player.name} has put off marrying long enough that it's becoming a real danger to the line.`],
+            bold: [`Your own vassals say plainly what everyone already thinks: there is no heir, and ${gameState.player.name} has put off marrying long enough that it's becoming a real danger to the line.`],
             wary: [`${gameState.player.name} is reminded, not gently, that a crown without an heir is a crown half-lost already — and a match, ${ctx.candidate.name}, is already waiting to be considered.`],
-            cunning: [`The council has already found a convenient match — ${ctx.candidate.name} — and makes clear that the longer ${gameState.player.name} waits, the more they'll be seen as inviting a succession crisis on purpose.`],
-            neutral: `The council presses ${gameState.player.name} to marry and secure the succession, proposing ${ctx.candidate.name} as a practical match.`,
+            cunning: [`Your court has already found a convenient match — ${ctx.candidate.name} — and makes clear that the longer ${gameState.player.name} waits, the more they'll be seen as inviting a succession crisis on purpose.`],
+            neutral: `Your lords press ${gameState.player.name} to marry and secure the succession, proposing ${ctx.candidate.name} as a practical match.`,
         }, gameState.player),
         options: [
             {
                 label: "Marry quickly, for the realm's sake",
                 apply(gameState, ctx) {
                     const married = arrangeMarriage(gameState, gameState.player, ctx.candidate);
-                    if (!married) return `The match falls through before it can be made official — the council is not pleased.`;
+                    if (!married) return `The match falls through before it can be made official — your lords are not pleased.`;
                     getVassals(gameState).forEach(v => adjustOpinion(v, randInt(4, 10)));
                     return `${gameState.player.name} marries ${married.name} — not for love, but the succession is secured, and the court visibly relaxes.`;
                 },
@@ -646,24 +659,24 @@ const DRAMA_BEAT_TEMPLATES = [
                     const player = gameState.player;
                     player.prestige = Math.max(0, (player.prestige || 0) - 8);
                     getVassals(gameState).forEach(v => { if (Math.random() < 0.5) adjustOpinion(v, randInt(-8, -2)); });
-                    return `${player.name} refuses to be rushed — a right any ruler should have, though the council's confidence in the line's security visibly slips (-8 prestige, vassals uneasy).`;
+                    return `${player.name} refuses to be rushed — a right any ruler should have, though confidence in the line's security visibly slips among your lords (-8 prestige, vassals uneasy).`;
                 },
             },
         ],
     },
-    // war_leader_outmatched x needs_military_support — the Marshal
-    // forces a real choice once a war is clearly being lost.
+    // war_leader_outmatched x needs_military_support — your own captains
+    // force a real choice once a war is clearly being lost.
     {
         id: "war_funding_crisis",
         situation: "war_leader_outmatched",
         need: "needs_military_support",
         chance: 0.3,
         buildContext: gameState => ({ targetRealmKey: gameState.war.targetRealmKey }),
-        title: "The war is going badly, and your Marshal says so plainly",
+        title: "The war is going badly, and your captains say so plainly",
         text: (gameState, ctx) => voiceLine({
-            bold: [`Your Marshal lays it out without softening it: the war against ${getRealm(ctx.targetRealmKey).name} is being lost on the numbers alone, and something has to change now.`],
-            wary: [`${gameState.player.name}'s own Marshal is openly worried — the war against ${getRealm(ctx.targetRealmKey).name} is going badly, and waiting any longer only makes the numbers worse.`],
-            neutral: `The war against ${getRealm(ctx.targetRealmKey).name} is going badly — your own council urges a real decision, not more waiting.`,
+            bold: [`Your own captains lay it out without softening it: the war against ${getRealm(ctx.targetRealmKey).name} is being lost on the numbers alone, and something has to change now.`],
+            wary: [`${gameState.player.name}'s own commanders are openly worried — the war against ${getRealm(ctx.targetRealmKey).name} is going badly, and waiting any longer only makes the numbers worse.`],
+            neutral: `The war against ${getRealm(ctx.targetRealmKey).name} is going badly — your own vassals urge a real decision, not more waiting.`,
         }, gameState.player),
         options: [
             {
@@ -693,6 +706,47 @@ const DRAMA_BEAT_TEMPLATES = [
                 apply(gameState) {
                     gameState.player.health = Math.max(0, gameState.player.health - randInt(0, 5));
                     return `${gameState.player.name} presses on despite the Marshal's warning — the strain of it is real.`;
+                },
+            },
+        ],
+    },
+    // foreign_born_ruler x needs_local_acceptance — a marriage that
+    // carried the bloodline across a real cultural border (dynasty.js's
+    // relocatePlayerIfNeeded) doesn't just mean cold vassals forever; this
+    // is the one real choice about answering it, win them over or rule
+    // through it, and either way it feeds the existing opinion/faction
+    // systems rather than a new hardcoded outcome.
+    {
+        id: "foreign_ruler_backlash",
+        situation: "foreign_born_ruler",
+        need: "needs_local_acceptance",
+        chance: 0.3,
+        buildContext: gameState => ({ originRealmName: getRealm(gameState.originRealmKey).name }),
+        title: "Foreign blood on the throne",
+        text: (gameState, ctx) => voiceLine({
+            bold: [`The lords here have not forgotten that ${gameState.player.name} was born to ${ctx.originRealmName}, not to them — and they say so, plainly, whenever the subject of loyalty comes up.`],
+            wary: [`${gameState.player.name} can feel it at every council and every feast: a ruler raised in ${ctx.originRealmName} is still, to these lords, a foreigner wearing their crown.`],
+            cunning: [`${gameState.player.name} reads the room clearly enough — being ${ctx.originRealmName}-born is a weapon any rival here would gladly use, and some already are.`],
+            neutral: `The local lords have not warmed to a ruler born in ${ctx.originRealmName} — it colors everything else between them.`,
+        }, gameState.player),
+        options: [
+            {
+                label: "Court the local lords directly (60 gold)",
+                apply(gameState) {
+                    const player = gameState.player;
+                    if ((player.gold || 0) < 60) return "There isn't enough gold on hand to hold the feasts and grants this would take.";
+                    player.gold -= 60;
+                    getVassals(gameState).forEach(v => adjustOpinion(v, randInt(15, 24)));
+                    return `${player.name} spends freely on local favor — grants, feasts, marriages brokered for loyal houses — and it tells (-60 gold, vassals noticeably warmer).`;
+                },
+            },
+            {
+                label: "Rule as you are — your blood, your crown",
+                apply(gameState) {
+                    const player = gameState.player;
+                    player.prestige = (player.prestige || 0) + 10;
+                    getVassals(gameState).forEach(v => { if (Math.random() < 0.6) adjustOpinion(v, randInt(-14, -6)); });
+                    return `${player.name} refuses to apologize for their own birth — a hard line that plays well to pride (+10 prestige), but it leaves the local lords' resentment to fester on its own.`;
                 },
             },
         ],
@@ -950,45 +1004,42 @@ const DECISION_EVENTS = [
         ],
     },
     {
-        id: "advisor_request",
+        id: "vassal_request",
         chance: 0.14,
-        condition: gameState => Object.keys(getCouncil(gameState)).length > 0,
-        buildContext: gameState => {
-            const roles = Object.keys(getCouncil(gameState));
-            return { roleKey: randomFrom(roles) };
-        },
-        title: "A council member's request",
+        condition: gameState => getVassals(gameState).length > 0,
+        buildContext: gameState => ({ vassalId: randomFrom(getVassals(gameState)).id }),
+        title: "A vassal's request",
         text: (gameState, ctx) => {
-            const advisor = getCouncil(gameState)[ctx.roleKey];
+            const vassal = getVassals(gameState).find(v => v.id === ctx.vassalId);
             return voiceLine({
-                cunning: [`${advisor.name} asks for more funding, framed as necessity — you suspect it's also ambition.`],
-                wary: [`${advisor.name} requests more funding; you find yourself wondering what exactly it will be spent on.`],
-                warm: [`${advisor.name} comes asking for more support, plainly believing you'll understand why it matters.`],
-                bold: [`${advisor.name} asks for more latitude bluntly, in the manner of someone used to getting it.`],
-                devout: [`${advisor.name} asks for more latitude, and makes a point of promising it will be used honestly.`],
-                neutral: `${advisor.name} asks for more latitude — and more funding — to do their work properly.`,
+                cunning: [`${vassal.name} asks for more funding, framed as necessity — you suspect it's also ambition.`],
+                wary: [`${vassal.name} requests more funding; you find yourself wondering what exactly it will be spent on.`],
+                warm: [`${vassal.name} comes asking for more support, plainly believing you'll understand why it matters.`],
+                bold: [`${vassal.name} asks for more latitude bluntly, in the manner of someone used to getting it.`],
+                devout: [`${vassal.name} asks for more latitude, and makes a point of promising it will be used honestly.`],
+                neutral: `${vassal.name} asks for more latitude — and more funding — to manage their lands properly.`,
             }, gameState.player);
         },
         options: [
             {
                 label: "Grant it (30 gold)",
                 apply(gameState, ctx) {
-                    const advisor = getCouncil(gameState)[ctx.roleKey];
+                    const vassal = getVassals(gameState).find(v => v.id === ctx.vassalId);
                     const player = gameState.player;
-                    if (!advisor) return "The request becomes moot.";
-                    if ((player.gold || 0) < 30) return `There isn't enough gold to grant ${advisor.name}'s request.`;
+                    if (!vassal) return "The request becomes moot.";
+                    if ((player.gold || 0) < 30) return `There isn't enough gold to grant ${vassal.name}'s request.`;
                     player.gold -= 30;
-                    adjustOpinion(advisor, 15);
-                    return `${advisor.name}'s request is granted (-30 gold, +15 opinion).`;
+                    adjustOpinion(vassal, 15);
+                    return `${vassal.name}'s request is granted (-30 gold, +15 opinion).`;
                 },
             },
             {
                 label: "Refuse",
                 apply(gameState, ctx) {
-                    const advisor = getCouncil(gameState)[ctx.roleKey];
-                    if (!advisor) return "The request becomes moot.";
-                    adjustOpinion(advisor, -10);
-                    return `${advisor.name}'s request is refused (-10 opinion).`;
+                    const vassal = getVassals(gameState).find(v => v.id === ctx.vassalId);
+                    if (!vassal) return "The request becomes moot.";
+                    adjustOpinion(vassal, -10);
+                    return `${vassal.name}'s request is refused (-10 opinion).`;
                 },
             },
         ],
@@ -1138,21 +1189,20 @@ const DECISION_EVENTS = [
     {
         id: "spymaster_opportunity",
         chance: 0.12,
-        condition: gameState => gameState.council && gameState.council.spymaster && !gameState.war,
+        condition: gameState => (gameState.player.skills.intrigue || 0) >= 10 && !gameState.war,
         buildContext: gameState => {
             const others = listRealms().filter(r => r.key !== gameState.realmKey && !hasClaim(gameState, r.key));
             if (!others.length) return {};
             return { realmKey: randomFrom(others).key };
         },
-        title: "Your Spymaster brings an opportunity",
+        title: "Your agents bring an opportunity",
         text: (gameState, ctx) => {
-            const spymaster = gameState.council.spymaster;
             const realm = ctx.realmKey ? getRealm(ctx.realmKey) : null;
             return voiceLine({
-                cunning: [`${spymaster.name} lays out an opening${realm ? ` against ${realm.name}` : ""} — the kind of thing that only works if you move before it closes.`],
-                wary: [`${spymaster.name} brings word of an opportunity${realm ? ` involving ${realm.name}` : ""}; it's tempting, and that's exactly what gives you pause.`],
-                bold: [`${spymaster.name} has found an opening${realm ? ` against ${realm.name}` : ""} and clearly expects you to take it.`],
-                neutral: `${spymaster.name} brings news of a possible opportunity${realm ? ` concerning ${realm.name}` : ""}.`,
+                cunning: [`Your agents at court lay out an opening${realm ? ` against ${realm.name}` : ""} — the kind of thing that only works if you move before it closes.`],
+                wary: [`Word reaches you of an opportunity${realm ? ` involving ${realm.name}` : ""}; it's tempting, and that's exactly what gives you pause.`],
+                bold: [`Your own agents have found an opening${realm ? ` against ${realm.name}` : ""} and clearly expect you to take it.`],
+                neutral: `Your agents bring news of a possible opportunity${realm ? ` concerning ${realm.name}` : ""}.`,
             }, gameState.player);
         },
         options: [
@@ -1160,24 +1210,23 @@ const DECISION_EVENTS = [
                 label: "Fund the scheme (40 gold)",
                 apply(gameState, ctx) {
                     const player = gameState.player;
-                    const spymaster = gameState.council.spymaster;
                     if (!ctx.realmKey) return "The opportunity turns out to be nothing after all.";
-                    if ((player.gold || 0) < 40) return `There isn't enough gold to fund ${spymaster.name}'s scheme, and the moment slips by.`;
+                    if ((player.gold || 0) < 40) return `There isn't enough gold to fund the scheme, and the moment slips by.`;
                     player.gold -= 40;
-                    const chance = Math.max(0.3, Math.min(0.85, 0.5 + spymaster.skill * 0.015));
+                    const chance = Math.max(0.3, Math.min(0.85, 0.5 + (player.skills.intrigue || 0) * 0.015));
                     if (Math.random() < chance) {
                         gameState.claims = gameState.claims || [];
                         gameState.claims.push({ realmKey: ctx.realmKey, grantedYear: gameState.year, type: "fabricated" });
-                        return `${spymaster.name}'s scheme pays off — a fabricated claim on ${getRealm(ctx.realmKey).name} is now yours (-40 gold).`;
+                        return `The scheme pays off — a fabricated claim on ${getRealm(ctx.realmKey).name} is now yours (-40 gold).`;
                     }
                     player.prestige = Math.max(0, (player.prestige || 0) - 8);
-                    return `${spymaster.name}'s scheme unravels, and the failure costs standing (-40 gold, -8 prestige).`;
+                    return `The scheme unravels, and the failure costs standing (-40 gold, -8 prestige).`;
                 },
             },
             {
                 label: "Decline — too risky",
                 apply(gameState) {
-                    return `The opportunity is passed up. ${gameState.council.spymaster.name} says nothing, but notes it.`;
+                    return `The opportunity is passed up, quietly.`;
                 },
             },
         ],
@@ -1636,11 +1685,8 @@ const DECISION_EVENTS = [
     {
         id: "courtier_begs_influence",
         chance: 0.1,
-        condition: gameState => typeof hasRelativeHoldingAForeignThrone === "function" && hasRelativeHoldingAForeignThrone(gameState) && [...getVassals(gameState), ...Object.values(getCouncil(gameState))].length > 0,
-        buildContext: gameState => {
-            const pool = [...getVassals(gameState), ...Object.values(getCouncil(gameState))];
-            return { personId: randomFrom(pool).id };
-        },
+        condition: gameState => typeof hasRelativeHoldingAForeignThrone === "function" && hasRelativeHoldingAForeignThrone(gameState) && getVassals(gameState).length > 0,
+        buildContext: gameState => ({ personId: randomFrom(getVassals(gameState)).id }),
         title: "A courtier begs a favor",
         text: (gameState, ctx) => {
             const person = getCourtierById(gameState, ctx.personId);
@@ -1747,8 +1793,7 @@ const DECISION_EVENTS = [
 ];
 
 function getCourtierById(gameState, id) {
-    if (gameState.vassals[id]) return gameState.vassals[id];
-    return Object.values(getCouncil(gameState)).find(c => c.id === id) || null;
+    return gameState.vassals[id] || null;
 }
 
 // Rolls for at most one new decision per year, and only if none is already

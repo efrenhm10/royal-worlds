@@ -1,7 +1,7 @@
 // relationships.js — the piece the earlier single-file version of this
 // game had and the rebuild didn't: family isn't just trait tags to read,
 // it's loyalty you actively work at. Every blood relative and spouse
-// carries a loyalty number (0-100, separate from vassals/council's
+// carries a loyalty number (0-100, separate from vassals'
 // opinion, same spirit), and the player can act on it directly — ask for
 // gold, ask for political support, send a gift, or simply spend time
 // together — instead of only ever being on the receiving end of events.

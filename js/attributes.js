@@ -89,7 +89,7 @@ const TIER_BLURBS = {
     2: "A baron in your own right: tenants, a hall, and a liege lord who expects your service.",
     3: "A county or earldom of your own: lesser lords answer to you, and you answer to a duke or king above.",
     4: "A duchy — counts and barons defer to you, and only a crown stands above.",
-    5: "A crown. The realm is yours to rule, with vassals, a council, and a court all your own from the first year.",
+    5: "A crown. The realm is yours to rule, with vassals and a court all your own from the first year.",
 };
 
 // One starting candidate per tier isn't enough variety to choose from, so

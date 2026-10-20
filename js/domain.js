@@ -91,26 +91,64 @@ function buyHolding(gameState, typeKey) {
     return true;
 }
 
+// How you choose to run your own lands, year over year — not a one-off
+// purchase like buyHolding/developHolding, but a standing policy that
+// trades immediate income against the land's future growth, exactly the
+// "make income on it or invest in it" choice that was missing: every
+// holding in hand is run the same way until you change it.
+const DOMAIN_POLICIES = {
+    reinvest: {
+        key: "reinvest", name: "Reinvest",
+        desc: "Plow revenue back into your lands. Yield is lower year to year, but in-hand holdings slowly improve themselves for free.",
+        yieldMultiplier: 0.7, autoGrowChance: 0.12,
+    },
+    balanced: {
+        key: "balanced", name: "Balanced",
+        desc: "Run your demesne at its ordinary yield — no extra growth, no extra strain.",
+        yieldMultiplier: 1, autoGrowChance: 0,
+    },
+    extract: {
+        key: "extract", name: "Extract",
+        desc: "Squeeze every holding for all it's worth. Yield is higher right now, but it costs your vassals' opinion of you over time.",
+        yieldMultiplier: 1.35, autoGrowChance: 0, opinionDriftPerYear: -1,
+    },
+};
+const DEFAULT_DOMAIN_POLICY = "balanced";
+
+function domainPolicy(gameState) {
+    return DOMAIN_POLICIES[gameState.domainPolicy] || DOMAIN_POLICIES[DEFAULT_DOMAIN_POLICY];
+}
+
+function setDomainPolicy(gameState, key) {
+    if (!DOMAIN_POLICIES[key]) return false;
+    gameState.domainPolicy = key;
+    logEvent(`${gameState.player.name} now runs the demesne on a policy of ${DOMAIN_POLICIES[key].name.toLowerCase()}.`);
+    return true;
+}
+
 // What a holding actually produces, at any level — the single source of
 // truth tickDomain's real yearly effects are built from, reused by the
 // UI to show a real, specific before/after preview ("gold income 8 -> 12
 // a year") before the player spends anything, instead of a flat "level
-// up" button with no visible payoff.
+// up" button with no visible payoff. In-hand holdings are scaled by the
+// active domain policy; a holding already granted to a vassal runs on
+// their own management, not yours, so the policy doesn't touch it.
 function holdingYield(gameState, holding, levelOverride) {
     const level = levelOverride != null ? levelOverride : holding.level;
     const vassal = !!holding.grantedToVassalId;
     const awayPenalty = (typeof isAtRoyalCourt === "function" && isAtRoyalCourt(gameState)) ? 0.5 : 1;
+    const policyMult = vassal ? 1 : domainPolicy(gameState).yieldMultiplier;
     if (holding.type === "keep") {
         return vassal
             ? { levies: level * 20, note: "sets this vassal's levy floor" }
-            : { levies: Math.round(level * 40 * awayPenalty) };
+            : { levies: Math.round(level * 40 * awayPenalty * policyMult) };
     }
     if (holding.type === "town") {
-        const income = Math.round(level * 4 * (vassal ? 1 : awayPenalty));
+        const income = Math.round(level * 4 * (vassal ? 1 : awayPenalty * policyMult));
         return vassal ? { gold: Math.round(income * 0.3), note: "your cut of a vassal's tax" } : { gold: income };
     }
     if (holding.type === "temple") {
-        return vassal ? { note: "10% yearly chance of +1 standing with Rome" } : { piety: Math.round(level * 2 * awayPenalty) };
+        return vassal ? { note: "10% yearly chance of +1 standing with Rome" } : { piety: Math.round(level * 2 * awayPenalty * policyMult) };
     }
     return {};
 }
@@ -179,7 +217,24 @@ function fortifyBorder(gameState) {
 function tickDomain(gameState) {
     setupDomain(gameState);
     const player = gameState.player;
+    const policy = domainPolicy(gameState);
     let personalLevies = 0;
+
+    // Reinvest: in-hand holdings have a real chance to improve themselves
+    // for free each year, the payoff for the lower yield above.
+    if (policy.autoGrowChance) {
+        inHandHoldings(gameState).forEach(h => {
+            if (Math.random() < policy.autoGrowChance) {
+                h.level += 1;
+                logEvent(`Reinvestment has improved your ${h.type} to level ${h.level}, at no cost.`);
+            }
+        });
+    }
+    // Extract: squeezing the land for more than it easily gives costs
+    // your vassals' good opinion, a little every year it's kept up.
+    if (policy.opinionDriftPerYear && inHandHoldings(gameState).length) {
+        getVassals(gameState).forEach(v => adjustOpinion(v, policy.opinionDriftPerYear));
+    }
 
     // Land run from a distance yields less — a real reason "stay home and
     // manage my own lands" and "go to the royal court" (royal_court.js)

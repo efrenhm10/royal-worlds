@@ -220,11 +220,11 @@ let _chronicleSubTab = "personal";
 // the player's own home realm on first visit.
 let _selectedTheaterRealm = null;
 
-// Court standing isn't tracked as its own number — it's what vassals and
-// councillors actually think of you, averaged, the same "respect" a real
-// court would gossip about.
+// Court standing isn't tracked as its own number — it's what vassals
+// actually think of you, averaged, the same "respect" a real court would
+// gossip about.
 function courtStanding(gameState) {
-    const people = [...getVassals(gameState), ...Object.values(getCouncil(gameState))];
+    const people = getVassals(gameState);
     if (!people.length) return null;
     return Math.round(people.reduce((s, p) => s + p.opinion, 0) / people.length);
 }
@@ -256,7 +256,7 @@ function renderCastOfCharacters(gameState) {
         });
     }
 
-    const courtiers = [...getVassals(gameState), ...Object.values(getCouncil(gameState))];
+    const courtiers = getVassals(gameState);
     if (courtiers.length) {
         const ally = [...courtiers].sort((a, b) => b.opinion - a.opinion)[0];
         const rival = [...courtiers].sort((a, b) => a.opinion - b.opinion)[0];
@@ -722,6 +722,23 @@ function renderPlayView() {
             view.appendChild(makeCard("Your demesne", '<p class="muted">No holdings of your own yet — that comes with a landed title.</p>'));
         }
 
+        // How you choose to run what's in hand — a standing policy, not a
+        // one-off purchase, giving "invest in my lands or extract from
+        // them" a real, ongoing answer rather than only buy/develop clicks.
+        if (holdings.length) {
+            const activePolicy = domainPolicy(gameState);
+            const policyCard = makeCard("How you run your lands", `<p class="muted">Currently: <strong>${activePolicy.name}</strong> — ${activePolicy.desc}</p>`);
+            Object.values(DOMAIN_POLICIES).forEach(p => {
+                if (p.key === activePolicy.key) return;
+                policyCard.appendChild(makeChoiceButton(`Switch to ${p.name} — ${p.desc}`, () => {
+                    setDomainPolicy(gameState, p.key);
+                    saveGame();
+                    renderPlay();
+                }, !!gameState.gameOver));
+            });
+            view.appendChild(policyCard);
+        }
+
         holdings.forEach(holding => {
             const typeInfo = HOLDING_TYPES.find(t => t.key === holding.type);
             const vassal = holding.grantedToVassalId ? vassals.find(v => v.id === holding.grantedToVassalId) : null;
@@ -1059,26 +1076,6 @@ function renderPlayView() {
             }
             view.appendChild(rcCard);
         }
-
-        const council = getCouncil(gameState);
-        const roleKeys = Object.keys(council);
-        const councilCard = makeCard("Your council", roleKeys.length ? "" : '<p class="muted">No formal council yet — that comes with a landed title.</p>');
-        roleKeys.forEach(roleKey => {
-            const advisor = council[roleKey];
-            const role = COUNCIL_ROLES.find(r => r.key === roleKey);
-            const row = el("div", "stat", avatarRow(advisor, `
-                <strong>${advisor.name}</strong> <span class="muted">— ${role.name}</span><br>
-                <span class="muted">${relationshipLabel(advisor.opinion)} — ${personalityFlavor(advisor)}.</span>
-            `));
-            const btn = makeChoiceButton("Replace", () => {
-                replaceAdvisor(gameState, roleKey);
-                saveGame();
-                renderPlay();
-            }, !!gameState.gameOver);
-            row.appendChild(btn);
-            councilCard.appendChild(row);
-        });
-        view.appendChild(councilCard);
 
         const vassals = getVassals(gameState);
         const card = makeCard("Your court", vassals.length ? "" : '<p class="muted">You command no vassals of your own yet — a higher title will bring them.</p>');

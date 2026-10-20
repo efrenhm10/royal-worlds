@@ -1,6 +1,6 @@
 // engine.js — the bookmark-era list, the core game-state object, the
 // year-tick loop, and save/load. Everything else (domain, vassals,
-// dynasty, church, council, intrigue, factions, wartime, reform) hangs
+// dynasty, church, intrigue, factions, wartime, reform) hangs
 // its own per-year logic off advanceYear() once it exists; until then
 // engine.js calls each hook defensively so a stub module never breaks
 // the loop.
@@ -41,7 +41,7 @@ function startNewGame(eraKey, realmKey, character) {
         crownAuthority: { [realmKey]: 0 },
         family: {},
         vassals: {},
-        succession: { lawKey: (typeof DEFAULT_SUCCESSION_LAW !== "undefined" ? DEFAULT_SUCCESSION_LAW : "maleProximogeniture") },
+        succession: { lawKey: realm.defaultSuccessionLaw || (typeof DEFAULT_SUCCESSION_LAW !== "undefined" ? DEFAULT_SUCCESSION_LAW : "maleProximogeniture") },
         gameOver: false,
         log: [],
         turn: 0,
@@ -57,7 +57,6 @@ function startNewGame(eraKey, realmKey, character) {
     callHookIfPresent("setupDynasty", gameState);
     callHookIfPresent("setupVassals", gameState);
     callHookIfPresent("setupChurch", gameState);
-    callHookIfPresent("setupCouncil", gameState);
     callHookIfPresent("setupIntrigue", gameState);
     callHookIfPresent("setupWartime", gameState);
     callHookIfPresent("setupFactions", gameState);
@@ -150,7 +149,6 @@ function advanceYear() {
     callHookIfPresent("tickRoyalCourt", gameState);
     callHookIfPresent("tickChurch", gameState);
     callHookIfPresent("tickChurchCareer", gameState);
-    callHookIfPresent("tickCouncil", gameState);
     callHookIfPresent("tickIntrigue", gameState);
     callHookIfPresent("tickFactions", gameState);
     callHookIfPresent("tickWartime", gameState);

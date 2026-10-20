@@ -25,8 +25,7 @@ function hasClaim(gameState, realmKey) {
 
 function schemeSuccessChance(gameState, skillKey, difficulty) {
     const player = gameState.player;
-    const spymaster = gameState.council && gameState.council.spymaster;
-    const skill = (player.skills[skillKey] || 0) + (spymaster ? spymaster.skill * 0.3 : 0);
+    const skill = player.skills[skillKey] || 0;
     return Math.max(0.05, Math.min(0.9, (skill - difficulty) / 20 + 0.5));
 }
 
@@ -112,14 +111,12 @@ function counterScheme(gameState) {
 }
 
 // Yearly hook: the background risk of someone ELSE's scheme landing on
-// the player, offset by the Spymaster's skill (council.js) if one is
-// seated. A scheme already in progress ticks toward completion instead
-// of a fresh one starting.
+// the player, offset by the player's own intrigue skill. A scheme already
+// in progress ticks toward completion instead of a fresh one starting.
 function tickIntrigue(gameState) {
     setupIntrigue(gameState);
     setupHostileScheme(gameState);
-    const spymaster = gameState.council && gameState.council.spymaster;
-    const defense = spymaster ? spymaster.skill : 5;
+    const defense = 5 + (gameState.player.skills.intrigue || 0) * 0.3;
 
     if (!gameState.hostileScheme) {
         const risk = Math.max(0.01, 0.07 - defense * 0.002);

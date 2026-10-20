@@ -12,10 +12,8 @@ function setupWartime(gameState) {
 
 function playerMilitaryPower(gameState) {
     const player = gameState.player;
-    const marshal = gameState.council && gameState.council.marshal;
-    const marshalBonus = marshal ? marshal.skill * 10 : 0;
     const standing = typeof standingPower === "function" ? standingPower(gameState) : 0;
-    return totalLevies(gameState) + (player.personalLevies || 0) + standing + player.tier * 80 + marshalBonus + player.skills.martial * 5;
+    return totalLevies(gameState) + (player.personalLevies || 0) + standing + player.tier * 80 + player.skills.martial * 5;
 }
 
 function targetMilitaryPower(gameState, realmKey) {
