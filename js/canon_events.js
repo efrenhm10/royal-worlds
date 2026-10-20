@@ -11,6 +11,11 @@
 
 const CANON_EVENTS_1461 = [
     {
+        id: "rome_tolfa_alum", year: 1461, realmKey: "rome",
+        headline: "Vast alum deposits have been discovered at Tolfa, within the Papal States themselves. Alum is essential to the European cloth trade and was bought from the Ottomans until now — Pope Pius II has an independent fortune at last, beholden to no one for it.",
+        stabilityDelta: { rome: 15 },
+    },
+    {
         id: "burgundy_philip_dies", year: 1467, realmKey: "burgundy",
         headline: "Philip the Good, Duke of Burgundy, has died at 71. His son Charles the Bold succeeds him, and a harder, more combative Burgundy begins.",
         stabilityDelta: { burgundy: -10 },

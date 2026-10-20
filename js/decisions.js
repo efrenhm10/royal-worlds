@@ -19,6 +19,59 @@
 // branch of game logic.
 const HISTORICAL_PRESSURE_TEMPLATES = [
     {
+        // The real demand behind Pius II's Congress of Mantua: every
+        // Catholic ruler is asked to put aside their own quarrels and
+        // fund a crusade against the Ottomans. Historically it mostly
+        // failed — France wanted Naples backed first, the Empire was too
+        // fractured to send anything real, only Hungary and Venice
+        // actually stood ready — and the decision reflects that: Rome's
+        // standing moves either way, but there's no pretense the crusade
+        // itself is actually going to happen.
+        id: "congress_of_mantua_levy",
+        realmKey: ["england", "france", "burgundy", "brittany", "castile", "aragon", "portugal", "austria", "milan", "venice", "naples", "florence", "hungary", "poland", "bohemia", "kalmar", "scotland"],
+        yearMin: 1461,
+        yearMax: 1464,
+        flagField: "crusadeLevyAnswered",
+        chance: 0.4,
+        title: "The Congress of Mantua's demand",
+        text: gameState => voiceLine({
+            devout: [`Pope Pius II's legate arrives in person, pressing ${gameState.player.name} for real gold and real men for the crusade against the Ottomans — the Congress of Mantua's decrees are not meant as a suggestion.`],
+            wary: [`A Papal legate arrives with the Congress of Mantua's demand: gold and men for a crusade against the Ottomans, while ${gameState.player.name}'s own rivals are left free to keep pressing their own quarrels at home.`],
+            cunning: [`Rome's legate presses ${gameState.player.name} for crusade funding — a demand that is easy to see the advantage of being seen to answer, whatever actually becomes of it.`],
+            neutral: `A Papal legate presses ${gameState.player.name} for contributions to Pope Pius II's crusade against the Ottomans, as decreed at the Congress of Mantua.`,
+        }, gameState.player),
+        options: [
+            {
+                label: "Answer the call generously (70 gold)",
+                apply(gameState) {
+                    const player = gameState.player;
+                    if ((player.gold || 0) < 70) return "There isn't enough gold on hand to answer the call as asked.";
+                    player.gold -= 70;
+                    adjustStanding(gameState, gameState.realmKey, 15);
+                    player.piety = (player.piety || 0) + 8;
+                    return `${player.name} answers the Pope's call generously — Rome will remember it (-70 gold, +15 standing with Rome, +8 piety).`;
+                },
+            },
+            {
+                label: "Send a modest contribution (25 gold)",
+                apply(gameState) {
+                    const player = gameState.player;
+                    if ((player.gold || 0) < 25) return "There isn't even enough gold on hand for a modest contribution.";
+                    player.gold -= 25;
+                    adjustStanding(gameState, gameState.realmKey, 5);
+                    return `A modest contribution is sent — enough to satisfy the letter of the demand, if not its spirit (-25 gold, +5 standing with Rome).`;
+                },
+            },
+            {
+                label: "Refuse — the crusade is not this realm's war",
+                apply(gameState) {
+                    adjustStanding(gameState, gameState.realmKey, -12);
+                    return `${gameState.player.name} refuses the legate plainly — Rome does not forget who stood aside (-12 standing with Rome).`;
+                },
+            },
+        ],
+    },
+    {
         id: "wars_of_roses_allegiance",
         realmKey: "england",
         yearMin: 1455,

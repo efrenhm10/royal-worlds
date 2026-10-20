@@ -656,9 +656,11 @@ function renderPlayView() {
             : "";
 
         const body = `
+            ${d.vibe ? `<p style="margin:2px 0 8px;font-style:italic;">${d.vibe}</p>` : ""}
             <p class="muted" style="margin:2px 0;">${gs.year} — ${rulerTitle} ${rulerName}${tracked ? (rulerAlive ? " (your own bloodline)" : "") : ""}</p>
             <p class="muted" style="margin:2px 0;font-size:13px;">${status.statusLine}</p>
             ${relations != null ? `<p class="muted" style="margin:2px 0;font-size:13px;">Relations: ${relations}/100</p>` : ""}
+            ${d.narrativeHook ? `<p style="margin:10px 0;padding:8px 10px;border:1px solid var(--gilt);border-radius:6px;background:rgba(201,151,26,0.08);font-size:13px;">${d.narrativeHook}</p>` : ""}
             <p class="muted" style="margin:8px 0 2px;"><strong>Government:</strong> ${govLabel}${realm.note ? ` — ${realm.note}` : ""}</p>
             ${listBlock("Institutions", d.institutions)}
             ${listBlock("Major industries", d.majorIndustries)}

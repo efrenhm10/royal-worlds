@@ -36,6 +36,8 @@ const REALMS = {
         attributes: { wealth: 55, stability: 30, militaryStrength: 60, strategicVulnerability: 60 },
         religion: "Roman Catholic",
         dossier: {
+            vibe: "A brutally divided, isolated island locked in a bloody cycle of dynastic vengeance.",
+            narrativeHook: "Total dynastic instability — the throne can flip in a single night. Weigh personal honor against immediate political survival as the crown changes hands through battlefield betrayals and cold-blooded ambition.",
             institutions: ["The Crown", "Parliament (Lords & Commons)", "The Great Council", "The royal household"],
             majorIndustries: ["Wool & cloth export", "Tin and lead mining", "Shipping"],
             resources: ["Wool", "Tin", "Coal (emerging)"],
@@ -54,6 +56,8 @@ const REALMS = {
         attributes: { wealth: 70, stability: 55, militaryStrength: 100, strategicVulnerability: 30 },
         religion: "Roman Catholic",
         dossier: {
+            vibe: "A paranoid, centralizing monarchy cleaning up a war-torn country through backroom espionage.",
+            narrativeHook: "Navigating a court of whispers — sell secrets to the scheming King, or back the wealthy rebel dukes trying to dismantle royal authority.",
             institutions: ["The Crown", "The Parlement of Paris", "The Estates-General (rarely convened)", "Royal baillis and seneschals"],
             majorIndustries: ["Grain and wine", "Textiles", "Armaments"],
             resources: ["Fertile farmland", "Vineyards", "Iron"],
@@ -72,6 +76,8 @@ const REALMS = {
         attributes: { wealth: 90, stability: 75, militaryStrength: 65, strategicVulnerability: 55 },
         religion: "Roman Catholic",
         dossier: {
+            vibe: "An ultra-rich, glamorous, but highly fragile mega-state desperately trying to become a recognized kingdom.",
+            narrativeHook: "Managing excessive wealth but severe structural vulnerability — buy off your enemies with lavish Burgundian gold, or force a land bridge through hostile sovereign territory?",
             institutions: ["The ducal court (the most splendid in Europe)", "The Estates of the various Burgundian lands", "The Order of the Golden Fleece"],
             majorIndustries: ["Flemish cloth and tapestry", "Banking and trade (Bruges, Antwerp)", "Wine"],
             resources: ["Flanders' textile wealth", "Rich farmland", "A major trading coastline"],
@@ -90,6 +96,8 @@ const REALMS = {
         attributes: { wealth: 45, stability: 60, militaryStrength: 30, strategicVulnerability: 50 },
         religion: "Roman Catholic",
         dossier: {
+            vibe: "A proud, fiercely independent maritime duchy, the last of its kind, watching France's shadow lengthen.",
+            narrativeHook: "Buying time against the inevitable — every year of independence is a year to find allies, secure an heir, or simply enjoy what France hasn't yet taken.",
             institutions: ["The ducal court", "The Estates of Brittany", "Breton customary law, separate from French law"],
             majorIndustries: ["Fishing and shipping", "Salt production", "Linen"],
             resources: ["A long Atlantic coastline", "Salt marshes", "Timber for shipbuilding"],
@@ -108,6 +116,8 @@ const REALMS = {
         attributes: { wealth: 60, stability: 35, militaryStrength: 65, strategicVulnerability: 40 },
         religion: "Roman Catholic",
         dossier: {
+            vibe: "A powerful, expansionist Iberian state balancing immense trade wealth against a weak, corrupt crown.",
+            narrativeHook: "Navigating a broken line of succession — align with powerful aristocratic leagues to either rescue a failing king or back a young princess destined to unite a global empire.",
             institutions: ["The Crown", "The Cortes of Castile", "The Military Orders (Santiago, Calatrava, Alcántara)"],
             majorIndustries: ["Sheep-herding and wool (the Mesta)", "Grain", "Silver and iron mining"],
             resources: ["Merino wool", "Grazing land", "Mountain ore"],
@@ -126,6 +136,8 @@ const REALMS = {
         attributes: { wealth: 55, stability: 50, militaryStrength: 70, strategicVulnerability: 45 },
         religion: "Roman Catholic",
         dossier: {
+            vibe: "A sophisticated maritime empire whose commercial heartland is suddenly imploding from within.",
+            narrativeHook: "Rebuilding a shattered merchant network — balance domestic military pacification with preserving your vital overseas colonies before rival maritime powers swallow your ports.",
             institutions: ["The Crown", "The separate Cortes of Aragon, Catalonia, and Valencia", "The Diputació of Catalonia"],
             majorIndustries: ["Mediterranean trade", "Shipbuilding", "Wool and grain"],
             resources: ["A major Mediterranean trading fleet", "Sicily and Naples' grain (through dynastic ties)", "Coastal salt"],
@@ -144,6 +156,8 @@ const REALMS = {
         attributes: { wealth: 50, stability: 65, militaryStrength: 40, strategicVulnerability: 25 },
         religion: "Roman Catholic",
         dossier: {
+            vibe: "A focused, highly advanced maritime nation completely redefining the boundaries of the known world.",
+            narrativeHook: "Strategic resource management — avoid costly European land entanglements, funneling every ounce of national treasure into maritime exploration and naval trade supremacy.",
             institutions: ["The Crown", "The Cortes of Portugal", "The Order of Christ (heir to the Templars, funding exploration)"],
             majorIndustries: ["Atlantic exploration and trade", "Fishing", "Grain and wine"],
             resources: ["Access to Atlantic trade routes down the African coast", "Madeira's sugar", "A skilled maritime tradition from Henry the Navigator's legacy"],
@@ -163,6 +177,8 @@ const REALMS = {
         religion: "Roman Catholic",
         note: "Also Holy Roman Emperor — the rare tier-6 recognition, held personally by this ruler rather than tied to the Austrian title itself.",
         dossier: {
+            vibe: "A slow-moving, heavily bureaucratized dynastic giant plagued by humiliating internal family splits.",
+            narrativeHook: "The long, generational dynastic game — brute force will fail you. Rely on legal arguments, imperial diets, and marriage arrangements that take decades to bear fruit.",
             institutions: ["The Archducal court", "The Imperial Diet (Reichstag)", "The Estates of the Austrian lands"],
             majorIndustries: ["Mining (salt, iron, silver)", "Alpine trade routes", "Agriculture"],
             resources: ["Salt mines", "Alpine passes controlling trade between Italy and Germany", "Iron ore"],
@@ -181,6 +197,8 @@ const REALMS = {
         attributes: { wealth: 75, stability: 65, militaryStrength: 50, strategicVulnerability: 55 },
         religion: "Roman Catholic",
         dossier: {
+            vibe: "A militaristic, elite northern powerhouse heavily invested in arms production and professional mercenary muscle.",
+            narrativeHook: "The cost of legitimacy — manage professional military companies (condottieri) while constantly spending capital to secure legal, dynastic recognition from foreign courts.",
             institutions: ["The ducal court", "The Milanese Senate (ducal-appointed)", "The condottieri military contract system"],
             majorIndustries: ["Armaments and metalworking", "Silk", "Banking"],
             resources: ["Skilled armorers and metalworkers", "The fertile Po valley", "Alpine trade routes"],
@@ -200,6 +218,8 @@ const REALMS = {
         religion: "Roman Catholic",
         note: "The Doge is elected, not inherited — a ruling family's children don't automatically succeed, though a well-placed dynasty keeps angling for the next election.",
         dossier: {
+            vibe: "A cold, calculating mercantile oligarchy sitting on a mountain of gold, staring down an eastern hurricane.",
+            narrativeHook: "Corporate statecraft — every decision balances the strict profit margins of greedy merchant senators against the desperate military defense of the state's overseas frontiers.",
             institutions: ["The Doge (ceremonial head)", "The Great Council (patrician families)", "The Senate", "The Council of Ten (internal security)"],
             majorIndustries: ["Maritime trade (spices, silk, glass)", "Shipbuilding (the Arsenal)", "Glassmaking (Murano)"],
             resources: ["The greatest merchant fleet in the Mediterranean", "The Arsenal's shipbuilding capacity", "Colonial trading posts across the eastern Mediterranean"],
@@ -218,6 +238,8 @@ const REALMS = {
         attributes: { wealth: 55, stability: 55, militaryStrength: 55, strategicVulnerability: 50 },
         religion: "Roman Catholic",
         dossier: {
+            vibe: "A vast, highly volatile Mediterranean crown plagued by deep-seated dynastic vendettas.",
+            narrativeHook: "Surviving a treacherous domestic civil war — ruthlessly root out traitors within your own high court while dancing around the competing expansionist designs of France and Aragon.",
             institutions: ["The Crown", "The royal council", "The feudal baronage's own courts"],
             majorIndustries: ["Grain export", "Olive oil", "Mediterranean trade"],
             resources: ["Rich grain-growing plains", "A strategic central-Mediterranean position"],
@@ -237,6 +259,8 @@ const REALMS = {
         religion: "Roman Catholic",
         note: "A republic in name, ruled in practice by the Medici — holds no formal crown, so its tier reads as Signore rather than a true monarch's.",
         dossier: {
+            vibe: "A dazzling Renaissance paradise built on dirty banking money and fragile political illusions.",
+            narrativeHook: "Soft power vs. hard steel — lacking a strong native army, rely on blackmail, financial credit leverage, and political orchestration from behind the scenes.",
             institutions: ["The Signoria (nominal governing council)", "The Guilds (Arti)", "The Medici banking network's informal influence"],
             majorIndustries: ["Banking (the Medici Bank, Europe's largest)", "Wool and silk cloth", "Art and architecture patronage"],
             resources: ["Europe's most sophisticated banking network", "Skilled textile workshops", "Tuscan farmland"],
@@ -256,14 +280,16 @@ const REALMS = {
         religion: "Roman Catholic",
         note: "Elected by conclave from the College of Cardinals, not inherited — this is the destination of the Church-career life path, not a starting dynasty. Present here as an NPC power for diplomacy and the Church-pressure systems.",
         dossier: {
+            vibe: "A highly intellectual, spiritually powerful institution trying to regain its moral dominance through a pan-European holy war.",
+            narrativeHook: "Geopolitical manipulation using faith and gold — leverage independent resource monopolies and the ultimate threat of excommunication to force bickering, selfish kings into doing your bidding.",
             institutions: ["The Papal Curia", "The College of Cardinals", "The Papal States' own secular administration"],
-            majorIndustries: ["Pilgrimage and religious tourism", "Church revenues (tithes, indulgences, annates)", "Agriculture"],
-            resources: ["The unique spiritual authority of the Papacy", "Church lands across Italy", "Pilgrim traffic to Rome itself"],
+            majorIndustries: ["Pilgrimage and religious tourism", "Church revenues (tithes, indulgences, annates)", "Alum mining (Tolfa, discovered 1461)", "Agriculture"],
+            resources: ["The unique spiritual authority of the Papacy", "The newly discovered Tolfa alum deposits — alum is essential to the European textile trade and was previously bought from the Ottomans", "Church lands across Italy", "Pilgrim traffic to Rome itself"],
             culturalGroups: ["Romans", "A transient, international clerical population"],
-            politicalConflicts: ["Pius II's call for a crusade against the Ottomans, struggling to find real support among Europe's rulers", "Control over fractious Papal State cities (Bologna, Perugia and others) that resist Rome's direct rule"],
+            politicalConflicts: ["Pius II's Congress of Mantua crusade levy, demanding every Catholic ruler put aside their own quarrels to fund a war on the Ottomans — a diplomatic nightmare so far", "France's Pragmatic Sanction of Bourges, which lets its own crown control church appointments and finances and ignore Rome's decrees", "Control over fractious Papal State cities (Bologna, Perugia and others) that resist Rome's direct rule"],
             strongestFactions: ["The Papal Curia", "Rival noble Roman families (Colonna, Orsini)", "The College of Cardinals' own factions"],
-            majorProblems: ["Constantinople's fall (1453) looms large — a crusade Pius wants badly but can't fund alone", "Many Papal State cities are only nominally obedient to Rome"],
-            majorAdvantages: ["Unmatched spiritual authority over all Catholic Europe", "Steady Church revenue from across the continent", "The ability to legitimize or excommunicate any Catholic ruler"],
+            majorProblems: ["Constantinople's fall (1453) looms large — a crusade Pius wants badly but can't fund alone", "France refuses to help the crusade unless Rome backs its own claim on Naples", "The Empire is too fractured by its own princes' feuds to send real support", "Many Papal State cities are only nominally obedient to Rome"],
+            majorAdvantages: ["Unmatched spiritual authority over all Catholic Europe", "The new Tolfa alum monopoly, an independent fortune Rome no longer has to ask anyone else for", "The ability to legitimize or excommunicate any Catholic ruler", "Hungary and Venice, the only powers actually standing ready to fight for the crusade"],
         },
     },
     hungary: {
@@ -274,6 +300,8 @@ const REALMS = {
         attributes: { wealth: 55, stability: 50, militaryStrength: 60, strategicVulnerability: 70 },
         religion: "Roman Catholic",
         dossier: {
+            vibe: "The battle-hardened, heavily fortified frontier shield of Central Europe.",
+            narrativeHook: "Fighting a two-front war against external expansion and internal high treason — can you hold the line against a superpower when your own dukes refuse to pay taxes?",
             institutions: ["The Crown", "The Diet (Hungarian nobility's assembly)", "The Black Army (Matthias's mercenary force, still forming)"],
             majorIndustries: ["Mining (gold and silver, among Europe's richest deposits)", "Cattle", "Wine"],
             resources: ["Some of Europe's richest gold and silver mines", "Fertile Danube basin farmland", "A frontier military tradition"],
@@ -292,6 +320,8 @@ const REALMS = {
         attributes: { wealth: 50, stability: 65, militaryStrength: 70, strategicVulnerability: 40 },
         religion: "Roman Catholic",
         dossier: {
+            vibe: "A massive, decentralized land giant locked in a generational war for access to the sea.",
+            narrativeHook: "Managing a powerful but demanding aristocracy — every victory on the battlefield requires signing away royal authority to your own nobles in parliament.",
             institutions: ["The Crown", "The Sejm (noble assembly)", "The powerful magnate and szlachta (nobility) class"],
             majorIndustries: ["Grain export (feeding much of Western Europe)", "Timber", "Amber and furs"],
             resources: ["Vast, fertile grain-growing plains", "Baltic timber and amber trade", "The Vistula river trade route to Gdańsk"],
@@ -311,6 +341,8 @@ const REALMS = {
         religion: "Roman Catholic",
         note: "A military-religious order, not a dynasty — the Grand Master is elected by the Order's own knights, so this isn't a startable life (no marriage, no heirs to speak of). Present as an NPC power whose real, ongoing collapse shapes Poland's own story.",
         dossier: {
+            vibe: "A once-feared crusading order watching its own conquest unravel county by county.",
+            narrativeHook: "Managing a slow-motion collapse — every fortress held is a small victory, every one lost is one more step toward irrelevance.",
             institutions: ["The Grand Master's court (Königsberg, since Marienburg's fall in 1457)", "The Order's knightly chapter", "The remaining Prussian castellanies still loyal to the Order"],
             majorIndustries: ["Amber trade", "Grain export (what's left of it)", "Castle-garrison economy"],
             resources: ["The Baltic amber trade", "A once-formidable castle network, now mostly lost", "Papal financial backing, increasingly reluctant"],
@@ -330,6 +362,8 @@ const REALMS = {
         religion: "Eastern Orthodox",
         note: "Blind since 1446 (hence 'the Dark'), Vasily II rules with his son and heir Ivan already shouldering much of the real authority — a co-rule that will become sole rule within months of this bookmark's start.",
         dossier: {
+            vibe: "A rising forest principality still kneeling to a fading horde, with a sharper heir already waiting in the wings.",
+            narrativeHook: "Patient centralization — absorb your rival princes one at a time, and never forget the tribute you still owe isn't paid forever.",
             institutions: ["The Grand Prince's court", "The Boyar Duma (council of nobles)", "The Orthodox Church, increasingly independent of Constantinople"],
             majorIndustries: ["Fur trade", "Grain", "River trade along the Volga and Oka"],
             resources: ["Vast northern forests and fur-bearing wealth", "Fertile black-earth farmland to the south", "Control of key river trade routes"],
@@ -349,6 +383,8 @@ const REALMS = {
         religion: "Roman Catholic",
         note: "A single crown over Denmark, Norway, and Sweden — Christian I founded this Oldenburg dynasty only in 1448, and Sweden's own nobility has already risen against the union once before and may again.",
         dossier: {
+            vibe: "A glittering three-crown union held together by Danish gold and not much else.",
+            narrativeHook: "Buying loyalty you can't command — every Swedish or Norwegian noble has a price, and the treasury isn't bottomless.",
             institutions: ["The Crown", "The separate Riksråd (council of the realm) of Denmark, Norway, and Sweden", "The Sound Toll (a lucrative Baltic shipping levy)"],
             majorIndustries: ["Baltic and North Sea shipping", "Fishing (especially herring)", "Cattle and timber"],
             resources: ["Control of the Øresund strait and its shipping tolls", "Rich North Sea and Baltic fisheries", "Norwegian timber and fish"],
@@ -367,6 +403,8 @@ const REALMS = {
         attributes: { wealth: 45, stability: 45, militaryStrength: 55, strategicVulnerability: 45 },
         religion: "Catholic, with an unreconciled Hussite majority",
         dossier: {
+            vibe: "A secure geographic basin isolated from the rest of Christendom by deep religious schisms.",
+            narrativeHook: "Ideological survival against all odds — balance radical internal religious factions while forging alliances with a hostile world that views you as an existential threat to Christendom.",
             institutions: ["The Crown", "The Bohemian Diet", "The Utraquist Church's own distinct structures"],
             majorIndustries: ["Silver mining (Kutná Hora)", "Glassmaking", "Grain"],
             resources: ["Rich silver deposits", "Fertile Bohemian basin farmland", "Skilled craft traditions"],
@@ -385,6 +423,8 @@ const REALMS = {
         attributes: { wealth: 25, stability: 35, militaryStrength: 25, strategicVulnerability: 85 },
         religion: "Eastern Orthodox",
         dossier: {
+            vibe: "A small, savage buffer state that survives by being more frightening than either empire pressing on it.",
+            narrativeHook: "Terror as statecraft — a reputation for cruelty is the only thing standing between you and being swallowed whole.",
             institutions: ["The Voivode's court", "The boyar council (often more powerful than the prince himself)"],
             majorIndustries: ["Cattle and livestock", "Grain", "Frontier trade"],
             resources: ["Fertile Danubian plains", "A strategic buffer position between Hungary and the Ottomans"],
@@ -404,6 +444,8 @@ const REALMS = {
         religion: "Sunni Islam",
         note: "Not a startable dynasty — this game's Church/Reformation/Crown-Authority systems are built around Catholic Europe. Present as the great outside power: a rival, a threat, a source of the Wallachian and Hungarian frontier's strategic vulnerability.",
         dossier: {
+            vibe: "An unstoppable, highly modern gunpowder superpower driven by a sense of world-conquering destiny.",
+            narrativeHook: "Playing as the ultimate endgame boss — constantly expand to feed the military machine while stamping out internal insurgencies in a vast, newly conquered, multi-ethnic empire.",
             institutions: ["The Sultan", "The Imperial Divan (council)", "The Janissary corps", "The timar land-grant military system"],
             majorIndustries: ["Mediterranean and overland trade (now funneled through Constantinople)", "Textiles", "Mining"],
             resources: ["Control of the overland trade routes between Europe and Asia", "Constantinople itself, a vast new imperial capital", "A huge, disciplined standing military"],
@@ -423,6 +465,8 @@ const REALMS = {
         religion: "Roman Catholic",
         note: "A child king under regency since his father James II's death in 1460.",
         dossier: {
+            vibe: "A kingdom ruled in whispers around a child's throne, while the old enemy watches the border.",
+            narrativeHook: "Regency politics in miniature — whoever controls the boy king controls the realm, and every noble house wants to be that hand.",
             institutions: ["The Crown (under regency)", "The Scottish Parliament", "The great noble houses effectively ruling in the king's name"],
             majorIndustries: ["Wool export", "Fishing", "Cross-border trade and raiding with England"],
             resources: ["Highland and Lowland sheep farming", "Coastal fishing", "Modest mineral deposits"],
