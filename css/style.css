@@ -428,6 +428,37 @@ select {
     min-width: 0;
 }
 
+.theater-layout {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    align-items: flex-start;
+}
+
+.theater-layout > .card:first-child {
+    flex: 2 1 480px;
+    min-width: 320px;
+}
+
+.theater-layout > .card:last-child {
+    flex: 1 1 320px;
+    min-width: 280px;
+}
+
+.theater-node {
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+}
+
+.theater-node:hover {
+    opacity: 0.8;
+}
+
+.theater-node text {
+    pointer-events: none;
+    user-select: none;
+}
+
 .sub-tab-row {
     display: flex;
     gap: 6px;

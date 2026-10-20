@@ -216,6 +216,9 @@ let _playViewTab = "chronicle";
 // [World] tag (set by canon.js for entries with no direct stakeholder)
 // decides which side an entry lands on.
 let _chronicleSubTab = "personal";
+// Which realm's dossier is showing on The Theater's map — defaults to
+// the player's own home realm on first visit.
+let _selectedTheaterRealm = null;
 
 // Court standing isn't tracked as its own number — it's what vassals and
 // councillors actually think of you, averaged, the same "respect" a real
@@ -583,52 +586,128 @@ function renderPlayView() {
         return;
     }
 
+    // The Theater's shared status read — one realm's live situation,
+    // reused by both the map node's color and the dossier panel's status
+    // line so the two never disagree.
+    function theaterRealmStatus(gs, realm) {
+        const isHome = realm.key === gs.realmKey;
+        const atWar = gs.war && gs.war.targetRealmKey === realm.key;
+        const tied = (gs.claims || []).some(c => c.realmKey === realm.key && c.type === "marriage");
+        const tracked = gs.foreignRoyals && gs.foreignRoyals[realm.key];
+        const ruler = tracked ? getPerson(gs, tracked) : null;
+        const rulerAlive = ruler && ruler.alive;
+        const stability = effectiveStability(gs, realm.key);
+
+        if (isHome) return { fill: "var(--gilt-bright)", statusLine: "Your own realm" };
+        if (atWar) return { fill: "var(--gules-bright)", statusLine: "At war with you" };
+        if (tracked && !rulerAlive) return { fill: "var(--gules)", statusLine: "The throne stands empty" };
+        if (tied) return { fill: "var(--gilt)", statusLine: "Bound to your family by marriage" };
+        if (stability < 35) return { fill: "#8a6a4a", statusLine: `Stability ${stability} — unstable` };
+        return { fill: "var(--panel-border)", statusLine: `Stability ${stability}` };
+    }
+
+    // A schematic, not a surveyed map — nodes at realms.js's rough
+    // REALM_MAP_POSITIONS, lines along REALM_NEIGHBORS, colored by each
+    // realm's actual live status. Clicking a node selects it for the
+    // dossier panel; it updates every render, so a war, a marriage tie,
+    // or a throne falling empty shows up here the moment it happens.
+    function renderTheaterMapSvg(gs) {
+        const realms = listRealms();
+        const seenPairs = new Set();
+        const lines = [];
+        realms.forEach(r => {
+            neighborsOf(r.key).forEach(nk => {
+                if (!getRealm(nk)) return;
+                const pairKey = [r.key, nk].sort().join("|");
+                if (seenPairs.has(pairKey)) return;
+                seenPairs.add(pairKey);
+                const a = mapPositionOf(r.key), b = mapPositionOf(nk);
+                lines.push(`<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="var(--panel-border)" stroke-width="0.35" />`);
+            });
+        });
+
+        const nodes = realms.map(realm => {
+            const pos = mapPositionOf(realm.key);
+            const status = theaterRealmStatus(gs, realm);
+            const selected = realm.key === _selectedTheaterRealm;
+            return `
+                <g class="theater-node" data-realm="${realm.key}">
+                    <circle cx="${pos.x}" cy="${pos.y}" r="${selected ? 3.1 : 2.3}" fill="${status.fill}" stroke="${selected ? "var(--ink)" : "var(--bg-deep)"}" stroke-width="${selected ? 0.55 : 0.3}" />
+                    <text x="${pos.x}" y="${pos.y - 3.2}" font-size="2.8" fill="var(--ink)" text-anchor="middle">${realm.name}</text>
+                </g>
+            `;
+        }).join("");
+
+        return `<svg viewBox="0 -4 100 79" style="width:100%;height:auto;display:block;" preserveAspectRatio="xMidYMid meet">${lines.join("")}${nodes}</svg>`;
+    }
+
+    // The click-through dossier — everything The Theater's old flat card
+    // grid showed (ruler, status, relations) plus the realm's real
+    // historical texture (realms.js's dossier field): government,
+    // institutions, industries, resources, the peoples who actually live
+    // there, the real political fault lines, and what's actually strong
+    // or fragile about it right now.
+    function renderRealmDossierPanel(gs, realmKey) {
+        const realm = getRealm(realmKey);
+        const isHome = realmKey === gs.realmKey;
+        const status = theaterRealmStatus(gs, realm);
+        const tracked = gs.foreignRoyals && gs.foreignRoyals[realmKey];
+        const ruler = tracked ? getPerson(gs, tracked) : null;
+        const rulerAlive = ruler && ruler.alive;
+        const rulerName = rulerAlive ? ruler.name : realm.ruler.name;
+        const rulerTitle = rulerAlive ? realmTopTitle(realmKey, ruler.gender) : realmTopTitle(realmKey, realm.ruler.gender);
+        const relations = !isHome && typeof relationsWith === "function" ? relationsWith(gs, realmKey) : null;
+        const d = realm.dossier || {};
+        const govLabel = { hereditary: "Hereditary", elective: "Elective", theocratic: "Theocratic (elected)" }[realm.government] || realm.government;
+
+        const listBlock = (label, items) => (items && items.length)
+            ? `<p class="muted" style="margin:8px 0 2px;"><strong>${label}</strong></p><ul style="margin:0 0 2px 18px;padding:0;">${items.map(i => `<li class="muted" style="font-size:13px;">${i}</li>`).join("")}</ul>`
+            : "";
+
+        const body = `
+            <p class="muted" style="margin:2px 0;">${gs.year} — ${rulerTitle} ${rulerName}${tracked ? (rulerAlive ? " (your own bloodline)" : "") : ""}</p>
+            <p class="muted" style="margin:2px 0;font-size:13px;">${status.statusLine}</p>
+            ${relations != null ? `<p class="muted" style="margin:2px 0;font-size:13px;">Relations: ${relations}/100</p>` : ""}
+            <p class="muted" style="margin:8px 0 2px;"><strong>Government:</strong> ${govLabel}${realm.note ? ` — ${realm.note}` : ""}</p>
+            ${listBlock("Institutions", d.institutions)}
+            ${listBlock("Major industries", d.majorIndustries)}
+            ${listBlock("Resources", d.resources)}
+            ${listBlock("Peoples", d.culturalGroups)}
+            ${listBlock("Political fault lines", d.politicalConflicts)}
+            ${listBlock("Strongest factions", d.strongestFactions)}
+            ${listBlock("Major problems", d.majorProblems)}
+            ${listBlock("Major advantages", d.majorAdvantages)}
+        `;
+
+        const card = makeCard(realm.name, body);
+        if (!isHome && !gs.gameOver && typeof sendEnvoy === "function") {
+            card.appendChild(makeChoiceButton(`Send an envoy (${ENVOY_COST} gold)`, () => {
+                sendEnvoy(gs, realmKey);
+                saveGame();
+                renderPlay();
+            }, !canSendEnvoy(gs, realmKey)));
+        }
+        return card;
+    }
+
     // The Theater — a strategic overview of every realm in play, not a
     // literal map: elegant cards instead of ASCII geography, each one
     // reading the realm's actual live state (a tracked succession, a war,
     // a marriage tie, its stability) rather than a static flavor blurb.
     if (_playViewTab === "realms") {
-        const grid = el("div", "grid", "");
-        listRealms().forEach(realm => {
-            const isHome = realm.key === gameState.realmKey;
-            const atWar = gameState.war && gameState.war.targetRealmKey === realm.key;
-            const tied = (gameState.claims || []).some(c => c.realmKey === realm.key && c.type === "marriage");
-            const tracked = gameState.foreignRoyals && gameState.foreignRoyals[realm.key];
-            const ruler = tracked ? getPerson(gameState, tracked) : null;
-            const rulerAlive = ruler && ruler.alive;
-            const rulerName = rulerAlive ? ruler.name : realm.ruler.name;
-            const rulerTitle = rulerAlive ? realmTopTitle(realm.key, ruler.gender) : realmTopTitle(realm.key, realm.ruler.gender);
-            const stability = effectiveStability(gameState, realm.key);
+        if (!_selectedTheaterRealm || !getRealm(_selectedTheaterRealm)) _selectedTheaterRealm = gameState.realmKey;
 
-            let borderClass = "";
-            let statusLine = `Stability ${stability}`;
-            if (isHome) { borderClass = "theater-card-home"; statusLine = "Your own realm"; }
-            else if (atWar) { borderClass = "theater-card-war"; statusLine = "At war with you"; }
-            else if (tracked && !rulerAlive) { borderClass = "theater-card-crisis"; statusLine = "The throne stands empty"; }
-            else if (tied) { borderClass = "theater-card-tied"; statusLine = "Bound to your family by marriage"; }
-            else if (stability < 35) { borderClass = "theater-card-unstable"; statusLine = `Stability ${stability} — unstable`; }
-
-            // Relations — the political lever for "manage this neighbor"
-            // directly, alongside stability (their own internal state).
-            const relations = !isHome && typeof relationsWith === "function" ? relationsWith(gameState, realm.key) : null;
-            const relationsLine = relations != null ? `<p class="muted" style="margin:2px 0;font-size:13px;">Relations: ${relations}/100</p>` : "";
-
-            const card = el("div", `card theater-card ${borderClass}`, `
-                <h3 style="margin-top:0;">${realm.name}</h3>
-                <p class="muted" style="margin:2px 0;">${gameState.year} — ${rulerTitle} ${rulerName}${tracked ? (rulerAlive ? " <span class=\"muted\">(your own bloodline)</span>" : "") : ""}</p>
-                <p class="muted" style="margin:2px 0;font-size:13px;">${statusLine}</p>
-                ${relationsLine}
-            `);
-            if (!isHome && !gameState.gameOver && typeof sendEnvoy === "function") {
-                card.appendChild(makeChoiceButton(`Send an envoy (${ENVOY_COST} gold)`, () => {
-                    sendEnvoy(gameState, realm.key);
-                    saveGame();
-                    renderPlay();
-                }, !canSendEnvoy(gameState, realm.key)));
-            }
-            grid.appendChild(card);
+        const layout = el("div", "theater-layout", "");
+        const mapCard = makeCard("The map of Europe, 1461", renderTheaterMapSvg(gameState));
+        mapCard.querySelectorAll(".theater-node").forEach(node => {
+            node.addEventListener("click", () => {
+                _selectedTheaterRealm = node.getAttribute("data-realm");
+                renderPlay();
+            });
         });
-        view.appendChild(grid);
+        layout.appendChild(mapCard);
+        layout.appendChild(renderRealmDossierPanel(gameState, _selectedTheaterRealm));
+        view.appendChild(layout);
         return;
     }
 
