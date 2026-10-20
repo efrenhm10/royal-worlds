@@ -135,32 +135,26 @@ function renderRealmSelect(eraKey) {
     });
 }
 
+// Every start is a real member of the realm's own royal house — the
+// ruler themself, or real blood of theirs — never a generated commoner
+// or landless noble. This keeps the family tree's own royal-succession
+// machinery (gameState.homeRulerId, royalHouseKey, the title chain) as
+// the ONE path every game goes through, instead of a rarely-exercised
+// special case alongside an ordinary noble start. Marrying the player's
+// own children off to ordinary nobles later is untouched — only how the
+// player's own life begins is restricted here.
 function renderCharacterCreate(eraKey, realmKey) {
     const realm = getRealm(realmKey);
-    const topTier = realmTopTier(realmKey);
-    const topLabel = realm.titleM === realm.titleF ? realm.titleM : `${realm.titleM}/${realm.titleF}`;
     document.getElementById("characterCreateIntro").textContent =
-        `Choose your rank in ${realm.name} — gentry through ${topLabel} — then pick which life to live.`;
+        `Begin as part of ${realm.name}'s own royal house this year, 1461 — the ruler themself, or real blood of theirs. Pick which life to live.`;
 
     const list = document.getElementById("characterList");
     clearEl(list);
-    // Not every realm's ladder tops out at King/Queen (Burgundy and
-    // Brittany stop at Duke, Florence at Signore) — the picker only goes
-    // as high as this realm's own rank actually reaches, and names that
-    // top rank the way this realm actually names it (Archduke, Doge,
-    // Voivode, Pope, Sultan...), not the generic ladder word.
-    TITLE_LADDER.filter(t => t.tier <= topTier).forEach(tierInfo => {
-        const isTop = tierInfo.tier === topTier;
-        const name = isTop ? realmTopTitle(realmKey, "M") : titleName(tierInfo.tier, "M", realmKey);
-        const nameF = isTop ? realmTopTitle(realmKey, "F") : titleName(tierInfo.tier, "F", realmKey);
-        const label = name === nameF ? name : `${name} / ${nameF}`;
-        const card = makeCard(label, `<p class="muted">${TIER_BLURBS[tierInfo.tier] || ""}</p>`);
-        const btn = makeChoiceButton(`Play a ${label}`, () => {
-            renderCandidatesForTier(eraKey, realmKey, tierInfo.tier);
-        });
-        card.appendChild(btn);
-        list.appendChild(card);
-    });
+    list.appendChild(candidateCard(eraKey, realmKey, createRulerCharacter(realmKey)));
+    list.appendChild(candidateCard(eraKey, realmKey, createRulerRelativeCandidate(realmKey, "sibling")));
+    list.appendChild(candidateCard(eraKey, realmKey, createRulerRelativeCandidate(realmKey, "sibling")));
+    list.appendChild(candidateCard(eraKey, realmKey, createRulerRelativeCandidate(realmKey, "child")));
+    list.appendChild(candidateCard(eraKey, realmKey, createRulerRelativeCandidate(realmKey, "child")));
 }
 
 function candidateCard(eraKey, realmKey, candidate) {
@@ -180,34 +174,6 @@ function candidateCard(eraKey, realmKey, candidate) {
     });
     card.appendChild(btn);
     return card;
-}
-
-function renderCandidatesForTier(eraKey, realmKey, tier) {
-    const realm = getRealm(realmKey);
-    document.getElementById("characterCreateIntro").textContent =
-        `Four lives at this rank in ${realm.name}, any of which could be yours. Pick one to begin.`;
-
-    const list = document.getElementById("characterList");
-    clearEl(list);
-
-    const backCard = makeCard("", "");
-    backCard.appendChild(makeChoiceButton("← Choose a different rank", () => {
-        renderCharacterCreate(eraKey, realmKey);
-    }));
-    list.appendChild(backCard);
-
-    // At the crown itself, offer to play the realm's actual ruler or a
-    // real relative of theirs (sibling/child) instead of only generated
-    // nobles — realms.js's historical figures are playable, not just
-    // flavor text on the realm-select screen.
-    if (tier === realmTopTier(realmKey)) {
-        list.appendChild(candidateCard(eraKey, realmKey, createRulerCharacter(realmKey)));
-        list.appendChild(candidateCard(eraKey, realmKey, createRulerRelativeCandidate(realmKey, "sibling")));
-        list.appendChild(candidateCard(eraKey, realmKey, createRulerRelativeCandidate(realmKey, "child")));
-    }
-
-    const candidates = generateCandidatesForTier(realmKey, tier, 4);
-    candidates.forEach(candidate => list.appendChild(candidateCard(eraKey, realmKey, candidate)));
 }
 
 let _playViewTab = "chronicle";
