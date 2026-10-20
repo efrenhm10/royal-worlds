@@ -16,6 +16,27 @@ const CANON_EVENTS_1461 = [
         stabilityDelta: { rome: 15 },
     },
     {
+        id: "france_league_public_weal_resolved", year: 1465, realmKey: "france",
+        headline: "After the bloody stalemate at Montlhéry, Louis XI has bought peace with his own great vassals at the Treaties of Conflans and Saint-Maur — towns on the Somme ceded back to Burgundy, Normandy handed to his own brother. The crown's reach, so carefully gathered, has been forced to loosen its grip.",
+        stabilityDelta: { france: -12, burgundy: 8, brittany: 6 },
+        // Branches on the real league_of_the_public_weal decision
+        // (decisions.js) — which side a vassal actually backed changes how
+        // hard the settlement lands, not just how the player's own
+        // standing moved at the time.
+        variants: [
+            {
+                when: gameState => gameState.leagueOfThePublicWealSide === "league",
+                headline: "After the bloody stalemate at Montlhéry, Louis XI has bought peace with his own great vassals at the Treaties of Conflans and Saint-Maur — with lords like this one already in their camp, Burgundy and Brittany press their advantage harder, and the crown's concessions cut deeper still.",
+                stabilityDelta: { france: -16, burgundy: 10, brittany: 8 },
+            },
+            {
+                when: gameState => gameState.leagueOfThePublicWealSide === "king",
+                headline: "After the bloody stalemate at Montlhéry, Louis XI has bought peace with his own great vassals at the Treaties of Conflans and Saint-Maur — a hard settlement, though the King does not forget which of his vassals stood with him when it mattered, and the crown's own loss stings a little less for it.",
+                stabilityDelta: { france: -8, burgundy: 6, brittany: 4 },
+            },
+        ],
+    },
+    {
         id: "burgundy_philip_dies", year: 1467, realmKey: "burgundy",
         headline: "Philip the Good, Duke of Burgundy, has died at 71. His son Charles the Bold succeeds him, and a harder, more combative Burgundy begins.",
         stabilityDelta: { burgundy: -10 },

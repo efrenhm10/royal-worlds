@@ -574,6 +574,38 @@ function buildDramaBeatDecisionEvent(tpl) {
     };
 }
 
+// A non-historical succession across a real border — ruling through a
+// foreign-born claim, or holding two crowns at once — doesn't just cost
+// standing quietly and wait for the ordinary yearly opinion/faction tick
+// to maybe notice, eventually. The local lords' anger can boil over right
+// now. Reuses the SAME faction (factions.js) and hostile-scheme
+// (intrigue.js) systems the rest of the game already runs year to year —
+// this just gives them a real, immediate trigger instead of only a slow,
+// probabilistic one, and never clobbers a faction or scheme already in
+// progress.
+function triggerSovereigntyBacklash(gameState) {
+    const roll = Math.random();
+    if (roll < 0.4) return null; // the opinion hit alone, left to simmer
+
+    if (roll < 0.75 && !gameState.faction) {
+        const disloyal = getVassals(gameState).filter(v => v.opinion < 45);
+        if (disloyal.length) {
+            const level = (gameState.crownAuthority && gameState.crownAuthority[gameState.realmKey]) || 0;
+            const type = level >= 2 ? "depose" : "independence";
+            gameState.faction = { type, memberIds: disloyal.map(v => v.id), formedYear: gameState.year };
+            logEvent(`Word reaches ${gameState.player.name} that a faction of lords is already meeting in secret, demanding ${type === "depose" ? "your abdication" : "independence"} — the backlash hasn't waited for a slow boil.`);
+            return "faction";
+        }
+    }
+
+    if (!gameState.hostileScheme) {
+        gameState.hostileScheme = { type: "murder", progress: 2, threshold: randInt(3, 6), discovered: false };
+        logEvent(`Whispers of poison and a quiet knife reach ${gameState.player.name} — someone close to the throne means to end this before it goes any further.`);
+        return "scheme";
+    }
+    return null;
+}
+
 const DRAMA_BEAT_TEMPLATES = [
     // unmarried_royal_sibling x needs_border_alliance — the crown leans
     // on a sibling to secure a border through marriage.
@@ -762,6 +794,13 @@ const DRAMA_BEAT_TEMPLATES = [
                     const player = gameState.player;
                     player.prestige = (player.prestige || 0) + 10;
                     getVassals(gameState).forEach(v => { if (Math.random() < 0.6) adjustOpinion(v, randInt(-14, -6)); });
+                    const backlash = triggerSovereigntyBacklash(gameState);
+                    if (backlash === "faction") {
+                        return `${player.name} refuses to apologize for their own birth (+10 prestige) — and within days, word comes back that a faction of lords is already conspiring against it.`;
+                    }
+                    if (backlash === "scheme") {
+                        return `${player.name} refuses to apologize for their own birth (+10 prestige) — pride that may cost more than standing, if the whispers of poison already moving through the court are anything to go by.`;
+                    }
                     return `${player.name} refuses to apologize for their own birth — a hard line that plays well to pride (+10 prestige), but it leaves the local lords' resentment to fester on its own.`;
                 },
             },
@@ -803,6 +842,13 @@ const DRAMA_BEAT_TEMPLATES = [
                     gameState.unionAcknowledged[ctx.foreignRealmKey] = true;
                     player.prestige = (player.prestige || 0) + 30;
                     getVassals(gameState).forEach(v => adjustOpinion(v, randInt(-18, -10)));
+                    const backlash = triggerSovereigntyBacklash(gameState);
+                    if (backlash === "faction") {
+                        return `${player.name} claims both crowns openly (+30 prestige) — and a faction of lords here, unwilling to become a mere province of a foreign throne, is already conspiring in secret.`;
+                    }
+                    if (backlash === "scheme") {
+                        return `${player.name} claims both crowns openly (+30 prestige) — but somewhere close to the throne, someone has decided a king who answers to two realms shouldn't answer to either one much longer.`;
+                    }
                     return `${player.name} claims both crowns openly — a prestige few rulers ever hold (+30 prestige), but your own lords here are unsettled at the thought of a king whose attention, and whose armies, now answer to two realms at once.`;
                 },
             },
