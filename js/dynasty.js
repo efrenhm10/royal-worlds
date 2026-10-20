@@ -116,7 +116,14 @@ function bearChild(gameState, motherId, fatherId, realmKey) {
     const father = getPerson(gameState, fatherId);
     const parentTier = Math.max((mother && mother.tier) || 0, (father && father.tier) || 0);
     const childTier = Math.max(0, parentTier - 1);
-    const child = createCharacter({ realmKey, tier: childTier, gender: Math.random() < 0.5 ? "M" : "F", age: 0 });
+    const gender = Math.random() < 0.5 ? "M" : "F";
+    // A child carries the family's name, not an independently random one
+    // — the father's surname by default (the period's own convention),
+    // the mother's if there's no father on record.
+    const realm = getRealm(realmKey);
+    const inheritedSurname = familySurname((father && father.name) || (mother && mother.name) || "");
+    const name = inheritedSurname ? `${generateFirstName(realm.cultureKey, gender)} ${inheritedSurname}` : undefined;
+    const child = createCharacter({ realmKey, tier: childTier, gender, age: 0, name });
     child.bloodline = true;
     child.motherId = motherId;
     child.fatherId = fatherId;
@@ -142,6 +149,9 @@ function generateSiblingWithFamily(gameState, realmKey, player) {
     sibling.motherId = player.motherId;
     sibling.fatherId = player.fatherId;
     sibling.alive = Math.random() < stillAliveChance(sibling.age);
+    // Same father, same surname — not an unrelated random one.
+    const siblingFather = getPerson(gameState, player.fatherId);
+    if (siblingFather) sibling.name = `${generateFirstName(sibling.cultureKey, gender)} ${familySurname(siblingFather.name)}`;
     registerPerson(gameState, sibling);
 
     if (sibling.alive && sibling.age >= 16 && Math.random() < 0.7) {
@@ -167,6 +177,9 @@ function generateParentSiblingWithFamily(gameState, realmKey, parent) {
     auntUncle.motherId = parent.motherId || null;
     auntUncle.fatherId = parent.fatherId || null;
     auntUncle.alive = Math.random() < stillAliveChance(auntUncle.age);
+    // A sibling of `parent` was born into the same family, under the
+    // same surname `parent` themselves carries (maiden or not).
+    auntUncle.name = `${generateFirstName(auntUncle.cultureKey, gender)} ${familySurname(parent.name)}`;
     registerPerson(gameState, auntUncle);
 
     if (auntUncle.alive && auntUncle.age >= 16 && Math.random() < 0.7) {
@@ -218,6 +231,11 @@ function setupDynasty(gameState) {
         const otherParent = makeRelative(realmKey, rulerChar.gender === "M" ? "F" : "M", rulerChar.age + randInt(-8, 8));
         otherParent.bloodline = true;
         otherParent.alive = Math.random() < stillAliveChance(otherParent.age);
+        // The ruler's own spouse is the realm's actual consort — royal in
+        // their own right, not a landless background relative, whatever
+        // personDisplayTitle would otherwise guess from a tier of 0.
+        otherParent.royalHouseKey = realmKey;
+        otherParent.tier = realmTopTier(realmKey);
         father = rulerChar.gender === "M" ? rulerChar : otherParent;
         mother = rulerChar.gender === "F" ? rulerChar : otherParent;
     } else {
@@ -227,6 +245,20 @@ function setupDynasty(gameState) {
         mother.bloodline = true;
         father.alive = Math.random() < stillAliveChance(father.age);
         mother.alive = Math.random() < stillAliveChance(mother.age);
+        // A child's surname comes from the father, not an independently
+        // rolled one — this is what makes the player's own surname mean
+        // something, instead of every generated relative getting a random
+        // name unrelated to everyone else's.
+        father.name = `${generateFirstName(father.cultureKey, "M")} ${familySurname(player.name)}`;
+        if (link && link.type === "sibling") {
+            // Playing as a reigning monarch's sibling (the family's own
+            // blood, not a marriage-in) — both parents are royalty too,
+            // whatever specific rank they themselves ever held.
+            father.royalHouseKey = realmKey;
+            mother.royalHouseKey = realmKey;
+            father.tier = realmTopTier(realmKey);
+            mother.tier = realmTopTier(realmKey);
+        }
     }
     father.spouseId = mother.id;
     mother.spouseId = father.id;
@@ -271,12 +303,22 @@ function setupDynasty(gameState) {
 // snapshot taken at game start.
 function tickDynasty(gameState) {
     const realmKey = gameState.realmKey;
+    const player = gameState.player;
     allFamily(gameState).forEach(person => {
-        if (person.id === gameState.player.id) return; // player already aged in engine.js
+        if (person.id === player.id) return; // player already aged in engine.js
         if (!person.alive) return;
         person.age += 1;
         if (checkDeath(person)) {
-            logEvent(`${person.name} has died at ${person.age}.`);
+            // The player's own spouse dying is not background noise the
+            // way a cousin's death is — it needs wording that can't be
+            // mistaken for anyone else's, not the same generic line every
+            // other family death gets buried under.
+            if (player.spouseId === person.id) {
+                const widowed = player.gender === "F" ? "widow" : "widower";
+                logEvent(`${player.name}'s ${person.gender === "M" ? "husband" : "wife"}, ${person.name}, has died at ${person.age} — ${player.name} is a ${widowed} now.`);
+            } else {
+                logEvent(`${person.name} has died at ${person.age}.`);
+            }
         }
     });
 
@@ -593,9 +635,17 @@ function royalRelationTitle(gameState, person) {
             if (ruler && ruler.alive) rulerEntries.push({ realmKey, ruler });
         });
     }
-    if (spouse && spouse.alive && spouse.realmKey === person.realmKey && spouse.tier >= realmTopTier(person.realmKey)
-        && !rulerEntries.some(e => e.ruler.id === spouse.id)) {
-        rulerEntries.push({ realmKey: person.realmKey, ruler: spouse });
+    // Unlike a foreign realm (tracked explicitly in gameState.foreignRoyals),
+    // the home realm has no standing "who currently holds it" record — find
+    // whoever in the family actually does, rather than only recognizing it
+    // through the much narrower case of "it happens to be person's own
+    // spouse." A sibling's throne, or a parent's, needs this exactly as
+    // much as a consort's marriage does.
+    if (person.realmKey) {
+        const homeRuler = allFamily(gameState).find(p =>
+            p.alive && p.realmKey === person.realmKey && p.tier >= realmTopTier(person.realmKey)
+            && !rulerEntries.some(e => e.ruler.id === p.id));
+        if (homeRuler) rulerEntries.push({ realmKey: person.realmKey, ruler: homeRuler });
     }
 
     for (const { realmKey, ruler } of rulerEntries) {
@@ -611,6 +661,20 @@ function royalRelationTitle(gameState, person) {
         if (ruler.motherId === person.id) return person.gender === "F" ? "Queen Mother" : "King Father";
         if (ruler.id === person.motherId || ruler.id === person.fatherId) return person.gender === "F" ? "Princess" : "Prince";
         if (getSiblings(gameState, ruler.id).some(s => s.id === person.id)) return "Royal Sibling";
+        // Married into the family rather than born to it — a daughter-
+        // or son-in-law of the reigning monarch carries the same courtesy
+        // title a blood prince or princess would, not a generic one.
+        if (spouse && (ruler.id === spouse.motherId || ruler.id === spouse.fatherId)) {
+            return person.gender === "F" ? "Princess" : "Prince";
+        }
+    }
+
+    // A widow(er) of someone who was genuinely crowned keeps a real title
+    // of their own even once the crown itself has passed on — not quietly
+    // demoted back to a generic land-tier guess the moment the obituary
+    // runs. Queen Mother (above) still takes priority once it applies.
+    if (spouse && !spouse.alive && spouse.realmKey && spouse.tier >= realmTopTier(spouse.realmKey)) {
+        return `Dowager ${realmTopTitle(spouse.realmKey, person.gender)}`;
     }
     return null;
 }

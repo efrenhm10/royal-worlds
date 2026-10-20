@@ -4,6 +4,15 @@
 // under partition, a smaller one), and carries the court over to them.
 // If no heir can be found at all, the line is extinct and the game ends.
 
+// A dead candidate's own position in the order is normally just their
+// age — except where right of representation (below) has stood in for
+// them with their own living child, who should rank where the dead
+// parent WOULD have, not wherever their own much-younger age would
+// otherwise sort them.
+function successionSortAge(person) {
+    return person._successionSortAge != null ? person._successionSortAge : person.age;
+}
+
 function pickByAge(pool, genderPreference) {
     let candidates = pool;
     if (genderPreference) {
@@ -11,7 +20,29 @@ function pickByAge(pool, genderPreference) {
         if (preferred.length) candidates = preferred;
     }
     if (!candidates.length) return null;
-    return [...candidates].sort((a, b) => b.age - a.age)[0];
+    return [...candidates].sort((a, b) => successionSortAge(b) - successionSortAge(a))[0];
+}
+
+// Right of representation: a dead child isn't simply skipped in favor of
+// the next relationship tier out (siblings, nieces/nephews…) — their OWN
+// living children step into their branch's place first, the way real
+// succession law works (a dead heir apparent's own son still comes before
+// the old king's younger children). Each substituted descendant is tagged
+// with the dead parent's own age so pickByAge/orderPool rank their branch
+// where the parent would have stood, not at the descendant's actual age.
+function getChildrenWithRepresentation(gameState, personId) {
+    const result = [];
+    getChildren(gameState, personId).forEach(child => {
+        if (child.alive) {
+            result.push(child);
+            return;
+        }
+        getChildrenWithRepresentation(gameState, child.id).forEach(descendant => {
+            if (descendant._successionSortAge == null) descendant._successionSortAge = child.age;
+            result.push(descendant);
+        });
+    });
+    return result;
 }
 
 function sumSkills(person) {
@@ -55,7 +86,7 @@ const DEFAULT_SUCCESSION_LAW = "maleProximogeniture";
 
 function candidatePools(gameState, personId) {
     return [
-        getChildren(gameState, personId),
+        getChildrenWithRepresentation(gameState, personId),
         getSiblings(gameState, personId),
         getNiecesNephews(gameState, personId),
         getAuntsUncles(gameState, personId),
@@ -98,18 +129,18 @@ function realmSuccessionLaw(realmKey) {
 function orderPool(pool, lawKey) {
     const law = SUCCESSION_LAWS[lawKey] || SUCCESSION_LAWS[DEFAULT_SUCCESSION_LAW];
     if (law.key === "agnatic") {
-        return pool.filter(p => p.gender === "M").sort((a, b) => b.age - a.age);
+        return pool.filter(p => p.gender === "M").sort((a, b) => successionSortAge(b) - successionSortAge(a));
     }
     if (law.key === "elective") {
         return [...pool].sort((a, b) => sumSkills(b) - sumSkills(a));
     }
     if (law.key === "maleProximogeniture" || law.key === "partition") {
-        const males = pool.filter(p => p.gender === "M").sort((a, b) => b.age - a.age);
-        const females = pool.filter(p => p.gender !== "M").sort((a, b) => b.age - a.age);
+        const males = pool.filter(p => p.gender === "M").sort((a, b) => successionSortAge(b) - successionSortAge(a));
+        const females = pool.filter(p => p.gender !== "M").sort((a, b) => successionSortAge(b) - successionSortAge(a));
         return [...males, ...females];
     }
     // cognaticPrimogeniture, and the default fallback: straight age order.
-    return [...pool].sort((a, b) => b.age - a.age);
+    return [...pool].sort((a, b) => successionSortAge(b) - successionSortAge(a));
 }
 
 // The full line of succession for ANY tracked person, not just the

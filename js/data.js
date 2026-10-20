@@ -66,3 +66,22 @@ function generatePeriodName(cultureKey, gender) {
     const surname = randomFrom(pool.surnames);
     return `${first} ${surname}`;
 }
+
+// A first name alone, for building a name that inherits a family's
+// existing surname rather than rolling a brand new one — used wherever a
+// child or sibling should actually carry the family's name (dynasty.js),
+// instead of every relative getting an independently random surname.
+function generateFirstName(cultureKey, gender) {
+    const pool = pickNamePool(cultureKey);
+    return randomFrom(pool[gender] || pool.M);
+}
+
+// Everything after the first word of a full "First Last" name — the
+// surname pools above are compound-safe ("de Montmorency", "von
+// Liechtenstein") since they're stored as single tokens including any
+// internal space, so splitting off just the first word correctly leaves
+// the rest, however many words long, as the surname.
+function familySurname(fullName) {
+    const parts = (fullName || "").split(" ");
+    return parts.length > 1 ? parts.slice(1).join(" ") : "";
+}
