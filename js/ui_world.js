@@ -488,6 +488,13 @@ function renderPlay() {
 // so a succession elsewhere updates everyone's title the moment it
 // happens, with no separate step needed.
 function fullPersonTitle(person) {
+    // Being a reigning monarch in your own right — home realm or a
+    // foreign one married or inherited in — always outranks a relational
+    // title a moment later would otherwise produce (Queen Mother, Prince
+    // Consort, Princess by marriage...). Checked first, not folded into
+    // royalRelationTitle, so it can never lose to a relational match.
+    const ownRegnant = typeof personOwnRegnantTitle === "function" ? personOwnRegnantTitle(gameState, person) : null;
+    if (ownRegnant) return ownRegnant;
     const royalTitle = royalRelationTitle(gameState, person);
     if (royalTitle) return royalTitle;
     return personDisplayTitle(person);

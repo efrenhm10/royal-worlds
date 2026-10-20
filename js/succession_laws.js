@@ -257,7 +257,7 @@ function applySuccession(gameState) {
 
     if (!heir) {
         gameState.gameOver = true;
-        gameState.gameOverReason = `${deceased.name}'s line has ended — no heir could be found. The ${titleName(deceased.tier, deceased.gender, gameState.realmKey).toLowerCase()}'s seat passes out of your family's hands.`;
+        gameState.gameOverReason = `${deceased.name}'s line has ended — no heir could be found. The ${realmTitleFor(deceased.tier, deceased.gender, gameState.realmKey).toLowerCase()}'s seat passes out of your family's hands.`;
         logEvent(gameState.gameOverReason);
         return;
     }
@@ -269,11 +269,20 @@ function applySuccession(gameState) {
     heir.prestige = (heir.prestige || 0) + Math.floor(deceased.prestige * 0.5);
     heir.realmKey = deceased.realmKey;
     heir.cultureKey = heir.cultureKey || deceased.cultureKey;
+    // The crown just inherited IS the heir's own royal house now — not
+    // whichever house they happened to be born into, if the two differ
+    // (a cousin inheriting across a marriage tie, say). Without this, a
+    // title check that's otherwise correct (personDisplayTitle: "Prince/
+    // Princess unless reigning over their OWN royalHouseKey") would stay
+    // stuck showing them as a prince or princess of a house that isn't
+    // the one they actually now sit on the throne of.
+    heir.royalHouseKey = gameState.realmKey;
 
     gameState.player = heir;
+    gameState.homeRulerId = heir.id;
     getVassals(gameState).forEach(v => { v.liegeId = heir.id; });
 
-    const newTitle = titleName(heir.tier, heir.gender, gameState.realmKey);
+    const newTitle = realmTitleFor(heir.tier, heir.gender, gameState.realmKey);
     gameState.pendingSuccessionScene = {
         deceasedName: deceased.name,
         deceasedAge: deceased.age,
@@ -284,4 +293,87 @@ function applySuccession(gameState) {
         assessment: assessRealmState(gameState),
     };
     logEvent(`${heir.name} inherits as ${newTitle}${isPartition ? ", the realm split among siblings" : ""}.`);
+}
+
+// Tops up the player's own demesne and court to match a NEW, higher
+// tier, without resetting or duplicating whatever they already hold —
+// used specifically for tickHomeSuccession's promotion path, below.
+// applySuccession (the player's own death) never needs this: the heir
+// there inherits the deceased's existing gameState.domain/vassals
+// wholesale, already correctly sized. This path is different — a prince
+// or princess who was maintaining their OWN small appanage separately
+// while someone else (their parent, their sibling) actually held the
+// crown needs their court to genuinely grow into the new rank, which is
+// exactly the "no extra ruling the kingdom features" gap this closes.
+function growDomainAndVassalsForTier(gameState, newTier) {
+    let holdingsAdded = 0;
+    const expectedHoldings = (typeof DOMAIN_SIZE_BY_TIER !== "undefined" && DOMAIN_SIZE_BY_TIER[newTier]) || 0;
+    while (typeof getDomain === "function" && getDomain(gameState).length < expectedHoldings) {
+        const type = HOLDING_TYPES[getDomain(gameState).length % HOLDING_TYPES.length];
+        gameState.domain.push({ id: nextHoldingId(), type: type.key, level: 1, grantedToVassalId: null });
+        holdingsAdded++;
+    }
+
+    let vassalsAdded = 0;
+    const expectedVassals = (typeof VASSAL_COUNT_BY_TIER !== "undefined" && VASSAL_COUNT_BY_TIER[newTier]) || 0;
+    while (typeof getVassals === "function" && getVassals(gameState).length < expectedVassals) {
+        const vassal = makeVassal(gameState, newTier);
+        gameState.vassals[vassal.id] = vassal;
+        vassalsAdded++;
+    }
+
+    return { holdingsAdded, vassalsAdded };
+}
+
+// Yearly hook: the home realm's equivalent of tickForeignRoyals — reads
+// gameState.homeRulerId (kept live by setupDynasty/relocatePlayerIfNeeded
+// and this function itself) and notices when that tracked ruler, who
+// might not be the player at all, has died. If the determined heir turns
+// out to be the player themselves, this is a REAL promotion (tier,
+// royal house, a grown domain and court), not just a title recalculation
+// — the player was likely playing a prince or princess with their own
+// small life the whole time, right up until this exact moment.
+function tickHomeSuccession(gameState) {
+    if (gameState.homeRulerId === undefined) gameState.homeRulerId = null;
+    if (!gameState.homeRulerId) return;
+    if (!gameState.player.alive) return; // the player's own death this year takes precedence (applySuccession)
+
+    const ruler = getPerson(gameState, gameState.homeRulerId);
+    if (!ruler || ruler.alive) return;
+    if (ruler.id === gameState.player.id) return; // the player's own death is applySuccession's job, not this
+
+    const realm = getRealm(gameState.realmKey);
+    const lawKey = realmSuccessionLaw(gameState.realmKey);
+    const heir = determineHeir(gameState, lawKey, ruler);
+
+    if (!heir) {
+        gameState.homeRulerId = null;
+        logEvent(`With ${ruler.name}'s death, no heir can be found to ${realm.name}'s own throne — it passes out of the family's hands entirely.`);
+        return;
+    }
+
+    heir.tier = Math.max(heir.tier || 0, realmTopTier(gameState.realmKey));
+    heir.royalHouseKey = gameState.realmKey;
+    gameState.homeRulerId = heir.id;
+
+    if (heir.id === gameState.player.id) {
+        const grown = growDomainAndVassalsForTier(gameState, heir.tier);
+        gameState.crownAuthority = gameState.crownAuthority || {};
+        if (gameState.crownAuthority[gameState.realmKey] == null) gameState.crownAuthority[gameState.realmKey] = 0;
+        const growthNote = (grown.holdingsAdded || grown.vassalsAdded)
+            ? ` ${grown.vassalsAdded ? `${grown.vassalsAdded} new vassal${grown.vassalsAdded === 1 ? "" : "s"} swear fealty` : "Your court grows to match"}${grown.holdingsAdded ? `, and your own demesne grows by ${grown.holdingsAdded} new holding${grown.holdingsAdded === 1 ? "" : "s"}` : ""}.`
+            : "";
+        logEvent(`${ruler.name} has died, and the crown of ${realm.name} passes to ${heir.name} — to you.${growthNote}`);
+        gameState.pendingSuccessionScene = {
+            deceasedName: ruler.name,
+            deceasedAge: ruler.age,
+            highlight: reignHighlight(ruler, gameState),
+            heirName: heir.name,
+            title: realmTitleFor(heir.tier, heir.gender, gameState.realmKey),
+            realmName: realm.name,
+            assessment: assessRealmState(gameState),
+        };
+    } else {
+        logEvent(`${ruler.name} has died, and the crown of ${realm.name} passes to ${heir.name}.`);
+    }
 }

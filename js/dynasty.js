@@ -252,12 +252,15 @@ function setupDynasty(gameState) {
         father.name = `${generateFirstName(father.cultureKey, "M")} ${familySurname(player.name)}`;
         if (link && link.type === "sibling") {
             // Playing as a reigning monarch's sibling (the family's own
-            // blood, not a marriage-in) — both parents are royalty too,
-            // whatever specific rank they themselves ever held.
+            // blood, not a marriage-in) — both parents are royalty too
+            // (royalHouseKey keeps personDisplayTitle from guessing
+            // "Gentleman"/"Gentlewoman"), but NOT the realm's current
+            // crown itself — that's their child (injectRulerSibling,
+            // below), tracked explicitly as gameState.homeRulerId rather
+            // than inferred from tier, so there's never a moment where
+            // two different people both read as "the reigning monarch".
             father.royalHouseKey = realmKey;
             mother.royalHouseKey = realmKey;
-            father.tier = realmTopTier(realmKey);
-            mother.tier = realmTopTier(realmKey);
         }
     }
     father.spouseId = mother.id;
@@ -267,6 +270,19 @@ function setupDynasty(gameState) {
     player.motherId = mother.id;
     player.fatherId = father.id;
 
+    // Whoever actually holds the crown right now, tracked explicitly
+    // rather than inferred later from tier — the home realm's own
+    // equivalent of gameState.foreignRoyals, kept live from here on by
+    // tickHomeSuccession (succession_laws.js) and relocatePlayerIfNeeded.
+    if (link && link.type === "child") {
+        gameState.homeRulerId = father.royalHouseKey === realmKey && father.tier >= realmTopTier(realmKey) ? father.id
+            : (mother.royalHouseKey === realmKey && mother.tier >= realmTopTier(realmKey) ? mother.id : null);
+    } else if (player.tier >= realmTopTier(realmKey) && player.realmKey === realmKey) {
+        gameState.homeRulerId = player.id; // playing as the ruler themself
+    } else {
+        gameState.homeRulerId = null; // set below once the "sibling" link's ruler is injected, or stays null for an ordinary, unlinked start
+    }
+
     const siblingCount = Math.max(0, Math.round((randInt(0, 4) + randInt(0, 4)) / 2) - 1);
     let rulerSiblingInjected = false;
     const injectRulerSibling = () => {
@@ -274,6 +290,7 @@ function setupDynasty(gameState) {
         rulerChar.motherId = player.motherId;
         rulerChar.fatherId = player.fatherId;
         registerPerson(gameState, rulerChar);
+        gameState.homeRulerId = rulerChar.id;
         rulerSiblingInjected = true;
     };
     for (let i = 0; i < siblingCount; i++) {
@@ -501,6 +518,25 @@ function relocatePlayerIfNeeded(gameState, candidate) {
         getVassals(gameState).forEach(v => adjustOpinion(v, -12));
     }
 
+    // The new realm is home now. Whoever graftRoyalHouse already
+    // established as its tracked ruler (moments ago, in this same
+    // arrangeMarriage call) is trusted directly rather than re-derived —
+    // a scan by tier alone can't tell "the one who was already reigning"
+    // from "the player, just elevated to match by this very marriage"
+    // once the two end up tied (marrying the realm's own ruler brings
+    // the player's own tier up to meet theirs, exactly where this would
+    // misfire). Only when nothing was tracked (an ordinary noble, not
+    // the realm's actual ruler) does this fall back to a scan, and even
+    // then never considers the player themself a candidate for it.
+    const existingForeignRuler = gameState.foreignRoyals && gameState.foreignRoyals[newRealmKey];
+    if (existingForeignRuler) {
+        gameState.homeRulerId = existingForeignRuler;
+    } else {
+        const newHomeRuler = allFamily(gameState).find(p => p.alive && p.id !== player.id && p.realmKey === newRealmKey && p.tier >= realmTopTier(newRealmKey));
+        gameState.homeRulerId = newHomeRuler ? newHomeRuler.id : null;
+    }
+    if (gameState.foreignRoyals) delete gameState.foreignRoyals[newRealmKey];
+
     logEvent(`${player.name} has left ${oldRealm.name} behind to join the household of ${newRealm.name}, surrendering what they held at home.${crossesCulture ? ` The local lords take notice of a foreign-born claimant in their midst.` : ""}`);
 }
 
@@ -618,14 +654,35 @@ function consortDisplayTitle(gameState, person) {
     return realmKey ? realmTopTitle(realmKey, person.gender) : null;
 }
 
+// Whatever throne this person holds in their OWN right — home realm
+// (gameState.homeRulerId) or a foreign one married or inherited into the
+// family (gameState.foreignRoyals) — outranks any relational title a
+// moment later in the same function might otherwise produce. Without
+// this check first, a reigning queen whose own son happens to also reign
+// somewhere else would be mislabeled "Queen Mother" instead of Queen —
+// being someone's mother never outranks being a monarch yourself. Checked
+// before royalRelationTitle, not inside it, so it's just as available to
+// anyone titling a person directly.
+function personOwnRegnantTitle(gameState, person) {
+    if (gameState.homeRulerId === person.id) {
+        return realmTopTitle(gameState.realmKey, person.gender);
+    }
+    if (gameState.foreignRoyals) {
+        const realmKey = Object.keys(gameState.foreignRoyals).find(k => gameState.foreignRoyals[k] === person.id);
+        if (realmKey) return realmTopTitle(realmKey, person.gender);
+    }
+    return null;
+}
+
 // A generic family-tree-distance title: given any tracked, currently
-// reigning monarch (gameState.foreignRoyals, plus the person's own home
-// realm if their spouse reigns there), work out exactly how this person
-// relates to that throne and return the real courtesy title that
-// relation carries — Consort, Prince/Princess, Queen Mother/King
-// Father, or Royal Sibling — computed fresh from the actual relational
-// data (getSiblings, motherId/fatherId) every time, never hardcoded to
-// one specific person or marriage.
+// reigning monarch (gameState.foreignRoyals, plus gameState.homeRulerId
+// for the player's own realm), work out exactly how this person relates
+// to that throne and return the real courtesy title that relation
+// carries — Consort, Prince/Princess, Queen Mother/King Father, or Royal
+// Sibling — computed fresh from the actual relational data (getSiblings,
+// motherId/fatherId) every time, never hardcoded to one specific person
+// or marriage. Only reached for someone who ISN'T themselves a reigning
+// monarch (personOwnRegnantTitle, above, takes priority over this).
 function royalRelationTitle(gameState, person) {
     const spouse = getSpouse(gameState, person.id);
     const rulerEntries = [];
@@ -635,17 +692,16 @@ function royalRelationTitle(gameState, person) {
             if (ruler && ruler.alive) rulerEntries.push({ realmKey, ruler });
         });
     }
-    // Unlike a foreign realm (tracked explicitly in gameState.foreignRoyals),
-    // the home realm has no standing "who currently holds it" record — find
-    // whoever in the family actually does, rather than only recognizing it
-    // through the much narrower case of "it happens to be person's own
-    // spouse." A sibling's throne, or a parent's, needs this exactly as
-    // much as a consort's marriage does.
-    if (person.realmKey) {
-        const homeRuler = allFamily(gameState).find(p =>
-            p.alive && p.realmKey === person.realmKey && p.tier >= realmTopTier(person.realmKey)
-            && !rulerEntries.some(e => e.ruler.id === p.id));
-        if (homeRuler) rulerEntries.push({ realmKey: person.realmKey, ruler: homeRuler });
+    // gameState.homeRulerId is the home realm's own equivalent of
+    // foreignRoyals — whoever actually holds gameState.realmKey's crown
+    // right now, player or not, kept live by setupDynasty/
+    // relocatePlayerIfNeeded (start/relocation) and tickHomeSuccession
+    // (succession_laws.js, every year the tracked ruler dies).
+    if (gameState.homeRulerId) {
+        const homeRuler = getPerson(gameState, gameState.homeRulerId);
+        if (homeRuler && homeRuler.alive && !rulerEntries.some(e => e.ruler.id === homeRuler.id)) {
+            rulerEntries.push({ realmKey: gameState.realmKey, ruler: homeRuler });
+        }
     }
 
     for (const { realmKey, ruler } of rulerEntries) {
