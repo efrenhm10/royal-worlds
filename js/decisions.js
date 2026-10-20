@@ -515,6 +515,20 @@ function classifyPlayerSituation(gameState) {
         tags.push("foreign_born_ruler");
     }
 
+    // The real personal-union case: the same shared bloodline can be
+    // promoted to a foreign realm's own tracked throne (tickForeignRoyals)
+    // and to the player's own home throne (applySuccession) independently,
+    // since both walk the same shared family tree. Neither one knows about
+    // the other, so this is the one place that actually checks for the
+    // collision, rather than letting it pass silently.
+    if (gameState.foreignRoyals) {
+        const unionRealmKey = Object.keys(gameState.foreignRoyals).find(k =>
+            k !== gameState.realmKey
+            && gameState.foreignRoyals[k] === player.id
+            && !(gameState.unionAcknowledged && gameState.unionAcknowledged[k]));
+        if (unionRealmKey) tags.push("personal_union");
+    }
+
     return tags;
 }
 
@@ -540,6 +554,8 @@ function assessRealmNeeds(gameState) {
         const avgOpinion = vassals.length ? vassals.reduce((s, v) => s + v.opinion, 0) / vassals.length : 50;
         if (avgOpinion < 55) needs.push("needs_local_acceptance");
     }
+
+    if (situations.includes("personal_union")) needs.push("needs_union_resolution");
 
     return needs;
 }
@@ -747,6 +763,61 @@ const DRAMA_BEAT_TEMPLATES = [
                     player.prestige = (player.prestige || 0) + 10;
                     getVassals(gameState).forEach(v => { if (Math.random() < 0.6) adjustOpinion(v, randInt(-14, -6)); });
                     return `${player.name} refuses to apologize for their own birth — a hard line that plays well to pride (+10 prestige), but it leaves the local lords' resentment to fester on its own.`;
+                },
+            },
+        ],
+    },
+    // personal_union x needs_union_resolution — the real collision: the
+    // same shared bloodline was independently promoted to the home throne
+    // (applySuccession) and a foreign one tracked since a marriage grafted
+    // that house in (tickForeignRoyals). Rather than letting both silently
+    // hold, this is the one real choice about it — keep both, with a real
+    // and lasting cost at home, or renounce the foreign crown outright by
+    // actually re-running that realm's own succession law one step past
+    // the player, the same determineHeir every other succession uses.
+    {
+        id: "personal_union_discovered",
+        situation: "personal_union",
+        need: "needs_union_resolution",
+        chance: 1,
+        buildContext: gameState => {
+            const foreignRealmKey = Object.keys(gameState.foreignRoyals).find(k =>
+                k !== gameState.realmKey
+                && gameState.foreignRoyals[k] === gameState.player.id
+                && !(gameState.unionAcknowledged && gameState.unionAcknowledged[k]));
+            return { foreignRealmKey, foreignRealmName: getRealm(foreignRealmKey).name };
+        },
+        title: "A crown within a crown",
+        text: (gameState, ctx) => voiceLine({
+            bold: [`Word arrives that cannot be waved off: through the tangle of marriages behind ${gameState.player.name}, the line of succession in ${ctx.foreignRealmName} has run out everywhere else, and landed squarely on the ruler already sitting here.`],
+            wary: [`${gameState.player.name} is, as of this week, also the rightful ruler of ${ctx.foreignRealmName} — an accident of marriages and deaths, not ambition, but no less real for that.`],
+            cunning: [`${gameState.player.name} sees the opening before anyone else does: ${ctx.foreignRealmName}'s own succession has quietly handed its crown to the same person who already wears this one.`],
+            neutral: `${gameState.player.name} now stands heir to both this crown and ${ctx.foreignRealmName}'s — two realms, one ruler, and no precedent either side is comfortable with.`,
+        }, gameState.player),
+        options: [
+            {
+                label: "Accept the union — wear both crowns",
+                apply(gameState, ctx) {
+                    const player = gameState.player;
+                    gameState.unionAcknowledged = gameState.unionAcknowledged || {};
+                    gameState.unionAcknowledged[ctx.foreignRealmKey] = true;
+                    player.prestige = (player.prestige || 0) + 30;
+                    getVassals(gameState).forEach(v => adjustOpinion(v, randInt(-18, -10)));
+                    return `${player.name} claims both crowns openly — a prestige few rulers ever hold (+30 prestige), but your own lords here are unsettled at the thought of a king whose attention, and whose armies, now answer to two realms at once.`;
+                },
+            },
+            {
+                label: "Renounce the foreign crown — keep this one uncontested",
+                apply(gameState, ctx) {
+                    const player = gameState.player;
+                    const lawKey = typeof realmSuccessionLaw === "function" ? realmSuccessionLaw(ctx.foreignRealmKey) : DEFAULT_SUCCESSION_LAW;
+                    const nextHeir = determineHeir(gameState, lawKey, player);
+                    if (nextHeir && nextHeir.id !== player.id) {
+                        gameState.foreignRoyals[ctx.foreignRealmKey] = nextHeir.id;
+                        return `${player.name} formally renounces the crown of ${ctx.foreignRealmName}, leaving this realm's own throne uncontested. The claim passes to ${nextHeir.name}, next in that house's own line.`;
+                    }
+                    delete gameState.foreignRoyals[ctx.foreignRealmKey];
+                    return `${player.name} formally renounces the crown of ${ctx.foreignRealmName} — with no other heir left in that line, it passes out of the family's hands entirely, to whoever ${ctx.foreignRealmName}'s own lords choose next.`;
                 },
             },
         ],
