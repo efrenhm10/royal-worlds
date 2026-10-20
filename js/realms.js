@@ -482,35 +482,7 @@ function neighborsOf(realmKey) {
     return REALM_NEIGHBORS[realmKey] || [];
 }
 
-// Schematic map coordinates (0-100 on each axis) — loosely geographic,
-// not surveyed: enough for The Theater's map to read as "England is
-// northwest, the Ottomans are far southeast" at a glance, which is all
-// a stylized strategy map needs to be.
-const REALM_MAP_POSITIONS = {
-    scotland: { x: 16, y: 8 },
-    england: { x: 19, y: 21 },
-    brittany: { x: 21, y: 32 },
-    france: { x: 30, y: 34 },
-    burgundy: { x: 38, y: 31 },
-    portugal: { x: 9, y: 55 },
-    castile: { x: 18, y: 52 },
-    aragon: { x: 27, y: 49 },
-    austria: { x: 52, y: 35 },
-    bohemia: { x: 50, y: 25 },
-    poland: { x: 58, y: 14 },
-    milan: { x: 39, y: 47 },
-    venice: { x: 53, y: 46 },
-    florence: { x: 44, y: 52 },
-    rome: { x: 46, y: 59 },
-    naples: { x: 50, y: 65 },
-    hungary: { x: 62, y: 32 },
-    wallachia: { x: 70, y: 38 },
-    ottoman: { x: 81, y: 50 },
-    teutonic: { x: 64, y: 11 },
-    muscovy: { x: 80, y: 15 },
-    kalmar: { x: 40, y: 8 },
-};
-
-function mapPositionOf(realmKey) {
-    return REALM_MAP_POSITIONS[realmKey] || { x: 50, y: 50 };
-}
+// Real territory shapes for The Theater's map live in realm_shapes.js
+// (REALM_SHAPE_PATHS/REALM_SHAPE_CENTROIDS/REALM_MAP_VIEWBOX) — loaded
+// as its own script, generated from a real historical-borders dataset
+// by mapgen/generate.js.

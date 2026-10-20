@@ -454,9 +454,11 @@ select {
     opacity: 0.8;
 }
 
-.theater-node text {
+/* Labels are for reading, not clicking — the territory shape underneath
+   is the real click target, so a label sitting on top of it (or spilling
+   over a neighbor) never steals the click. */
+text.theater-node {
     pointer-events: none;
-    user-select: none;
 }
 
 .sub-tab-row {

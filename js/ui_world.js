@@ -606,39 +606,30 @@ function renderPlayView() {
         return { fill: "var(--panel-border)", statusLine: `Stability ${stability}` };
     }
 
-    // A schematic, not a surveyed map — nodes at realms.js's rough
-    // REALM_MAP_POSITIONS, lines along REALM_NEIGHBORS, colored by each
-    // realm's actual live status. Clicking a node selects it for the
-    // dossier panel; it updates every render, so a war, a marriage tie,
-    // or a throne falling empty shows up here the moment it happens.
+    // A real territory map — realm_shapes.js's actual historical-border
+    // outlines (15 of 22 from a real 1492-snapshot dataset, the nearest
+    // year available; 7 hand-approximated where that source doesn't
+    // carry them separately), filled by each realm's live status.
+    // Clicking a territory selects it for the dossier panel; it updates
+    // every render, so a war, a marriage tie, or a throne falling empty
+    // shows up here the moment it happens.
     function renderTheaterMapSvg(gs) {
         const realms = listRealms();
-        const seenPairs = new Set();
-        const lines = [];
-        realms.forEach(r => {
-            neighborsOf(r.key).forEach(nk => {
-                if (!getRealm(nk)) return;
-                const pairKey = [r.key, nk].sort().join("|");
-                if (seenPairs.has(pairKey)) return;
-                seenPairs.add(pairKey);
-                const a = mapPositionOf(r.key), b = mapPositionOf(nk);
-                lines.push(`<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="var(--panel-border)" stroke-width="0.35" />`);
-            });
-        });
-
-        const nodes = realms.map(realm => {
-            const pos = mapPositionOf(realm.key);
+        const shapes = realms.map(realm => {
+            const d = REALM_SHAPE_PATHS[realm.key];
+            if (!d) return "";
             const status = theaterRealmStatus(gs, realm);
             const selected = realm.key === _selectedTheaterRealm;
-            return `
-                <g class="theater-node" data-realm="${realm.key}">
-                    <circle cx="${pos.x}" cy="${pos.y}" r="${selected ? 3.1 : 2.3}" fill="${status.fill}" stroke="${selected ? "var(--ink)" : "var(--bg-deep)"}" stroke-width="${selected ? 0.55 : 0.3}" />
-                    <text x="${pos.x}" y="${pos.y - 3.2}" font-size="2.8" fill="var(--ink)" text-anchor="middle">${realm.name}</text>
-                </g>
-            `;
+            return `<path class="theater-node" data-realm="${realm.key}" d="${d}" fill="${status.fill}" fill-opacity="0.82" stroke="${selected ? "var(--ink)" : "var(--bg-deep)"}" stroke-width="${selected ? 0.45 : 0.18}" />`;
         }).join("");
 
-        return `<svg viewBox="0 -4 100 79" style="width:100%;height:auto;display:block;" preserveAspectRatio="xMidYMid meet">${lines.join("")}${nodes}</svg>`;
+        const labels = realms.map(realm => {
+            const c = REALM_SHAPE_CENTROIDS[realm.key];
+            if (!c) return "";
+            return `<text class="theater-node" data-realm="${realm.key}" x="${c.x}" y="${c.y}" font-size="2.3" fill="var(--ink)" text-anchor="middle" paint-order="stroke" stroke="var(--bg-deep)" stroke-width="0.35">${realm.name}</text>`;
+        }).join("");
+
+        return `<svg viewBox="${REALM_MAP_VIEWBOX}" style="width:100%;height:auto;display:block;" preserveAspectRatio="xMidYMid meet">${shapes}${labels}</svg>`;
     }
 
     // The click-through dossier — everything The Theater's old flat card
