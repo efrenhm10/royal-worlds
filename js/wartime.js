@@ -27,11 +27,34 @@ function canDeclareWar(gameState) {
     return !gameState.war && !gameState.gameOver;
 }
 
+// The Military Pact (dynasty.js's arrangeMarriage) — a realm the crown
+// married into cannot be attacked while the pact holds, full stop. It
+// has to be formally and visibly broken first (breakMarriagePact).
+function hasMarriagePact(gameState, realmKey) {
+    return (gameState.marriagePacts || []).some(p => p.realmKey === realmKey);
+}
+
 function declareWar(gameState, targetRealmKey) {
     if (!canDeclareWar(gameState)) return false;
     if (!hasClaim(gameState, targetRealmKey)) return false;
+    if (hasMarriagePact(gameState, targetRealmKey)) return false;
     gameState.war = { targetRealmKey, warScore: 0, startYear: gameState.year };
     logEvent(`${gameState.player.name} has declared war on ${getRealm(targetRealmKey).name}, pressing a just claim.`);
+    return true;
+}
+
+// Breaking faith is a real, visible, costly act — not a quiet toggle.
+// Every court in Christendom notices a broken marriage pact; it isn't
+// something a ruler does twice without their own word meaning nothing.
+function breakMarriagePact(gameState, realmKey) {
+    if (!hasMarriagePact(gameState, realmKey)) return false;
+    gameState.marriagePacts = gameState.marriagePacts.filter(p => p.realmKey !== realmKey);
+    const player = gameState.player;
+    player.prestige = Math.max(0, (player.prestige || 0) - 25);
+    gameState.relations = gameState.relations || {};
+    gameState.relations[realmKey] = Math.max(0, (gameState.relations[realmKey] != null ? gameState.relations[realmKey] : 50) - 35);
+    getVassals(gameState).forEach(v => { if (Math.random() < 0.3) adjustOpinion(v, -randInt(3, 8)); });
+    logEvent(`${player.name} has formally broken the marriage pact with ${getRealm(realmKey).name} — a betrayal every court in Christendom will remember (-25 prestige, relations shattered).`);
     return true;
 }
 

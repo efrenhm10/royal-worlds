@@ -61,6 +61,7 @@ function startNewGame(eraKey, realmKey, character) {
     callHookIfPresent("setupWartime", gameState);
     callHookIfPresent("setupFactions", gameState);
     callHookIfPresent("setupReform", gameState);
+    callHookIfPresent("setupGuilds", gameState);
     callHookIfPresent("setupCanon", gameState);
     callHookIfPresent("setupMilitary", gameState);
     callHookIfPresent("setupEducation", gameState);
@@ -154,6 +155,7 @@ function advanceYear() {
     callHookIfPresent("tickFactions", gameState);
     callHookIfPresent("tickWartime", gameState);
     callHookIfPresent("tickReform", gameState);
+    callHookIfPresent("tickGuilds", gameState);
     callHookIfPresent("tickCanon", gameState);
     callHookIfPresent("tickEvents", gameState);
     callHookIfPresent("tickStress", gameState);

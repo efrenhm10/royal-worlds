@@ -1073,14 +1073,42 @@ function renderPlayView() {
         }
 
         const vassals = getVassals(gameState);
-        const card = makeCard("Your court", vassals.length ? "" : '<p class="muted">You command no vassals of your own yet — a higher title will bring them.</p>');
+        const card = makeCard("The Great Feudal Lords", vassals.length ? "" : '<p class="muted">You command no vassals of your own yet — a higher title will bring them.</p>');
         vassals.forEach(v => {
             const vTitle = titleName(v.tier, v.gender, gameState.realmKey);
             card.appendChild(el("div", "stat", avatarRow(v, `
                 <strong>${vTitle} ${v.name}</strong><br>
-                <span class="muted">${relationshipLabel(v.opinion)} — ${personalityFlavor(v)}. ${v.levies} levies to call on.</span>
+                <span class="muted">${relationshipLabel(v.opinion)} — ${personalityFlavor(v)}. ${v.levies.toLocaleString()} levies to call on.${(v.grudge || 0) >= 2 ? ` <strong>Holds a real grudge</strong> — refused one time too many.` : ""}${v.traits && v.traits.includes("Ambitious") ? ` <strong>A rising house</strong> — their own strength keeps growing.` : ""}</span>
             `)));
         });
+        view.appendChild(card);
+
+        // The Burghers & Guilds — the third power block, alongside the
+        // Great Feudal Lords (above, who hold the military) and the
+        // Church (its own tab, who hold legitimacy). The guilds hold
+        // neither; they hold the coin the crown actually needs, and
+        // every privilege bought with it comes straight out of the
+        // Feudal Lords' own standing.
+        const guildStanding = getGuildStanding(gameState);
+        const guildCard = makeCard("The Burghers & Guilds", `
+            <div class="stat"><span>Standing with the crown</span><span>${guildStanding}/100</span></div>
+            <div class="stat"><span>Trade tax this year</span><span>${guildTaxIncome(gameState)} gold</span></div>
+            <div class="stat"><span>Charters granted</span><span>${gameState.guilds.charters}</span></div>
+            <p class="muted">They hold the realm's liquid coin, not land or soldiers — every charter that keeps them loyal is a privilege taken straight out of the Great Feudal Lords' own hands.</p>
+        `);
+        if (!gameState.gameOver) {
+            guildCard.appendChild(makeChoiceButton("Grant a trade charter", () => {
+                grantTradeCharter(gameState);
+                saveGame();
+                renderPlay();
+            }));
+            guildCard.appendChild(makeChoiceButton("Levy a special tax on the guilds", () => {
+                taxGuilds(gameState);
+                saveGame();
+                renderPlay();
+            }));
+        }
+        view.appendChild(guildCard);
 
         const lawCard = makeCard("Succession", "");
         const currentLaw = SUCCESSION_LAWS[gameState.succession.lawKey];
@@ -1265,13 +1293,21 @@ function renderPlayView() {
             if (pressableClaims.length) {
                 pressableClaims.forEach(c => {
                     const claimRealm = getRealm(c.realmKey);
-                    const row = el("div", "stat", `<span>${claimRealm.name} (${c.type} claim)</span>`);
-                    const btn = makeChoiceButton("Declare war", () => {
-                        declareWar(gameState, c.realmKey);
-                        saveGame();
-                        renderPlay();
-                    }, !canDeclareWar(gameState));
-                    row.appendChild(btn);
+                    const pactBound = hasMarriagePact(gameState, c.realmKey);
+                    const row = el("div", "stat", `<span>${claimRealm.name} (${c.type} claim)${pactBound ? ` — <strong>bound by a marriage pact</strong>` : ""}</span>`);
+                    if (pactBound) {
+                        row.appendChild(makeChoiceButton("Break the pact first", () => {
+                            breakMarriagePact(gameState, c.realmKey);
+                            saveGame();
+                            renderPlay();
+                        }, !!gameState.gameOver));
+                    } else {
+                        row.appendChild(makeChoiceButton("Declare war", () => {
+                            declareWar(gameState, c.realmKey);
+                            saveGame();
+                            renderPlay();
+                        }, !canDeclareWar(gameState)));
+                    }
                     warCard.appendChild(row);
                 });
             } else {

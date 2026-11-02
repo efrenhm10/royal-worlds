@@ -42,5 +42,15 @@ function tickChurch(gameState) {
 
     if (isExcommunicationRisk(gameState, realmKey)) {
         getVassals(gameState).forEach(v => adjustOpinion(v, -2));
+        // Canon law held that excommunication legally freed vassals from
+        // their oaths of loyalty outright — not just a slow opinion
+        // trickle. A real, immediate chance every year the risk holds,
+        // reusing the same faction/hostile-scheme trigger a non-historical
+        // succession's backlash uses (decisions.js) — the mechanical
+        // shape (vassals turning on the crown right now) is the same
+        // regardless of what legally justified it.
+        if (typeof triggerSovereigntyBacklash === "function" && Math.random() < 0.25) {
+            triggerSovereigntyBacklash(gameState);
+        }
     }
 }

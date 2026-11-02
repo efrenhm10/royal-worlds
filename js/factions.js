@@ -13,7 +13,11 @@ function factionRisk(gameState) {
     const avgOpinion = vassals.reduce((s, v) => s + v.opinion, 0) / vassals.length;
     const level = (gameState.crownAuthority && gameState.crownAuthority[gameState.realmKey]) || 0;
     const caPenalty = crownAuthorityInfo(level).vassalOpinionPenalty;
-    return Math.max(0, (50 - avgOpinion) + caPenalty * 0.5);
+    // A low average opinion can be a bad year; a high average grudge is
+    // a court that remembers being refused, specifically and by name,
+    // again and again — real risk an opinion snapshot alone would miss.
+    const avgGrudge = vassals.reduce((s, v) => s + (v.grudge || 0), 0) / vassals.length;
+    return Math.max(0, (50 - avgOpinion) + caPenalty * 0.5 + avgGrudge);
 }
 
 function resolveFaction(gameState, rebelVassals) {

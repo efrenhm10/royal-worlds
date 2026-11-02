@@ -536,6 +536,9 @@ function relocatePlayerIfNeeded(gameState, candidate) {
         gameState.homeRulerId = newHomeRuler ? newHomeRuler.id : null;
     }
     if (gameState.foreignRoyals) delete gameState.foreignRoyals[newRealmKey];
+    // A military pact with the realm you now rule yourself is
+    // meaningless — the new realm is home, not a foreign ally.
+    if (gameState.marriagePacts) gameState.marriagePacts = gameState.marriagePacts.filter(p => p.realmKey !== newRealmKey);
 
     logEvent(`${player.name} has left ${oldRealm.name} behind to join the household of ${newRealm.name}, surrendering what they held at home.${crossesCulture ? ` The local lords take notice of a foreign-born claimant in their midst.` : ""}`);
 }
@@ -843,6 +846,19 @@ function arrangeMarriage(gameState, targetPerson, candidate) {
                 ? ` — any children of this marriage will carry royal blood of ${realmName}'s own ruling house, and a real claim on its throne`
                 : "";
             logEvent(`Through this marriage, the family presses a collateral claim on ${realmName}${stake}.`);
+        }
+
+        // The Military Pact: a marriage this far from home was never just
+        // romance, or even just a claim on paper — it was a binding
+        // non-aggression agreement, backed by the spouse's own house and
+        // its own army. wartime.js's declareWar now actually enforces
+        // this: the crown cannot move against a realm it married into
+        // without formally breaking faith first (breakMarriagePact), at
+        // a real and lasting cost.
+        gameState.marriagePacts = gameState.marriagePacts || [];
+        if (!gameState.marriagePacts.some(p => p.realmKey === candidate.sourceRealmKey)) {
+            gameState.marriagePacts.push({ realmKey: candidate.sourceRealmKey, grantedYear: gameState.year });
+            logEvent(`The marriage carries a binding military pact with ${getRealm(candidate.sourceRealmKey).name} — neither house may move against the other without breaking faith outright.`);
         }
     }
 

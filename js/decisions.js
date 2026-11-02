@@ -1147,6 +1147,7 @@ const DECISION_EVENTS = [
                     if ((player.gold || 0) < 30) return `There isn't enough gold to grant ${vassal.name}'s request.`;
                     player.gold -= 30;
                     adjustOpinion(vassal, 15);
+                    if (typeof addVassalGrudge === "function") addVassalGrudge(vassal, -1);
                     return `${vassal.name}'s request is granted (-30 gold, +15 opinion).`;
                 },
             },
@@ -1156,7 +1157,8 @@ const DECISION_EVENTS = [
                     const vassal = getVassals(gameState).find(v => v.id === ctx.vassalId);
                     if (!vassal) return "The request becomes moot.";
                     adjustOpinion(vassal, -10);
-                    return `${vassal.name}'s request is refused (-10 opinion).`;
+                    if (typeof addVassalGrudge === "function") addVassalGrudge(vassal, 2);
+                    return `${vassal.name}'s request is refused (-10 opinion)${vassal.grudge >= 4 ? ` — this is not the first time, and ${vassal.name} is keeping count.` : "."}`;
                 },
             },
         ],
@@ -1903,6 +1905,107 @@ const DECISION_EVENTS = [
                         return `The local lords handle it on their own — and resent being left to, afterward.`;
                     }
                     return `The raid burns itself out before it reaches anything that matters.`;
+                },
+            },
+        ],
+    },
+    // The Great Feudal Lords vs. the Burghers & Guilds, made concrete —
+    // not an abstract slider, one named duke pressing a real grievance
+    // against a real rival estate.
+    {
+        id: "toll_road_dispute",
+        chance: 0.14,
+        condition: gameState => getVassals(gameState).length > 0,
+        buildContext: gameState => ({ vassalId: randomFrom(getVassals(gameState)).id }),
+        title: "A toll road dispute",
+        text: (gameState, ctx) => {
+            const vassal = getVassals(gameState).find(v => v.id === ctx.vassalId);
+            return voiceLine({
+                bold: [`${vassal.name} wants tolls on the road through their lands raised sharply — the merchant guilds call it extortion, and both sides want ${gameState.player.name} to settle it.`],
+                cunning: [`${vassal.name} has quietly raised tolls on a trade road already, daring the guilds to complain before ${gameState.player.name} finds out and has to choose a side.`],
+                wary: [`A dispute over road tolls between ${vassal.name} and the merchant guilds has landed squarely on ${gameState.player.name}'s desk, and neither side will accept being told to wait.`],
+                neutral: `${vassal.name} and the merchant guilds are at odds over tolls on a trade road — both expect ${gameState.player.name} to rule on it.`,
+            }, gameState.player);
+        },
+        options: [
+            {
+                label: "Side with the guilds — cap the tolls",
+                apply(gameState, ctx) {
+                    const vassal = getVassals(gameState).find(v => v.id === ctx.vassalId);
+                    const gain = randInt(10, 18);
+                    adjustGuildStanding(gameState, gain);
+                    if (vassal) {
+                        adjustOpinion(vassal, -randInt(10, 16));
+                        if (typeof addVassalGrudge === "function") addVassalGrudge(vassal, 2);
+                    }
+                    return `${gameState.player.name} caps the tolls — the guilds' trade moves freer (guild standing +${gain}), and ${vassal ? vassal.name : "the lord in question"} does not forget being overruled.`;
+                },
+            },
+            {
+                label: "Side with the lord — let the tolls stand",
+                apply(gameState, ctx) {
+                    const vassal = getVassals(gameState).find(v => v.id === ctx.vassalId);
+                    const loss = randInt(10, 18);
+                    adjustGuildStanding(gameState, -loss);
+                    if (vassal) adjustOpinion(vassal, randInt(10, 16));
+                    return `${gameState.player.name} backs ${vassal ? vassal.name : "the lord"}'s right to the tolls — the Great Feudal Lords take note of a crown that respects their privileges, and the guilds take note of the opposite (guild standing -${loss}).`;
+                },
+            },
+            {
+                label: "Split the difference",
+                apply(gameState, ctx) {
+                    const vassal = getVassals(gameState).find(v => v.id === ctx.vassalId);
+                    adjustGuildStanding(gameState, randInt(2, 5));
+                    if (vassal) adjustOpinion(vassal, randInt(2, 5));
+                    return `${gameState.player.name} brokers a compromise — the tolls come down, but not to nothing. Neither side is pleased, but neither is openly aggrieved either.`;
+                },
+            },
+        ],
+    },
+    // The Church vs. the Burghers & Guilds — moneylending was a real,
+    // recurring flashpoint between canon law and commerce in this period.
+    {
+        id: "church_condemns_moneylenders",
+        chance: 0.12,
+        condition: gameState => getGuildStanding(gameState) >= 35,
+        title: "The Church condemns the money-lenders",
+        text: gameState => voiceLine({
+            devout: [`${gameState.player.name}'s own confessor raises it gently but plainly: the guild's money-lenders are charging interest the Church calls usury, and souls — including the crown's own — are at risk for tolerating it.`],
+            bold: [`The local bishops have had enough: the guilds' money-lenders are openly charging interest, and the Church wants ${gameState.player.name} to act, not merely listen.`],
+            cunning: [`${gameState.player.name} sees exactly what's really at stake — the Church wants the guilds' lending reined in, and the guilds will remember whoever decides it either way.`],
+            neutral: `The Church presses ${gameState.player.name} to crack down on the guilds' money-lenders, whose interest charges the bishops call open usury.`,
+        }, gameState.player),
+        options: [
+            {
+                label: "Crack down on the money-lenders",
+                apply(gameState) {
+                    const player = gameState.player;
+                    adjustStanding(gameState, gameState.realmKey, randInt(10, 16));
+                    const loss = randInt(12, 20);
+                    adjustGuildStanding(gameState, -loss);
+                    player.piety = (player.piety || 0) + 8;
+                    return `${player.name} orders the guilds' lending practices curtailed — the Church is satisfied (+piety, standing with Rome up), but the guilds feel it directly in their coin (guild standing -${loss}).`;
+                },
+            },
+            {
+                label: "Protect the guilds' lending",
+                apply(gameState) {
+                    const player = gameState.player;
+                    adjustStanding(gameState, gameState.realmKey, -randInt(10, 16));
+                    const gain = randInt(10, 16);
+                    adjustGuildStanding(gameState, gain);
+                    return `${player.name} quietly protects the guilds' lending — Rome's patience with the crown's piety wears thinner, but the guilds' standing rises (+${gain}), and so does the gold that follows it.`;
+                },
+            },
+            {
+                label: "Impose a modest fine instead",
+                apply(gameState) {
+                    const player = gameState.player;
+                    const fine = Math.round(40 + player.tier * 10);
+                    player.gold = (player.gold || 0) + fine;
+                    adjustGuildStanding(gameState, -randInt(3, 6));
+                    adjustStanding(gameState, gameState.realmKey, randInt(2, 5));
+                    return `${player.name} settles it with a fine rather than a ban — ${fine} gold for the treasury, a token gesture toward Rome, and the guilds grumble but pay.`;
                 },
             },
         ],

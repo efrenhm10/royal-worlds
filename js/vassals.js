@@ -33,7 +33,21 @@ function makeVassal(gameState, liegeTier) {
         traits,
         opinion: Math.max(0, Math.min(100, randInt(45, 70) + traitOpinionBias(traits))),
         levies: randInt(20, 200) * (vassalTier + 1),
+        // A grudge is not the same thing as a bad mood — opinion drifts
+        // and recovers year to year, but a vassal who's been refused,
+        // specifically and by name, remembers it on top of however they
+        // currently feel. Fades slowly if never reinforced, but every
+        // fresh refusal resets the clock.
+        grudge: 0,
     };
+}
+
+// A specific, named refusal — not just a bad roll — adds real, lasting
+// grudge on top of whatever opinion hit already landed. This is what a
+// vassal remembers specifically about being told no, separate from
+// their moment-to-moment mood.
+function addVassalGrudge(vassal, amount) {
+    vassal.grudge = Math.max(0, (vassal.grudge || 0) + amount);
 }
 
 function setupVassals(gameState) {
@@ -97,9 +111,24 @@ function tickVassals(gameState) {
     const level = (gameState.crownAuthority && gameState.crownAuthority[gameState.realmKey]) || 0;
     const info = crownAuthorityInfo(level);
     getVassals(gameState).forEach(vassal => {
-        const baseline = 50 - info.vassalOpinionPenalty + traitOpinionBias(vassal.traits);
+        const grudgePenalty = (vassal.grudge || 0) * 1.5;
+        const baseline = 50 - info.vassalOpinionPenalty + traitOpinionBias(vassal.traits) - grudgePenalty;
         const pull = (baseline - vassal.opinion) * 0.1;
         const wobble = randInt(-3, 3);
         adjustOpinion(vassal, pull + wobble);
+
+        // A grudge never reinforced by a fresh refusal slowly fades —
+        // it doesn't haunt a vassal forever, but it doesn't vanish the
+        // moment opinion itself happens to recover either.
+        if (vassal.grudge > 0) vassal.grudge = Math.max(0, vassal.grudge - 0.5);
+
+        // An ambitious house doesn't sit still waiting for the crown's
+        // permission to grow — left unchecked, its real strength (real
+        // levies, not just a number on a sheet) keeps building year over
+        // year, exactly the kind of rising power a court should have to
+        // actually notice and manage, not just a name on a roster.
+        if (vassal.traits && vassal.traits.includes("Ambitious")) {
+            vassal.levies = Math.round(vassal.levies * (1 + randInt(1, 4) / 100));
+        }
     });
 }
