@@ -13,6 +13,24 @@ const TROOP_TYPES = [
 
 const MERCENARY_COMPANY_NAMES = ["The Free Lances", "The Iron Company", "The White Mantles", "The Black Band", "The Golden Spears", "The Ravens of the Rhine", "The Sable Company"];
 
+// A directly-recruited force is a household guard, not an army — the
+// real strength of a medieval ruler was always the levies their vassals
+// owed them, not troops the crown paid and fed itself. Capped modestly
+// by tier so it stays exactly that: real enough to matter, nowhere near
+// enough to make a loyal vassal base optional. Mercenaries (hired for
+// gold, not maintained as a standing roster) aren't capped by this —
+// buying a burst of outside strength is its own real, limited lever.
+const STANDING_TROOP_CAP_BY_TIER = { 0: 0, 1: 10, 2: 20, 3: 40, 4: 70, 5: 120, 6: 180 };
+
+function standingTroopCap(gameState) {
+    return STANDING_TROOP_CAP_BY_TIER[gameState.player.tier] || 0;
+}
+
+function standingTroopTotal(gameState) {
+    setupMilitary(gameState);
+    return TROOP_TYPES.reduce((sum, t) => sum + (gameState.military[t.key] || 0), 0);
+}
+
 function setupMilitary(gameState) {
     gameState.military = gameState.military || { menAtArms: 0, knights: 0, archers: 0, mercenaries: [] };
 }
@@ -27,10 +45,15 @@ function recruitTroopCost(gameState, key, amount) {
     return type ? type.recruitCost * amount : 0;
 }
 
+function canRecruitTroops(gameState, amount) {
+    return standingTroopTotal(gameState) + amount <= standingTroopCap(gameState);
+}
+
 function recruitTroops(gameState, key, amount) {
     setupMilitary(gameState);
     const type = TROOP_TYPES.find(t => t.key === key);
     if (!type || amount <= 0) return false;
+    if (!canRecruitTroops(gameState, amount)) return false; // the household guard is only ever so large — real strength has to come from your vassals
     const cost = recruitTroopCost(gameState, key, amount);
     if ((gameState.player.gold || 0) < cost) return false;
     gameState.player.gold -= cost;
@@ -60,10 +83,17 @@ function standingUpkeep(gameState) {
 
 // Quality isn't flavor — it's a direct multiplier on how much fighting
 // strength each body of troops is worth, same unit scale as
-// wartime.js's targetMilitaryPower.
+// wartime.js's targetMilitaryPower. The household guard (troops the
+// crown directly recruits and keeps) is deliberately weighted low — even
+// maxed out at its tier cap, it stays well under what a genuinely loyal
+// vassal base fields in real levies, so the real power stays with the
+// vassals, exactly as it should. Mercenaries are a different lever
+// entirely — hired for gold, not owned or maintained, a real (if
+// temporary and expensive) way to buy strength outright — and keep their
+// full weight.
 function standingPower(gameState) {
     setupMilitary(gameState);
-    const base = TROOP_TYPES.reduce((sum, t) => sum + (gameState.military[t.key] || 0) * t.quality * 10, 0);
+    const base = TROOP_TYPES.reduce((sum, t) => sum + (gameState.military[t.key] || 0) * t.quality * 3, 0);
     const merc = gameState.military.mercenaries.reduce((sum, m) => sum + m.count * m.quality * 10, 0);
     return Math.round(base + merc);
 }

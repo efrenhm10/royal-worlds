@@ -57,6 +57,34 @@ function totalLevies(gameState) {
     return getVassals(gameState).reduce((sum, v) => sum + v.levies, 0);
 }
 
+// The King does not own the army — the vassals do. What a vassal
+// actually sends when the levy is called depends on how they feel about
+// the one calling it, not just how many men their lands can field. A
+// vassal who hates you doesn't quietly contribute less; they withhold
+// outright, refusing the summons. This is the real, load-bearing
+// military number (wartime.js's playerMilitaryPower) — totalLevies above
+// stays the raw, nominal figure the Domain/Military tabs show alongside
+// it, so the gap between "what you command on paper" and "what actually
+// shows up" is visible, not hidden in a single number.
+function vassalLevyContribution(vassal) {
+    if (vassal.opinion < 30) return 0; // refuses the summons outright
+    if (vassal.opinion < 55) return Math.round(vassal.levies * 0.5); // answers, grudgingly and short
+    return vassal.levies; // answers in full
+}
+
+function totalEffectiveLevies(gameState) {
+    return getVassals(gameState).reduce((sum, v) => sum + vassalLevyContribution(v), 0);
+}
+
+// Named vassals who are refusing or shorting the muster right now — for
+// the Military tab to actually show WHO isn't answering, not just a
+// smaller total number with no explanation.
+function withholdingVassals(gameState) {
+    return getVassals(gameState)
+        .filter(v => v.opinion < 55)
+        .map(v => ({ vassal: v, refusing: v.opinion < 30 }));
+}
+
 function adjustOpinion(vassal, amount) {
     vassal.opinion = Math.max(0, Math.min(100, vassal.opinion + amount));
 }

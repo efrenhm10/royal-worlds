@@ -797,18 +797,40 @@ function renderPlayView() {
     }
 
     if (_playViewTab === "military") {
+        const nominalLevies = totalLevies(gameState);
+        const effectiveLevies = totalEffectiveLevies(gameState);
+        const withheld = nominalLevies - effectiveLevies;
         const summary = makeCard("Your forces", `
-            <div class="stat"><span>Vassal levies</span><span>${totalLevies(gameState).toLocaleString()}</span></div>
+            <div class="stat"><span>Vassal levies answering the call</span><span>${effectiveLevies.toLocaleString()}${withheld > 0 ? ` <span class="muted">(of ${nominalLevies.toLocaleString()} owed)</span>` : ""}</span></div>
             <div class="stat"><span>Personal levies (from in-hand keeps)</span><span>${(player.personalLevies || 0).toLocaleString()}</span></div>
-            <div class="stat"><span>Standing army + mercenaries</span><span>${standingPower(gameState).toLocaleString()}</span></div>
+            <div class="stat"><span>Household guard + mercenaries</span><span>${standingPower(gameState).toLocaleString()}</span></div>
             <div class="stat"><span><strong>Total military power</strong></span><span><strong>${playerMilitaryPower(gameState).toLocaleString()}</strong></span></div>
-            <div class="stat"><span>Upkeep (standing army + mercenaries, per year)</span><span>${standingUpkeep(gameState)} gold</span></div>
+            <div class="stat"><span>Upkeep (household guard + mercenaries, per year)</span><span>${standingUpkeep(gameState)} gold</span></div>
         `);
         view.appendChild(summary);
 
+        // The King does not own the army — the vassals do. A vassal who
+        // resents you doesn't just contribute a smaller number quietly;
+        // this names exactly who is refusing or shorting the muster, and
+        // why, so the cost of a hated court is visible before a war is
+        // lost over it.
+        const withholders = withholdingVassals(gameState);
+        if (withholders.length) {
+            const loyaltyCard = makeCard("Vassals refusing or shorting the muster", "");
+            withholders.forEach(({ vassal, refusing }) => {
+                loyaltyCard.appendChild(el("div", "stat", avatarRow(vassal, `
+                    <strong>${vassal.name}</strong> — ${relationshipLabel(vassal.opinion)}<br>
+                    <span class="muted">${refusing ? `Refuses the summons outright — none of ${vassal.levies.toLocaleString()} owed levies answer.` : `Answers grudgingly — only half of ${vassal.levies.toLocaleString()} owed levies show up.`}</span>
+                `)));
+            });
+            view.appendChild(loyaltyCard);
+        }
+
+        const guardCap = standingTroopCap(gameState);
+        const guardTotal = standingTroopTotal(gameState);
         TROOP_TYPES.forEach(type => {
             const count = getTroopCount(gameState, type.key);
-            const card = makeCard(`${type.name} — ${count.toLocaleString()}`, `<p class="muted">${type.desc} Quality ${type.quality} · ${type.upkeep} gold upkeep each per year.</p>`);
+            const card = makeCard(`${type.name} — ${count.toLocaleString()}`, `<p class="muted">${type.desc} Quality ${type.quality} · ${type.upkeep} gold upkeep each per year.</p><p class="muted">Household guard: ${guardTotal.toLocaleString()} of ${guardCap.toLocaleString()} — a bodyguard's worth, not an army. Real strength has to come from your vassals.</p>`);
             if (!gameState.gameOver) {
                 [10, 50, 200].forEach(amount => {
                     const cost = recruitTroopCost(gameState, type.key, amount);
@@ -816,7 +838,7 @@ function renderPlayView() {
                         recruitTroops(gameState, type.key, amount);
                         saveGame();
                         renderPlay();
-                    }, player.gold < cost));
+                    }, player.gold < cost || !canRecruitTroops(gameState, amount)));
                 });
                 if (count > 0) {
                     card.appendChild(makeChoiceButton(`Disband ${Math.min(50, count)}`, () => {

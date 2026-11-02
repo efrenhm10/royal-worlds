@@ -13,7 +13,8 @@ function setupWartime(gameState) {
 function playerMilitaryPower(gameState) {
     const player = gameState.player;
     const standing = typeof standingPower === "function" ? standingPower(gameState) : 0;
-    return totalLevies(gameState) + (player.personalLevies || 0) + standing + player.tier * 80 + player.skills.martial * 5;
+    const levies = typeof totalEffectiveLevies === "function" ? totalEffectiveLevies(gameState) : totalLevies(gameState);
+    return levies + (player.personalLevies || 0) + standing + player.tier * 80 + player.skills.martial * 5;
 }
 
 function targetMilitaryPower(gameState, realmKey) {
