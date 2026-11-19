@@ -1,200 +1,216 @@
 // story_elizabeth_woodville.js — her life told as one continuous story,
-// from her parents' own scandal through to the ruin or the crown her own
-// choices lead her toward. Three real endings, not one: a quiet life no
-// history book remembers, a dignified refusal, or the throne itself —
-// each reached by a different sequence of choices, each changing what
-// the NEXT scene actually says, not just how it's scored.
+// paced the way a good "live through it" game paces itself: short beats,
+// a real choice on almost every page. As a knight's daughter and then a
+// widow, Elizabeth doesn't get to decide most of what happens TO her —
+// who she marries, whose custody she's in, whether the crown notices
+// her at all — so most choices are about how she answers that: obey,
+// quietly resist, or lean on family for help. What she actually
+// controls (her own gold, her own name, her family's standing) carries
+// forward into the real game at the end.
 
 STORY_DECKS.elizabeth_woodville = {
     startNodeId: "parents",
+    startingStats: { gold: 15, prestige: 0, houseStanding: 35 },
     nodes: {
 
         parents: {
-            text: () => [
-                "Before there was an Elizabeth Woodville, there was a scandal her family never stopped living down.",
-                "In 1437, Jacquetta of Luxembourg — a continental noblewoman, widow of John of Lancaster, Duke of Bedford, uncle to the King of England himself — married Richard Woodville, a mere knight who had served in her late husband's household. The match was beneath her by every measure that mattered at court. The fine the Crown levied against them, for marrying without royal license, was simply the price of having done it anyway, with no one's permission and nothing to gain by it that could be written down on a ledger.",
-                "It would not be the last time a Woodville married for reasons the court found difficult to forgive.",
-            ].join("\n\n"),
-            choices: [{ label: "Continue", next: "birth" }],
-        },
-
-        birth: {
-            text: () => [
-                "Elizabeth was born into that scandal's long shadow — the eldest of what would become thirteen children, raised at Grafton Regis in a household noble by her mother's blood and newly, precariously risen by her father's.",
-                "She grew up belonging fully to neither world: too well-connected for the gentry who distrusted a knight's rapid rise, not quite grand enough for the continental cousins her mother never stopped mentioning.",
-            ].join("\n\n"),
-            choices: [{ label: "Continue", next: "girlhood" }],
+            text: () => "Before there was an Elizabeth Woodville, there was a scandal: her mother Jacquetta, a continental noblewoman, married a mere knight — Richard Woodville — for nothing anyone could call advantage, and paid the Crown's fine for doing it without leave. Elizabeth, their eldest, grows up knowing the family married for love once already, against everyone's advice.",
+            choices: [
+                {
+                    label: "She'll resent that scandal — it cost the family standing she means to win back",
+                    apply: s => { s.flags.resentsScandal = true; adjustStoryStat(s, "houseStanding", 2); },
+                    next: "girlhood",
+                },
+                {
+                    label: "She's quietly proud of it — her parents chose each other over everything else",
+                    apply: s => { s.flags.proudOfScandal = true; adjustStoryStat(s, "prestige", 2); },
+                    next: "girlhood",
+                },
+            ],
         },
 
         girlhood: {
-            text: () => "Growing up in a household always negotiating its own standing, a sharp girl learns to watch one thing closely above all else. What does Elizabeth watch?",
+            text: () => "At Grafton Regis, a sharp girl in a house of thirteen children learns to watch one thing closely. What does Elizabeth watch?",
             choices: [
                 {
-                    label: "The suitors who come calling for her sisters, and what each match actually buys the family",
-                    apply: s => { s.flags.ambitiousUpbringing = true; },
+                    label: "The suitors courting her sisters, and what each match actually buys the family",
+                    apply: s => { s.flags.ambitiousUpbringing = true; adjustStoryStat(s, "houseStanding", 4); },
                     next: "first_marriage",
                 },
                 {
-                    label: "The quiet arithmetic of a household always one bad harvest from real trouble",
-                    apply: s => { s.flags.carefulUpbringing = true; },
+                    label: "The household accounts, always one bad harvest from real trouble",
+                    apply: s => { s.flags.carefulUpbringing = true; adjustStoryStat(s, "gold", 10); },
                     next: "first_marriage",
                 },
             ],
         },
 
+        // Her first marriage isn't her choice at all — her father
+        // arranges it. What's actually hers to decide is how she meets
+        // that.
         first_marriage: {
-            text: s => [
-                s.flags.ambitiousUpbringing
-                    ? "By the time she is of age, Elizabeth already understands exactly what a marriage is worth — and her own first match, to Sir John Grey of Groby, heir to a solid Lancastrian barony, reads to her like a fair opening move, not a verdict on her life."
-                    : "By the time she is of age, Elizabeth has learned not to expect too much from a marriage, and her own first match, to Sir John Grey of Groby, heir to a solid Lancastrian barony, is exactly the kind of sensible, unremarkable arrangement she'd have chosen for herself.",
-                "It is not a love match, particularly, but it is not an unkind one either. Two sons follow — Thomas, then Richard.",
-            ].join("\n\n"),
+            text: () => "Her father arranges it: Sir John Grey of Groby, a solid Lancastrian heir. No one asks Elizabeth whether she wants this. They never do.",
+            choices: [
+                {
+                    label: "Accept it gracefully — a dutiful daughter, whatever she privately thinks",
+                    apply: s => { s.flags.obedientDaughter = true; adjustStoryStat(s, "houseStanding", 5); },
+                    next: "first_marriage_2",
+                },
+                {
+                    label: "Go along with it, but make it plain she was never asked",
+                    apply: s => { s.flags.quietlyResentful = true; },
+                    next: "first_marriage_2",
+                },
+                {
+                    label: "Ask her mother Jacquetta how she ever made peace with a marriage no one approved of",
+                    apply: s => { s.flags.askedMother = true; adjustStoryStat(s, "prestige", 3); },
+                    next: "first_marriage_2",
+                },
+            ],
+        },
+
+        first_marriage_2: {
+            text: s => s.flags.askedMother
+                ? "Jacquetta's answer is simple: a marriage is what you make of it afterward, not what's decided beforehand. Elizabeth marries Grey with that advice in her pocket. Two sons follow, Thomas and Richard."
+                : "It turns out to be a decent enough match, as arranged marriages go — not loveless, if never quite chosen. Two sons follow, Thomas and Richard.",
             choices: [{ label: "Continue", next: "widowed" }],
         },
 
         widowed: {
-            text: () => [
-                "Then the war that has been circling England for years finally reaches her own household directly. In 1461, at the second battle fought at St Albans, Sir John Grey dies for the Lancastrian cause he'd always quietly supported — on the losing side, as it turns out, now that a House of York king sits newly crowned in London.",
-                "Elizabeth is twenty-four, widowed, with two small sons, and a mother-in-law who has decided that Elizabeth's dower lands — hers by the marriage settlement, hers by law — are not actually going to be handed over without a fight.",
-            ].join("\n\n"),
-            choices: [{ label: "Continue", next: "fork" }],
-        },
-
-        fork: {
-            text: () => "The dispute drags on, and every way forward from here costs something different. Does Elizabeth press her claim through the proper channels, however long that takes — or does she go around the courts entirely, and put her case directly in front of the new king himself?",
+            text: () => "1461: John Grey dies for Lancaster at the second battle of St Albans — the losing side, now that a Yorkist king sits newly crowned in London. Elizabeth is twenty-four, widowed, two small sons, and a mother-in-law who refuses to hand over the dower lands that are hers by law.",
             choices: [
                 {
-                    label: "Press the claim through the courts — slow, proper, and the kind of fight a widow with no real friends at court tends to lose",
-                    apply: s => { s.flags.pursuedCourts = true; },
+                    label: "Press the claim through the courts — slow, proper, and likely to lose",
+                    apply: s => { s.flags.pursuedCourts = true; adjustStoryStat(s, "houseStanding", 3); },
                     next: "courts_1",
                 },
                 {
-                    label: "Go around the courts — petition the king in person, whatever it costs to arrange",
-                    apply: s => { s.flags.petitionedKing = true; },
-                    next: "grafton",
+                    label: "Go around the courts — petition the king himself, whatever it takes to arrange",
+                    apply: s => { s.flags.petitionedKing = true; adjustStoryStat(s, "prestige", 5); adjustStoryStat(s, "gold", -5); },
+                    next: "courtship",
                 },
             ],
         },
 
         // ---- Branch A: the quiet life, unremembered ----
         courts_1: {
-            text: () => [
-                "The court moves at the court's own pace, and a widow with a disputed dower and no powerful patron waits years, not months. Elizabeth writes, petitions, waits, writes again.",
-                "Eventually — not through any single dramatic victory, but through sheer refusal to go away — she recovers enough of what was hers to keep her sons fed and her household standing. It is not everything. It is enough.",
-            ].join("\n\n"),
-            choices: [{ label: "Continue", next: "courts_2" }],
+            text: () => "The case drags for years — a widow with no patron waits, writes, waits again. Money runs thin before the courts rule in her favor.",
+            choices: [
+                {
+                    label: "Sell what jewelry remains rather than ask anyone for help",
+                    apply: s => { s.flags.proudPoverty = true; adjustStoryStat(s, "gold", 8); adjustStoryStat(s, "prestige", 3); },
+                    next: "courts_2",
+                },
+                {
+                    label: "Write to her mother Jacquetta's own family on the continent and ask outright",
+                    apply: s => { s.flags.askedForHelp = true; adjustStoryStat(s, "gold", 15); adjustStoryStat(s, "houseStanding", -3); },
+                    next: "courts_2",
+                },
+            ],
         },
 
         courts_2: {
-            text: () => "A name has come forward for a second marriage — not a grand one, but a willing one, and the boys need a settled household more than they need a mother holding out for something better.",
+            text: () => "The dower is finally hers, in part. A name has come forward for a second marriage — not grand, but willing, and the boys need a settled household more than she needs to hold out for better.",
             choices: [
                 {
                     label: "Accept the match. A quiet, stable life is its own kind of victory.",
-                    apply: s => { s.flags.quietRemarriage = true; },
+                    apply: s => { s.flags.quietRemarriage = true; adjustStoryStat(s, "houseStanding", 6); },
                     next: "__HANDOFF__",
                 },
                 {
                     label: "Refuse. Raise the boys alone, on less, rather than answer to another husband.",
-                    apply: s => { s.flags.raisedAlone = true; },
+                    apply: s => { s.flags.raisedAlone = true; adjustStoryStat(s, "prestige", 6); },
                     next: "__HANDOFF__",
                 },
             ],
         },
 
         // ---- Branch B: the famous one ----
-        grafton: {
-            text: () => [
-                "The young King Edward IV is out hunting near Grafton when Elizabeth puts herself — deliberately, by every account that survives — directly in his path, her two sons in tow, her petition in hand.",
-                "He stops. He listens. By the second time he happens to be hunting in exactly that part of the forest, it is clear to everyone involved, including Elizabeth, that he has not stopped for the petition at all.",
-            ].join("\n\n"),
-            choices: [{ label: "Continue", next: "courtship" }],
-        },
-
         courtship: {
-            text: () => [
-                "Weeks of secret meetings follow. The Earl of Warwick, meanwhile, is deep in negotiations of his own — a French marriage, Bona of Savoy, meant to bind England to Burgundy's great rival — entirely unaware that the king he's brokering for has already made up his mind about something else.",
-                "Edward proposes. In secret. To a widow, a commoner's daughter, a dead Lancastrian knight's wife — utterly unsuitable by every measure of state, and he does not appear to care in the slightest.",
-            ].join("\n\n"),
+            text: () => "King Edward IV stops while hunting near Grafton to hear her petition — then stops again, and again, until it's plain to everyone he hasn't come for the petition at all. Weeks of secret meetings end with a proposal: marriage, in secret, to a widow with no fortune, while the Earl of Warwick negotiates a French match for him that Edward has apparently already decided against.",
             choices: [
                 {
                     label: "Accept him. In secret. Whatever it costs later.",
-                    apply: s => { s.flags.marriedEdward = true; },
-                    next: "marriage",
+                    apply: s => { s.flags.marriedEdward = true; adjustStoryStat(s, "prestige", 20); },
+                    next: "ascendancy",
                 },
                 {
                     label: "Refuse. Protect her name and her sons' modest security instead.",
-                    apply: s => { s.flags.refusedEdward = true; },
+                    apply: s => { s.flags.refusedEdward = true; adjustStoryStat(s, "houseStanding", 10); },
                     next: "refused_ending",
                 },
             ],
         },
 
         refused_ending: {
-            text: () => [
-                "Elizabeth says no. The king, to his own quiet surprise, does not press it — and settles her original petition in her favor as a kind of parting courtesy, as if embarrassed to have been refused by the one person in the realm with every reason to say yes.",
-                "She never becomes queen. Her sons grow up untitled, comfortable, ordinary. No history book will ever write her name next to a crown — and whatever else that costs her, it is the one time in her life a king wanted something from her, and she was the one who said no.",
-            ].join("\n\n"),
+            text: () => "Edward, to his own quiet surprise, doesn't press it — and settles her petition in her favor anyway, as if embarrassed to have been refused. She never becomes queen. Her sons grow up untitled and ordinary. It is the one time in her life a king wanted something from her, and she said no.",
             choices: [{ label: "Continue", next: "__HANDOFF__" }],
         },
 
-        marriage: {
-            text: () => "They are married in secret, at Grafton, with almost no one present. Edward tells no one — not his council, not his own mother, and certainly not Warwick, still laboring over a French match for a king who is already, quietly, someone's husband.",
-            choices: [{ label: "Continue", next: "ascendancy" }],
-        },
-
         ascendancy: {
-            text: () => [
-                "The marriage becomes known eventually — it has to — and once it does, the Woodvilles rise fast. Sisters married into the greatest houses in England. Elizabeth's father made an Earl. Her sons given rich wardships.",
-                "Warwick, the Kingmaker, watches all of it happen to a family he regards as upstarts, and he is not a man who forgives being outpaced in his own king's court.",
-            ].join("\n\n"),
+            text: () => "They marry at Grafton with almost no one present — not Edward's council, not his mother, certainly not Warwick. Once the marriage becomes known, the Woodvilles rise fast: sisters married into the great houses, her father made an Earl. Warwick watches an upstart family outpace him in his own king's court.",
             choices: [
                 {
-                    label: "Push the family's rise further still — every advantage, while it's there to take",
-                    apply: s => { s.flags.pushedFamilyRise = true; },
+                    label: "Push the family's rise further still — every advantage, while it's there",
+                    apply: s => { s.flags.pushedFamilyRise = true; adjustStoryStat(s, "houseStanding", 15); adjustStoryStat(s, "prestige", -3); },
                     next: "readeption",
                 },
                 {
-                    label: "Deliberately restrain it — fewer matches, less provocation, less tinder for Warwick to strike",
-                    apply: s => { s.flags.restrainedFamily = true; },
+                    label: "Restrain it deliberately — less provocation, less tinder for Warwick",
+                    apply: s => { s.flags.restrainedFamily = true; adjustStoryStat(s, "houseStanding", 5); },
+                    next: "readeption",
+                },
+                {
+                    label: "Ask her mother's advice — Jacquetta has outlasted worse enemies than Warwick",
+                    apply: s => { s.flags.askedMotherAscendancy = true; adjustStoryStat(s, "houseStanding", 8); adjustStoryStat(s, "prestige", 4); },
                     next: "readeption",
                 },
             ],
         },
 
         readeption: {
-            text: s => [
-                s.flags.pushedFamilyRise
-                    ? "It is not enough to stop what comes next. In 1470, Warwick finally defects outright — allied, astonishingly, with Margaret of Anjou herself, the old Lancastrian enemy, to restore Henry VI to the throne he was deposed from nine years before."
-                    : "The restraint buys time, but not enough of it. In 1470, Warwick defects outright anyway — allied, astonishingly, with Margaret of Anjou herself, the old Lancastrian enemy, to restore Henry VI to the throne.",
-                "Edward flees to Burgundy. Elizabeth, heavily pregnant, flees to sanctuary at Westminster Abbey with her daughters, and gives birth there — in sanctuary, under guard, on rations the Abbey can spare — to a son. The boy is christened Edward, after a father who is, for the moment, a king in exile and nothing else.",
-            ].join("\n\n"),
-            choices: [{ label: "Continue", next: "restoration" }],
-        },
-
-        restoration: {
-            text: () => "It does not last. Within the year Edward returns, wins at Barnet and Tewkesbury, and takes back a throne that was briefly, impossibly, not his. Elizabeth and her children come out of sanctuary into a London that is, once again, unquestionably theirs.",
-            choices: [{ label: "Continue", next: "crisis_1483" }],
+            text: s => `${s.flags.pushedFamilyRise ? "It isn't enough." : "It buys time, but not enough of it."} In 1470 Warwick defects outright, allied with the old enemy Margaret of Anjou, to restore Henry VI. Edward flees to Burgundy; Elizabeth, pregnant, flees to sanctuary at Westminster Abbey, cut off from the court entirely.`,
+            choices: [
+                {
+                    label: "Lean on what Woodville allies are still at large to get word out",
+                    apply: s => { s.flags.leanedOnAllies = true; adjustStoryStat(s, "houseStanding", 5); adjustStoryStat(s, "gold", -10); },
+                    next: "crisis_1483",
+                },
+                {
+                    label: "Trust no one — sit tight in sanctuary and wait it out alone",
+                    apply: s => { s.flags.trustedNoOne = true; adjustStoryStat(s, "prestige", 5); },
+                    next: "crisis_1483",
+                },
+            ],
         },
 
         crisis_1483: {
-            text: () => [
-                "Twelve years of real peace follow — the longest, steadiest stretch of Elizabeth's life. Then, in April of 1483, Edward dies suddenly, at not quite forty-one, for reasons no one at court can fully agree on.",
-                "Her son by him — the boy born in sanctuary — is twelve now, and already, within days, in the custody of his uncle, Richard of Gloucester, who has just had Elizabeth's brother and her son by her first marriage arrested on the road to London.",
-            ].join("\n\n"),
-            choices: [{ label: "Continue", next: "sanctuary_choice" }],
+            text: () => "She gives birth in sanctuary to a son — Edward, after a father who is briefly a king in exile and nothing else. Within the year Edward returns, wins at Barnet and Tewkesbury, and takes the throne back. Twelve peaceful years follow — then, in April 1483, Edward dies suddenly at not quite forty-one. Her boy by him is twelve, uncrowned, and already in his uncle Gloucester's custody.",
+            choices: [
+                {
+                    label: "Act now — gather her younger children and move before Gloucester does",
+                    apply: s => { s.flags.actedFast = true; adjustStoryStat(s, "prestige", 5); },
+                    next: "sanctuary_choice",
+                },
+                {
+                    label: "Wait for real news before doing anything that can't be undone",
+                    apply: s => { s.flags.waitedForNews = true; adjustStoryStat(s, "houseStanding", 3); },
+                    next: "sanctuary_choice",
+                },
+            ],
         },
 
         sanctuary_choice: {
-            text: () => "Everything Elizabeth has built for twenty years is suddenly, violently uncertain again. Does she flee — again — to the one place that has protected her before, or does she stand and fight Gloucester in the open, whatever that costs?",
+            text: () => "Gloucester has already arrested her brother and her son Richard Grey on the road to London. Everything she's built for twenty years is violently uncertain again. Flee once more to the sanctuary that protected her before — or stand and fight him in the open?",
             choices: [
                 {
                     label: "Flee to sanctuary at Westminster Abbey with her younger children",
-                    apply: s => { s.flags.fledSanctuary = true; },
+                    apply: s => { s.flags.fledSanctuary = true; adjustStoryStat(s, "gold", -10); adjustStoryStat(s, "houseStanding", 5); },
                     next: "__HANDOFF__",
                 },
                 {
                     label: "Resist Gloucester's regency openly — rally what allies remain",
-                    apply: s => { s.flags.resistedOpenly = true; },
+                    apply: s => { s.flags.resistedOpenly = true; adjustStoryStat(s, "prestige", 10); },
                     next: "__HANDOFF__",
                 },
             ],
@@ -242,11 +258,8 @@ STORY_DECKS.elizabeth_woodville = {
                     gs.player.tier = Math.max(gs.player.tier, 4);
                     growDomainAndVassalsForTier(gs, gs.player.tier);
                     if (flags.fledSanctuary) {
-                        gs.player.gold = Math.max(0, (gs.player.gold || 0) - 20);
-                        gs.player.piety = (gs.player.piety || 0) + 10;
                         logEvent(`${player.name} takes her younger children into Westminster Abbey's sanctuary once again, powerless for now to stop whatever is already happening to the sons left outside it.`);
                     } else {
-                        gs.player.prestige = (gs.player.prestige || 0) + 15;
                         logEvent(`${player.name} refuses to simply disappear into sanctuary again — whatever allies the Woodville name still commands in London, she means to use them.`);
                     }
                     logEvent(`${player.name}'s story, from a disputed widow's dower to a crown held for twenty years, continues now as the ordinary business of a life still being lived.`);

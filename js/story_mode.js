@@ -26,11 +26,28 @@ function getStoryState() {
     return _storyState;
 }
 
+// The three numbers the story actually tracks and shows throughout —
+// deliberately the game's own existing currencies (gold, personal
+// prestige, the family's own standing), not an invented skill system.
+// A royal or noble child doesn't get to decide much for herself yet, so
+// these mostly move in response to how her family is doing and how she
+// handles having so little say in her own life — not a stat grind.
 function beginStory(figureKey) {
     const deck = STORY_DECKS[figureKey];
     if (!deck) throw new Error(`No story deck for: ${figureKey}`);
-    _storyState = { figureKey, nodeId: deck.startNodeId, flags: {} };
+    const starting = deck.startingStats || {};
+    _storyState = {
+        figureKey, nodeId: deck.startNodeId, flags: {},
+        gold: starting.gold != null ? starting.gold : 20,
+        prestige: starting.prestige != null ? starting.prestige : 0,
+        houseStanding: starting.houseStanding != null ? starting.houseStanding : 40,
+    };
     return _storyState;
+}
+
+function adjustStoryStat(storyState, key, amount) {
+    const current = storyState[key] || 0;
+    storyState[key] = key === "gold" ? Math.max(0, current + amount) : Math.max(0, Math.min(100, current + amount));
 }
 
 function abandonStory() {
@@ -85,7 +102,16 @@ function handoffToRealGame(opts) {
     gameState.legendaryFigureCharacterId = character.id;
     gameState.legendaryBeatsResolved = ((LEGENDARY_FIGURES[figureKey] || {}).beats || []).map(b => b.id);
     gameState.legendaryDeathsResolved = [];
-    gameState.legendaryStoryFlags = getStoryState() ? getStoryState().flags : {};
+    const story = getStoryState();
+    gameState.legendaryStoryFlags = story ? story.flags : {};
+    // What the story built up — her own gold, her own name, her
+    // family's standing — carries into the real game rather than
+    // vanishing the moment play actually starts.
+    if (story) {
+        gameState.player.gold = (gameState.player.gold || 0) + (story.gold || 0);
+        gameState.player.prestige = (gameState.player.prestige || 0) + (story.prestige || 0);
+        gameState.legendaryHouseStanding = story.houseStanding;
+    }
     if (typeof resumeHook === "function") resumeHook(gameState, gameState.legendaryStoryFlags);
     return gameState;
 }

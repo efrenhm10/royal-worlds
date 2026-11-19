@@ -686,12 +686,12 @@ const LEGENDARY_FIGURES = {
     elizabeth_woodville: {
         key: "elizabeth_woodville", name: "Elizabeth Woodville", mode: "story",
         blurb: "A widow of twenty-four with two young sons and a disputed inheritance — and, soon, a secret that will scandalize every court in Christendom.",
-        birthYear: 1437,
+        birthYear: 1437, gender: "F", portraitTier: 1,
     },
     catherine_de_medici: {
         key: "catherine_de_medici", name: "Catherine de' Medici", mode: "story",
         blurb: "Orphaned within a month of her birth, married off at fourteen into the oldest royal house in Europe, and — decades later, widowed and regent — the real power behind three sons' thrones.",
-        birthYear: 1519,
+        birthYear: 1519, gender: "F", portraitTier: 4,
     },
 };
 

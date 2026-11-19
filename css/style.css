@@ -544,6 +544,47 @@ text.theater-node {
     font-size: 1.6em;
 }
 
+.story-portrait {
+    margin: 0 auto 8px;
+    width: 88px;
+}
+
+.story-portrait svg {
+    display: block;
+}
+
+.story-stats {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.story-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 84px;
+    padding: 6px 10px;
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    background: rgba(0,0,0,0.18);
+}
+
+.story-stat span {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ink-soft);
+}
+
+.story-stat b {
+    font-family: "Cinzel", "Times New Roman", serif;
+    color: var(--gilt-bright);
+    font-size: 1.1em;
+}
+
 .story-prose {
     font-size: 1.14em;
     line-height: 1.75;

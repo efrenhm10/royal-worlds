@@ -1,69 +1,82 @@
 // story_catherine_de_medici.js — orphaned at a month old, married off at
-// fourteen into the oldest royal house in Europe, humiliated for a
-// decade for bearing no children, and then, in her fifties, the real
-// power in France for the better part of thirty years. Her story runs
-// all the way to the single darkest choice of her life — the massacre
-// that made her name a byword for ruthlessness for the rest of history
-// — and hands off into the ongoing game right after it, Queen Mother in
-// fact if not in name, with whatever years are left to her still to live.
+// fourteen, humiliated for a decade for bearing no children, then, in
+// her fifties, the real power in France for thirty years. Paced in
+// short beats with a real choice on almost every page, ending at the
+// single darkest choice of her life — the massacre that made her name
+// a byword for ruthlessness — and handing off into the ongoing game
+// right after it, Queen Mother in fact if not in name.
 
 STORY_DECKS.catherine_de_medici = {
     startNodeId: "parents",
+    startingStats: { gold: 40, prestige: 0, houseStanding: 55 },
     nodes: {
 
         parents: {
-            text: () => [
-                "Catherine de' Medici's parents never once laid eyes on her.",
-                "Lorenzo de' Medici, Duke of Urbino, married Madeleine de la Tour d'Auvergne, a French noblewoman of ancient blood, in 1518 — a match arranged by Lorenzo's cousin, Pope Leo X, to bind the Medici's new money to one of the oldest names in France. Madeleine died of a fever just fifteen days after giving birth to their only child, in Florence, in April of 1519. Lorenzo himself died three weeks after that, almost certainly of syphilis, leaving a month-old daughter heir to a title and a fortune and nothing resembling a family to raise her.",
-            ].join("\n\n"),
-            choices: [{ label: "Continue", next: "childhood" }],
-        },
-
-        childhood: {
-            text: () => [
-                "Catherine was raised first by her grandmother, then by an aunt, in a Florence that loved and feared the Medici name in roughly equal measure. In 1527, when she was eight, the city expelled the family outright, and the new republican government kept her — a Medici heiress, a hostage to the family's own fortunes — moved between convents for her own uneasy protection.",
-                "During the siege that followed, as Imperial and Papal armies closed in to restore Medici rule, a mob reportedly called for her to be put out on the city walls as a target, or worse, handed to the soldiers outright. She was eleven. The Medici retook Florence in 1530 anyway, and her formidable uncle — by then Pope Clement VII — took personal charge of arranging what came next for her.",
-            ].join("\n\n"),
-            choices: [{ label: "Continue", next: "lesson" }],
-        },
-
-        lesson: {
-            text: () => "A child who survives a mob calling for her death learns something from it that never quite leaves her. What does Catherine take from those years?",
+            text: () => "Catherine's parents never once laid eyes on her. Lorenzo de' Medici married the French noblewoman Madeleine de la Tour d'Auvergne in 1518 — a Papal alliance match. Madeleine died fifteen days after Catherine's birth; Lorenzo died three weeks after that. A month old, and already an orphan heiress with no one left to raise her.",
             choices: [
                 {
-                    label: "That the right face, offered calmly enough, is armor even when everyone else is deciding her fate for her",
-                    apply: s => { s.flags.learnedMasks = true; },
+                    label: "Grow up guarded and watchful — nothing about her own safety is ever assumed again",
+                    apply: s => { s.flags.learnedDistrust = true; adjustStoryStat(s, "houseStanding", 3); },
+                    next: "siege",
+                },
+                {
+                    label: "Grow up composed above all — whatever she feels, no one gets to see it",
+                    apply: s => { s.flags.learnedMasks = true; adjustStoryStat(s, "prestige", 3); },
+                    next: "siege",
+                },
+            ],
+        },
+
+        // Not one choice in this scene is actually hers — the city
+        // decides her fate, her uncle decides her marriage, both
+        // without asking. What she controls is how she bears it.
+        siege: {
+            text: () => "Florence expels the Medici in 1527, when Catherine is eight, and keeps her as a hostage to the family's fortunes. During the siege that follows, a mob reportedly calls for her to be put on the city walls as a target. She is eleven, and no one asks her opinion on any of it.",
+            choices: [
+                {
+                    label: "Beg the nuns sheltering her to intercede with the mob directly",
+                    apply: s => { s.flags.appealedDirectly = true; adjustStoryStat(s, "prestige", -2); },
                     next: "marriage",
                 },
                 {
-                    label: "That trusting the wrong protector, even for a moment, is the only danger that actually matters",
-                    apply: s => { s.flags.learnedDistrust = true; },
+                    label: "Say nothing, show nothing, and wait for the Medici armies outside the walls",
+                    apply: s => { s.flags.waitedItOut = true; adjustStoryStat(s, "prestige", 3); },
+                    next: "marriage",
+                },
+                {
+                    label: "Write secretly to her aunt, begging her to use whatever influence remains",
+                    apply: s => { s.flags.appealedToAunt = true; adjustStoryStat(s, "houseStanding", 4); adjustStoryStat(s, "gold", -5); },
                     next: "marriage",
                 },
             ],
         },
 
         marriage: {
-            text: () => [
-                "In 1533, at fourteen, Catherine is married at Marseille to Henri, Duke of Orléans — second son of King Francis I of France. Her uncle the Pope arranges it as the grandest alliance a banking family's granddaughter could possibly make: the oldest royal house in Europe, in exchange for a dowry vast enough that no one at the French court can quite bring themselves to say no to it, whatever they privately think of her blood.",
-                "They never let her forget the mismatch anyway. A Medici, however rich, is still a merchant's granddaughter to men whose own families have worn crowns for five hundred years.",
-            ].join("\n\n"),
-            choices: [{ label: "Continue", next: "barren_years" }],
+            text: () => "The Medici retake Florence; her uncle, now Pope Clement VII, arranges the grandest match a banker's granddaughter could make — no one asks Catherine either. At fourteen, she marries Henri, Duke of Orléans, second son of the King of France. The French court never lets her forget she's merchant blood married into five centuries of crowns.",
+            choices: [
+                {
+                    label: "Study the court obsessively — learn exactly who actually matters here",
+                    apply: s => { s.flags.studiedCourt = true; adjustStoryStat(s, "houseStanding", 6); },
+                    next: "barren_years",
+                },
+                {
+                    label: "Keep to herself — let her dowry speak for her, since nothing else will",
+                    apply: s => { adjustStoryStat(s, "gold", -10); },
+                    next: "barren_years",
+                },
+            ],
         },
 
         barren_years: {
-            text: () => [
-                "Ten years pass without a child. Henri keeps an open, acknowledged mistress, Diane de Poitiers, a widow nearly twenty years his senior who runs his household and, increasingly, his affections — while Catherine's own position at court grows more precarious with every childless year. King Francis I himself reportedly begins to consider having the marriage annulled.",
-                "Everyone at court has an opinion about what a queen who cannot give the realm an heir is actually worth.",
-            ].join("\n\n"),
+            text: () => "Ten years pass without a child. Henri keeps an open mistress, Diane de Poitiers, who runs his household outright. King Francis I himself is said to be weighing an annulment.",
             choices: [
                 {
-                    label: "Endure it. Make herself quietly useful and watchful rather than beloved, and wait.",
-                    apply: s => { s.flags.enduredDiane = true; },
+                    label: "Endure it quietly — make herself useful and watchful, and wait",
+                    apply: s => { s.flags.enduredDiane = true; adjustStoryStat(s, "houseStanding", 5); },
                     next: "fertility",
                 },
                 {
-                    label: "Confront Henri directly — demand her position be secured on its own terms, whatever the risk.",
+                    label: "Confront Henri directly — demand her position secured, whatever the risk",
                     apply: s => { s.flags.confrontedDiane = true; },
                     next: "confront_outcome",
                 },
@@ -71,10 +84,10 @@ STORY_DECKS.catherine_de_medici = {
         },
 
         confront_outcome: {
-            text: () => "It is the kind of gamble that could go either way with a husband who has never once had to choose between the two women in his life.",
+            text: () => "It is the kind of gamble that could go either way with a husband who has never had to choose between the two women in his life.",
             choices: [
                 {
-                    label: "Continue",
+                    label: "Say it plainly, in front of his own council, and force the issue",
                     apply: s => { s.flags.confrontBackfired = Math.random() < 0.5; },
                     next: "confront_result",
                 },
@@ -83,45 +96,43 @@ STORY_DECKS.catherine_de_medici = {
 
         confront_result: {
             text: s => s.flags.confrontBackfired
-                ? "It backfires badly. Henri, embarrassed in front of his own court, backs Diane more openly than before, and the annulment talk Catherine was trying to head off only gathers real weight instead."
-                : "Astonishingly, it works. Henri — not a subtle man, but not an entirely heartless one either — is unsettled enough by his wife's bluntness that he quietly tells his father the annulment talk is to stop. Diane remains, but Catherine's own place is no longer quite so easily questioned.",
+                ? "It backfires badly. Humiliated in front of his own court, Henri backs Diane more openly than ever, and the annulment talk only gathers weight."
+                : "Astonishingly, it works. Unsettled by his wife's bluntness, Henri quietly tells his father the annulment talk is to stop.",
             choices: [{ label: "Continue", next: s => s.flags.confrontBackfired ? "set_aside_ending" : "fertility" }],
         },
 
         set_aside_ending: {
-            text: () => [
-                "The annulment proceeds within the year. Catherine is sent back to Florence with her dowry returned and her marriage dissolved — no queen, no regency, no massacre for history to remember her by. A Medici again, and nothing else, for the rest of a long, quiet, well-funded life.",
-            ].join("\n\n"),
+            text: () => "The annulment proceeds within the year. Catherine returns to Florence, her dowry refunded, her marriage dissolved — no queen, no regency, no massacre for history to remember her by. Just a Medici again, for the rest of a long, quiet, well-funded life.",
             choices: [{ label: "Continue", next: "__HANDOFF__" }],
         },
 
         fertility: {
-            text: () => [
-                "Then, whether by a physician's intervention, by prayer, or by simple chance — the sources disagree and always will — children finally come. Ten of them, over the following twelve years, most of whom survive infancy. The annulment talk evaporates entirely. Catherine, whatever else she is at the French court, is no longer merely a disappointment.",
-                "Henri becomes King Henri II in 1547, on his own father's death. Catherine is Queen of France — though Diane de Poitiers, now the Duchess of Valentinois, remains openly, infuriatingly dominant at court regardless.",
-            ].join("\n\n"),
-            choices: [{ label: "Continue", next: "widowhood" }],
+            text: () => "Then, by medicine, prayer, or simple chance, children finally come — ten of them. The annulment talk evaporates. Henri becomes King in 1547; Catherine is Queen of France, though Diane remains openly dominant at court regardless.",
+            choices: [
+                {
+                    label: "Make peace with Diane's place at court — a war not worth fighting anymore",
+                    apply: s => { adjustStoryStat(s, "houseStanding", 4); },
+                    next: "widowhood",
+                },
+                {
+                    label: "Keep a private, exact ledger of every slight — settled later, not forgotten",
+                    apply: s => { s.flags.keptLedger = true; adjustStoryStat(s, "prestige", 5); },
+                    next: "widowhood",
+                },
+            ],
         },
 
         widowhood: {
-            text: () => [
-                "In 1559, Henri is struck in the eye by a splintered lance during a tournament celebrating two royal marriages, and dies of the wound ten agonizing days later. Catherine's eldest son becomes King Francis II at fifteen — and is dead himself within a year and a half, of an ear infection that spreads to his brain.",
-                "Her second son, Charles, becomes king at ten years old. France needs a regent, and for the first time in her life, at forty, the power is Catherine's own to actually wield, not merely to watch other people wield around her.",
-            ].join("\n\n"),
-            choices: [{ label: "Continue", next: "regency" }],
-        },
-
-        regency: {
-            text: () => "A country already splitting between Catholics and the growing Huguenot movement is now hers to govern through a child king. How does she rule?",
+            text: () => "In 1559 a jousting splinter kills Henri. Her eldest son is dead within the year too. Her second son, Charles, becomes king at ten — and France needs a regent. For the first time in her life, at forty, real power is actually hers to wield.",
             choices: [
                 {
-                    label: "A careful, exhausting balance — favor neither side fully, broker peace after fragile peace",
-                    apply: s => { s.flags.balancedRegency = true; },
+                    label: "A careful, exhausting balance — favor neither Catholic nor Huguenot fully",
+                    apply: s => { s.flags.balancedRegency = true; adjustStoryStat(s, "houseStanding", 6); },
                     next: "wars_of_religion",
                 },
                 {
-                    label: "Back the Catholic hardliners decisively — crush the Huguenots while the crown still has the army to do it",
-                    apply: s => { s.flags.hardlineRegency = true; },
+                    label: "Back the Catholic hardliners outright — crush the Huguenots while she has the army",
+                    apply: s => { s.flags.hardlineRegency = true; adjustStoryStat(s, "prestige", 8); adjustStoryStat(s, "houseStanding", -4); },
                     next: "wars_of_religion",
                 },
             ],
@@ -129,43 +140,44 @@ STORY_DECKS.catherine_de_medici = {
 
         wars_of_religion: {
             text: s => s.flags.hardlineRegency
-                ? "It doesn't work the way the hardliners promised it would. A decade of brutal, grinding civil war follows regardless — massacres and counter-massacres, a kingdom that cannot agree with itself about anything, least of all religion."
-                : "It doesn't hold the way she needs it to. A decade of brutal, grinding civil war follows anyway — massacres and counter-massacres, every fragile peace she brokers lasting just long enough to be broken again.",
-            choices: [{ label: "Continue", next: "bartholomew" }],
+                ? "It doesn't work the way the hardliners promised — brutal civil war grinds on for a decade regardless."
+                : "It doesn't hold the way she needs — brutal civil war grinds on for a decade anyway, every fragile peace broken again.",
+            choices: [
+                {
+                    label: "Keep brokering terms with exhausted patience, peace after broken peace",
+                    next: "bartholomew",
+                },
+                {
+                    label: "Start quietly identifying who, if it ever came to it, would have to be removed",
+                    apply: s => { s.flags.plannedAhead = true; },
+                    next: "bartholomew",
+                },
+            ],
         },
 
         bartholomew: {
-            text: () => [
-                "By August 1572, the Huguenot military leadership — including Admiral Coligny, the Protestant cause's most capable commander — is gathered in Paris itself, for a royal wedding meant to seal yet another fragile peace. An assassination attempt on Coligny fails, badly, and leaves the Huguenot leadership furious and the city's Catholic population braced for retaliation they're certain is coming.",
-                "Catherine has, for perhaps the only time in thirteen years of careful balancing, a single clear choice in front of her — and almost no time at all to make it.",
-            ].join("\n\n"),
+            text: () => "August 1572: the Huguenot military leadership, Admiral Coligny included, is gathered in Paris for a royal wedding meant to seal a fragile peace. A botched attempt on Coligny's life leaves the city braced for retaliation it's certain is coming — and Catherine almost no time to decide anything.",
             choices: [
                 {
-                    label: "Order the strike first — the Huguenot leadership, all of it, while they're gathered in one city and can't escape",
-                    apply: s => { s.flags.orderedMassacre = true; },
+                    label: "Order the strike first — the whole Huguenot leadership, while they're in one city",
+                    apply: s => { s.flags.orderedMassacre = true; adjustStoryStat(s, "prestige", -15); },
                     next: "massacre_ordered",
                 },
                 {
-                    label: "Refuse. Warn Coligny's camp, and let the moment — whatever it costs later — pass without striking",
-                    apply: s => { s.flags.preventedMassacre = true; },
+                    label: "Refuse. Warn Coligny's camp and let the moment pass without striking.",
+                    apply: s => { s.flags.preventedMassacre = true; adjustStoryStat(s, "houseStanding", -8); },
                     next: "massacre_prevented",
                 },
             ],
         },
 
         massacre_ordered: {
-            text: () => [
-                "The order goes out. Coligny is killed in his own bed before dawn. What was meant to be a contained strike against perhaps a few dozen Huguenot leaders spirals within hours into a city-wide massacre — Catholic mobs killing Protestants in the streets of Paris for three straight days, the violence spreading to other French cities over the following weeks. The final death toll will never be agreed on; the lowest serious estimates still run past two thousand in Paris alone, with thousands more dead elsewhere in France.",
-                "The Huguenot military leadership is shattered for a generation. The crown's immediate security is, by the only measure that mattered to Catherine in that hour, secured. Her own name is now permanently, inseparably bound to one of the worst massacres in European history — a verdict no explanation she ever offers afterward will unmake.",
-            ].join("\n\n"),
+            text: () => "Coligny is killed before dawn. What was meant to be a contained strike spirals within hours into a city-wide massacre — thousands dead in Paris alone over three days, thousands more elsewhere in France in the weeks after. The Huguenot leadership is shattered for a generation; Catherine's own name is now bound to it forever.",
             choices: [{ label: "Continue", next: "__HANDOFF__" }],
         },
 
         massacre_prevented: {
-            text: () => [
-                "Coligny is warned in time and gets out of Paris with most of his retinue intact. There is no massacre — but there is also no shattered Huguenot leadership, no decisive moment that breaks the civil war's back. The fighting grinds on, inconclusive, for years yet to come, and the hardliners at Catherine's own court never fully forgive her for the strike she didn't make when she had Coligny in her hand.",
-                "History will not call her a monster for this. It will, just as surely, never call the Wars of Religion over because of it either.",
-            ].join("\n\n"),
+            text: () => "Coligny gets out of Paris in time. There is no massacre — and no decisive break in the war either. It grinds on inconclusively for years, and the hardliners at her own court never forgive her for the strike she didn't make when she had him.",
             choices: [{ label: "Continue", next: "__HANDOFF__" }],
         },
     },

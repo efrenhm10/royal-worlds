@@ -96,15 +96,30 @@ function renderMarriageSection(view, gameState, targetPerson) {
     view.appendChild(card);
 }
 
+// A stable, name-hashed fake "person" good enough for avatarSvg's
+// procedural portrait — Legendary Lives figures don't have a real
+// gameState person record until (or ever, mid-story) the game actually
+// starts, but the portrait is part of knowing who you're looking at.
+function legendaryPortraitPerson(figure) {
+    return {
+        id: hashString(figure.key || figure.name || ""),
+        name: figure.name, gender: figure.gender || "M",
+        tier: figure.portraitTier != null ? figure.portraitTier : (figure.startType === "ruler" ? 5 : 3),
+        age: figure.age != null ? figure.age : 30,
+        alive: true,
+    };
+}
+
 function renderLegendarySelect() {
     const list = document.getElementById("legendaryList");
     clearEl(list);
     listLegendaryFigures().forEach(figure => {
         const isStory = figure.mode === "story";
         const beatCount = (figure.beats || []).length;
+        const portrait = avatarSvg(legendaryPortraitPerson(figure), 48);
         const body = isStory
-            ? `<p class="muted">Born ${figure.birthYear}.</p><p class="muted">${figure.blurb}</p><p class="muted">Told as one continuous story, starting before she's even born — real choices along the way change what happens next.</p>`
-            : `<p class="muted">Born ${figure.birthYear} — beginning in 1461 at age ${figure.age}.</p><p class="muted">${figure.blurb}</p><p class="muted">${beatCount} real, documented turning point${beatCount === 1 ? "" : "s"} to face as your own.</p>`;
+            ? `<div style="display:flex;align-items:center;gap:10px;">${portrait}<div><p class="muted" style="margin:0;">Born ${figure.birthYear}.</p></div></div><p class="muted">${figure.blurb}</p><p class="muted">Told as one continuous story, starting before she's even born — a real choice on almost every page, each one changing what happens next.</p>`
+            : `<div style="display:flex;align-items:center;gap:10px;">${portrait}<div><p class="muted" style="margin:0;">Born ${figure.birthYear} — beginning in 1461 at age ${figure.age}.</p></div></div><p class="muted">${figure.blurb}</p><p class="muted">${beatCount} real, documented turning point${beatCount === 1 ? "" : "s"} to face as your own.</p>`;
         const card = makeCard(figure.name, body);
         const btn = makeChoiceButton(isStory ? "Begin her story" : "Live this life", () => {
             if (isStory) {
@@ -136,8 +151,20 @@ function renderStoryMode() {
     const page = el("div", "story-page");
 
     const header = el("div", "story-page-header");
-    header.innerHTML = `<h2>${figure ? figure.name : ""}</h2>`;
+    const portrait = figure ? avatarSvg(legendaryPortraitPerson(figure), 88) : "";
+    header.innerHTML = `<div class="story-portrait">${portrait}</div><h2>${figure ? figure.name : ""}</h2>`;
     page.appendChild(header);
+
+    // The three numbers the story actually tracks — her own gold, her
+    // own name, her family's standing — visible the whole way through,
+    // the same way a life-sim's stat bar never goes away.
+    const stats = el("div", "story-stats");
+    stats.innerHTML = [
+        { label: "Gold", value: storyState.gold },
+        { label: "Her Own Name", value: `${storyState.prestige}%` },
+        { label: "House Standing", value: `${storyState.houseStanding}%` },
+    ].map(s => `<div class="story-stat"><span>${s.label}</span><b>${s.value}</b></div>`).join("");
+    page.appendChild(stats);
 
     const prose = el("div", "story-prose");
     const text = typeof node.text === "function" ? node.text(storyState) : node.text;
