@@ -677,123 +677,21 @@ const LEGENDARY_FIGURES = {
         ],
     },
 
+    // Elizabeth Woodville and Catherine de' Medici are told as full,
+    // branching stories instead (story_mode.js / story_*.js) — this is
+    // just their catalog entry, so they still show up on the Legendary
+    // Lives selection screen alongside the beat-driven figures above.
+    // mode:"story" is what tells the selection screen to route into
+    // beginStory() instead of startLegendaryLife().
     elizabeth_woodville: {
-        key: "elizabeth_woodville", name: "Elizabeth Woodville", realmKey: "england", gender: "F", age: 24,
-        startType: "custom", tierOverride: 1, birthYear: 1437, traits: ["Ambitious", "Patient"],
+        key: "elizabeth_woodville", name: "Elizabeth Woodville", mode: "story",
         blurb: "A widow of twenty-four with two young sons and a disputed inheritance — and, soon, a secret that will scandalize every court in Christendom.",
-        setupFamily(gameState) {
-            const player = gameState.player;
-            const johnGrey = createCharacter({ realmKey: "england", tier: 1, gender: "M", age: 32, name: "Sir John Grey" });
-            johnGrey.alive = false;
-            registerPerson(gameState, johnGrey);
-            const thomas = createCharacter({ realmKey: "england", tier: 1, gender: "M", age: 6, name: "Thomas Grey" });
-            thomas.motherId = player.id;
-            thomas.fatherId = johnGrey.id;
-            registerPerson(gameState, thomas);
-            const richard = createCharacter({ realmKey: "england", tier: 1, gender: "M", age: 4, name: "Richard Grey" });
-            richard.motherId = player.id;
-            richard.fatherId = johnGrey.id;
-            registerPerson(gameState, richard);
-            logEvent(`${player.name}: a widow at twenty-four, her husband Sir John Grey killed for the Lancastrian cause at St Albans, left with two young sons and an estate under dispute.`);
-        },
-        beats: [
-            {
-                id: "elizabeth_grafton_oak", year: 1464,
-                title: "Beneath the Oak at Grafton",
-                text: gameState => `The young king himself has ridden out while hunting near your family's lands, and stopped — ostensibly to hear your petition over your late husband's confiscated estate. He has stopped three times now. Everyone at court can guess why, except, it seems, Warwick, still deep in his French marriage negotiations.`,
-                options: [
-                    {
-                        label: "Follow history: accept Edward's proposal, and marry him",
-                        apply(gameState) {
-                            const p = gameState.player;
-                            marryHistoricalSpouse(gameState, { realmKey: "england", name: "Edward IV", gender: "M", age: 22, tier: 5, traits: ["Gallant", "Ambitious"] });
-                            p.tier = Math.max(p.tier, 4);
-                            growDomainAndVassalsForTier(gameState, p.tier);
-                            p.prestige = (p.prestige || 0) + 20;
-                            gameState.elizabethMarriedEdward = true;
-                            return `${p.name} marries the King of England in secret — a widow, a commoner's daughter, Queen within the year, and a scandal the whole realm will spend the next decade paying for, one way or another (+20 prestige; a household now fit for a queen).`;
-                        },
-                    },
-                    {
-                        label: "Your own path: decline the king's advances",
-                        apply(gameState) {
-                            const p = gameState.player;
-                            p.gold = (p.gold || 0) + 10;
-                            p.prestige = (p.prestige || 0) + 5;
-                            gameState.elizabethMarriedEdward = false;
-                            return `${p.name} protects her own name rather than her own ambition — the estate dispute is quietly settled in her favor as a parting courtesy, and the crown of England goes to someone else's story entirely (+10 gold, +5 prestige; a private, ordinary life, by the standards of what might have been).`;
-                        },
-                    },
-                ],
-            },
-            {
-                id: "elizabeth_woodville_ascendancy", year: 1469,
-                title: "The Woodville Ascendancy",
-                prereq: gameState => !!gameState.elizabethMarriedEdward,
-                text: gameState => `Your family's standing has multiplied almost overnight — sisters married into the greatest noble houses in England, your father made an Earl, your sons given rich wardships. Warwick watches all of it, and he is not a man who forgives being outpaced.`,
-                options: [
-                    {
-                        label: "Follow history: push the family's rise further still",
-                        apply(gameState) {
-                            const p = gameState.player;
-                            p.gold = Math.max(0, (p.gold || 0) - 40);
-                            p.prestige = (p.prestige || 0) + 20;
-                            getVassals(gameState).forEach(v => adjustOpinion(v, -8));
-                            gameState.warwickRebellionRisk = true;
-                            return `Every remaining sibling is married as high as can possibly be arranged — immense family power, and a court nobility, Warwick loudest of all, that resents every inch of it (-40 gold, +20 prestige; real resentment building at court).`;
-                        },
-                    },
-                    {
-                        label: "Your own path: deliberately restrain the family's rise",
-                        apply(gameState) {
-                            const p = gameState.player;
-                            p.gold = (p.gold || 0) + 20;
-                            p.prestige = (p.prestige || 0) + 5;
-                            getVassals(gameState).forEach(v => adjustOpinion(v, 5));
-                            return `${p.name} talks her own family down from the grandest matches on offer — less power for the Woodvilles, far less tinder for Warwick to strike against (+20 gold, +5 prestige; the court noticeably calmer about your family's place in it).`;
-                        },
-                    },
-                ],
-            },
-            {
-                id: "elizabeth_sanctuary", year: 1483,
-                title: "Sanctuary",
-                prereq: gameState => !!gameState.elizabethMarriedEdward,
-                onTrigger(gameState) {
-                    const spouse = getSpouse(gameState, gameState.player.id);
-                    if (spouse) spouse.alive = false;
-                },
-                text: gameState => `Edward is dead at forty — sudden, for a man who seemed invincible only weeks ago. Your son by him is twelve, uncrowned, and already in the custody of his uncle Richard of Gloucester, who has just arrested your brother and your son Richard Grey on the road to London.`,
-                options: [
-                    {
-                        label: "Follow history: flee to sanctuary at Westminster Abbey",
-                        apply(gameState) {
-                            const p = gameState.player;
-                            p.gold = Math.max(0, (p.gold || 0) - 20);
-                            p.prestige = Math.max(0, (p.prestige || 0) - 10);
-                            p.piety = (p.piety || 0) + 10;
-                            gameState.elizabethFledSanctuary = true;
-                            return `${p.name} takes her younger children into the Abbey's sanctuary rather than Gloucester's reach — safe, but powerless to stop whatever is already happening to the sons left outside it (-20 gold, -10 prestige, +10 piety).`;
-                        },
-                    },
-                    {
-                        label: "Your own path: resist Gloucester's regency openly",
-                        apply(gameState) {
-                            const p = gameState.player;
-                            if (Math.random() < 0.5) {
-                                p.health = Math.max(10, p.health - 20);
-                                p.prestige = Math.max(0, (p.prestige || 0) - 15);
-                                p.gold = Math.max(0, (p.gold || 0) - 30);
-                                return `${p.name} rallies what allies remain rather than hide — and Gloucester's men move faster than her own. Arrested, humiliated, and lucky to be merely imprisoned rather than worse (-20 health, -15 prestige, -30 gold).`;
-                            }
-                            p.prestige = (p.prestige || 0) + 20;
-                            p.gold = Math.max(0, (p.gold || 0) - 10);
-                            return `${p.name}'s open defiance draws just enough of the old Woodville affinity back to her side to slow Gloucester's takeover by weeks, not months — not a victory, but not nothing either (+20 prestige, -10 gold).`;
-                        },
-                    },
-                ],
-            },
-        ],
+        birthYear: 1437,
+    },
+    catherine_de_medici: {
+        key: "catherine_de_medici", name: "Catherine de' Medici", mode: "story",
+        blurb: "Orphaned within a month of her birth, married off at fourteen into the oldest royal house in Europe, and — decades later, widowed and regent — the real power behind three sons' thrones.",
+        birthYear: 1519,
     },
 };
 

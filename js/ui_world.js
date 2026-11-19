@@ -100,17 +100,78 @@ function renderLegendarySelect() {
     const list = document.getElementById("legendaryList");
     clearEl(list);
     listLegendaryFigures().forEach(figure => {
+        const isStory = figure.mode === "story";
         const beatCount = (figure.beats || []).length;
-        const body = `<p class="muted">Born ${figure.birthYear} — beginning in 1461 at age ${figure.age}.</p><p class="muted">${figure.blurb}</p><p class="muted">${beatCount} real, documented turning point${beatCount === 1 ? "" : "s"} to face as your own.</p>`;
+        const body = isStory
+            ? `<p class="muted">Born ${figure.birthYear}.</p><p class="muted">${figure.blurb}</p><p class="muted">Told as one continuous story, starting before she's even born — real choices along the way change what happens next.</p>`
+            : `<p class="muted">Born ${figure.birthYear} — beginning in 1461 at age ${figure.age}.</p><p class="muted">${figure.blurb}</p><p class="muted">${beatCount} real, documented turning point${beatCount === 1 ? "" : "s"} to face as your own.</p>`;
         const card = makeCard(figure.name, body);
-        const btn = makeChoiceButton("Live this life", () => {
-            startLegendaryLife(figure.key);
-            renderPlay();
-            showScreen("play");
+        const btn = makeChoiceButton(isStory ? "Begin her story" : "Live this life", () => {
+            if (isStory) {
+                beginStory(figure.key);
+                renderStoryMode();
+                showScreen("storyScreen");
+            } else {
+                startLegendaryLife(figure.key);
+                renderPlay();
+                showScreen("play");
+            }
         });
         card.appendChild(btn);
         list.appendChild(card);
     });
+}
+
+// Story Mode's own renderer — a book page, not a HUD: the current
+// node's prose, then either a single quiet "Continue" or the real
+// choices for this moment, each one big enough to read in full.
+function renderStoryMode() {
+    const content = document.getElementById("storyContent");
+    clearEl(content);
+    const node = currentStoryNode();
+    const storyState = getStoryState();
+    if (!node || !storyState) return;
+
+    const figure = LEGENDARY_FIGURES[storyState.figureKey];
+    const page = el("div", "story-page");
+
+    const header = el("div", "story-page-header");
+    header.innerHTML = `<h2>${figure ? figure.name : ""}</h2>`;
+    page.appendChild(header);
+
+    const prose = el("div", "story-prose");
+    const text = typeof node.text === "function" ? node.text(storyState) : node.text;
+    text.split("\n\n").forEach(paragraph => {
+        prose.appendChild(el("p", null, paragraph));
+    });
+    page.appendChild(prose);
+
+    const isFork = node.choices.length > 1;
+    const choicesWrap = el("div", isFork ? "story-choices story-choices-fork" : "story-continue-row");
+    node.choices.forEach((choice, index) => {
+        const btn = makeChoiceButton(choice.label, () => {
+            chooseStoryOption(index);
+            if (getStoryState()) {
+                renderStoryMode();
+            } else {
+                renderPlay();
+                showScreen("play");
+            }
+        });
+        btn.className += isFork ? " story-choice-btn" : " story-continue-btn";
+        choicesWrap.appendChild(btn);
+    });
+    page.appendChild(choicesWrap);
+
+    const abandonRow = el("div", "story-abandon-row");
+    const abandonBtn = makeChoiceButton("Abandon this life", () => {
+        abandonStory();
+        goToMainMenu();
+    });
+    abandonRow.appendChild(abandonBtn);
+    page.appendChild(abandonRow);
+
+    content.appendChild(page);
 }
 
 function renderEraSelect() {

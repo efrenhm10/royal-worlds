@@ -515,3 +515,117 @@ text.theater-node {
     opacity: 1;
     transform: translateY(0);
 }
+
+/* Story Mode — a Legendary Life told as a book, not a dashboard: one
+   wide, readable page at a time, generous serif text, and real choices
+   set apart from the quiet "turn the page" default, rather than every
+   decision in the game sharing one small popup card. */
+.story-page {
+    max-width: 680px;
+    margin: 30px auto;
+    padding: 36px 44px;
+    background: linear-gradient(180deg, var(--panel-raised) 0%, var(--panel) 100%);
+    border: 1px solid var(--panel-border);
+    outline: 1px solid rgba(201,151,26,0.22);
+    outline-offset: -6px;
+    border-radius: 4px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.03);
+}
+
+.story-page-header {
+    text-align: center;
+    margin-bottom: 22px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--panel-border);
+}
+
+.story-page-header h2 {
+    margin: 0 0 4px;
+    font-size: 1.6em;
+}
+
+.story-prose {
+    font-size: 1.14em;
+    line-height: 1.75;
+    color: var(--ink);
+}
+
+.story-prose p {
+    margin: 0 0 1.1em;
+    text-indent: 1.4em;
+}
+
+.story-prose p:first-of-type {
+    text-indent: 0;
+}
+
+.story-prose p:first-of-type::first-letter {
+    font-family: "Cinzel", "Times New Roman", serif;
+    font-size: 2.6em;
+    line-height: 0.8;
+    float: left;
+    padding: 0.03em 0.08em 0 0;
+    color: var(--gilt-bright);
+}
+
+.story-choices {
+    margin-top: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.story-choices.story-choices-fork {
+    padding-top: 14px;
+    border-top: 1px dashed var(--panel-border);
+}
+
+.story-choice-btn {
+    display: block;
+    width: 100%;
+    text-align: left;
+    white-space: normal;
+    font-size: 1em;
+    line-height: 1.4;
+    padding: 14px 18px;
+    border: 1px solid var(--gilt);
+    background: linear-gradient(180deg, rgba(201,151,26,0.14), var(--panel) 60%);
+}
+
+.story-choice-btn:hover:not(:disabled) {
+    background: linear-gradient(180deg, rgba(240,194,61,0.22), var(--panel) 60%);
+}
+
+.story-continue-row {
+    margin-top: 28px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.story-continue-btn {
+    font-style: italic;
+    background: transparent;
+    border-color: var(--panel-border);
+    box-shadow: none;
+    color: var(--ink-soft);
+}
+
+.story-continue-btn:hover:not(:disabled) {
+    color: var(--gilt-bright);
+    background: rgba(201,151,26,0.1);
+}
+
+.story-abandon-row {
+    text-align: center;
+    margin-top: 10px;
+}
+
+.story-abandon-row button {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    color: var(--ink-soft);
+    font-size: 13px;
+    text-decoration: underline;
+    padding: 4px;
+}
