@@ -144,6 +144,7 @@ function advanceYear() {
     callHookIfPresent("tickMilitary", gameState);
     callHookIfPresent("tickVassals", gameState);
     callHookIfPresent("tickDynasty", gameState);
+    callHookIfPresent("tickLegendaryScriptedDeaths", gameState);
     callHookIfPresent("tickHomeSuccession", gameState);
     callHookIfPresent("tickForeignRoyals", gameState);
     callHookIfPresent("tickDynastyPrestige", gameState);
@@ -166,6 +167,7 @@ function advanceYear() {
         gameState.pendingDecision = null;
         callHookIfPresent("applySuccession", gameState);
     } else {
+        callHookIfPresent("tickLegendaryBiography", gameState);
         callHookIfPresent("tickDecisions", gameState);
     }
 

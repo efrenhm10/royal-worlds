@@ -20,9 +20,21 @@
         <p>You are not the protagonist of the history books. You are one noble or royal line inside them — holding what your family already has, or spending a life trying to climb one rung higher. Marriages, wars, intrigue, the Church, a council you can trust or can't. Die, and you become your heir. The line either survives you or it doesn't.</p>
         <div class="grid">
             <button id="newBtn">Begin a new line</button>
+            <button id="legendaryBtn">Live a legendary life</button>
             <button id="continueBtn" disabled>Continue (no save yet)</button>
         </div>
     </div>
+</section>
+
+<!-- Legendary Lives: play a real historical figure through their own
+     documented life, with real history vs. your own path at each turn. -->
+<section id="legendarySelect" class="screen">
+    <div class="card">
+        <h2>Live a legendary life</h2>
+        <p class="muted">A real person, a real moment in their actual life. At the turns that mattered, you'll choose: follow history, or take your own path.</p>
+        <button id="legendaryBackBtn" class="back-btn">&larr; Back</button>
+    </div>
+    <div class="grid" id="legendaryList"></div>
 </section>
 
 <!-- Era / bookmark selection -->
@@ -96,6 +108,7 @@
 <script src="js/stress.js"></script>
 <script src="js/events.js"></script>
 <script src="js/decisions.js"></script>
+<script src="js/legendary_lives.js"></script>
 <script src="js/scenes.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/ui_world.js"></script>

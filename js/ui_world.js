@@ -96,6 +96,23 @@ function renderMarriageSection(view, gameState, targetPerson) {
     view.appendChild(card);
 }
 
+function renderLegendarySelect() {
+    const list = document.getElementById("legendaryList");
+    clearEl(list);
+    listLegendaryFigures().forEach(figure => {
+        const beatCount = (figure.beats || []).length;
+        const body = `<p class="muted">Born ${figure.birthYear} — beginning in 1461 at age ${figure.age}.</p><p class="muted">${figure.blurb}</p><p class="muted">${beatCount} real, documented turning point${beatCount === 1 ? "" : "s"} to face as your own.</p>`;
+        const card = makeCard(figure.name, body);
+        const btn = makeChoiceButton("Live this life", () => {
+            startLegendaryLife(figure.key);
+            renderPlay();
+            showScreen("play");
+        });
+        card.appendChild(btn);
+        list.appendChild(card);
+    });
+}
+
 function renderEraSelect() {
     const list = document.getElementById("eraList");
     clearEl(list);

@@ -14,6 +14,15 @@ document.addEventListener("DOMContentLoaded", () => {
         if (typeof renderEraSelect === "function") renderEraSelect();
     });
 
+    document.getElementById("legendaryBtn").addEventListener("click", () => {
+        showScreen("legendarySelect");
+        if (typeof renderLegendarySelect === "function") renderLegendarySelect();
+    });
+
+    document.getElementById("legendaryBackBtn").addEventListener("click", () => {
+        showScreen("boot");
+    });
+
     const continueBtn = document.getElementById("continueBtn");
     if (hasSavedGame()) {
         continueBtn.disabled = false;
